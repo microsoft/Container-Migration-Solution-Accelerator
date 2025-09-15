@@ -1,6 +1,0 @@
-name: container-migration-solution-accelerator
-metadata:
-    template: container-migration-solution-accelerator@1.0
-
-requiredVersions:
-  azd: '>=1.18.2'
