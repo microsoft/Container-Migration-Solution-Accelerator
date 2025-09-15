@@ -1,0 +1,104 @@
+# HTTP API Test
+# This file contains tests for the HTTP API endpoints.
+
+# Variables - Dynamic GUID generation
+@newProcessId = {{$guid}}
+@testProcessId = 049acc54-6846-456e-bf06-d58393741175
+
+# Application Probing API
+### Probing the application
+GET http://localhost:8000/health HTTP/1.1
+
+### Starting the application
+GET http://localhost:8000/startup HTTP/1.1
+
+# Dependency Injection Demo APIs
+### Sample API with Dependency Injection
+GET http://localhost:8000/router_one/hello HTTP/1.1
+
+### Get registered services information
+GET http://localhost:8000/router_one/services HTTP/1.1
+
+### Test transient vs singleton service behavior
+GET http://localhost:8000/router_two/test-transient HTTP/1.1
+
+### Basic hello endpoint
+GET http://localhost:8000/router_two/hello HTTP/1.1
+
+# Concrete Services Demo
+### Concrete services demo
+GET http://localhost:8000/concrete/demo HTTP/1.1
+
+### Service registration patterns info
+GET http://localhost:8000/concrete/info HTTP/1.1
+
+### enlist_process_queue
+POST http://localhost:8000/process/ HTTP/1.1
+Content-Type: multipart/form-data; boundary=file-boundary
+
+--file-boundary
+Content-Disposition: form-data; name="files"; filename="ebs-kc-classes.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc-classes.yaml
+--file-boundary
+Content-Disposition: form-data; name="files"; filename="ebs-kc-restore.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc-restore.yaml
+--file-boundary
+Content-Disposition: form-data; name="files"; filename="ebs-kc-snapshot.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc-snapshot.yaml
+--file-boundary
+Content-Disposition: form-data; name="files"; filename="ebs-kc.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc.yaml
+--file-boundary--
+
+# Variables for testing
+@process_id = "cf09bb6d-682c-4018-8312-eaacf1d10519"
+
+### Get process status (use actual process_id from POST response)
+GET http://localhost:8000/api/process/status/d00ed235-c2c9-4714-87ea-aa93bfb58966/ HTTP/1.1
+
+### Get Rendered process status (use actual process_id from POST response)  
+GET http://localhost:8000/api/process/status/12c6a8d9-b1d7-4f1a-ae9b-3ef5a422bee5/render/ HTTP/1.1
+
+
+
+### Create New Process with Dynamic GUID
+# @name createProcess
+POST http://localhost:8000/api/process/start HTTP/1.1
+Accept: application/json
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="ebs-kc.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc.yaml
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="ebs-kc-snapshot.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc-snapshot.yaml
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="ebs-kc-restore.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc-restore.yaml
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="ebs-kc-classes.yaml"
+Content-Type: application/yaml
+
+< ../test_files/EKS/ebs-kc-classes.yaml
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### for DEBUG
+GET http://localhost:8000/debug/config HTTP/1.1
+Accept: application/json
