@@ -1,0 +1,108 @@
+main {
+  padding-top: 2rem !important; /* Reduced from 8rem for better screen utilization */
+}
+
+@media (min-width: 1200px) {
+  main {
+    padding-top: 1rem !important; /* Even less padding on larger screens */
+  }
+}
+
+@media (max-height: 800px) {
+  main {
+    padding-top: 0.5rem !important; /* Minimal padding on shorter screens */
+  }
+}
+
+.main-content {
+  transition: margin-right 0.3s ease-in-out; /* Smooth transition */
+  margin-right: 0px; /* Default margin */
+}
+
+.main-content.shifted {
+  margin-right: 300px; /* Adjust to panel width */
+}
+
+/* Responsive panel adjustments */
+@media (max-width: 1400px) {
+  .main-content.shifted {
+    margin-right: 280px; /* Slightly smaller panel on medium screens */
+  }
+}
+
+@media (max-width: 1200px) {
+  .main-content.shifted {
+    margin-right: 260px; /* Even smaller panel on smaller screens */
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content.shifted {
+    margin-right: 0px; /* No margin shift on mobile, panel overlays */
+  }
+}
+
+html, body {
+  overflow: auto;
+  scrollbar-width: thin; /* Shows thin scrollbars for Firefox */
+  scrollbar-color: #888 #f1f1f1; /* thumb and track colors for Firefox */
+}
+
+/* For WebKit-based browsers (Chrome, Safari, Edge) */
+html::-webkit-scrollbar {
+  width: 8px; /* Adjust width as needed */
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #888; /* Scrollbar color */
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Darker on hover */
+}
+
+html::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Track color */
+}
+
+.main-content {
+  overflow: hidden;
+  overflow-y: auto;
+  flex: 1;
+  /* //margin-top: 60px; Same as header height */
+  margin-bottom: 50px; /* Adjust based on bottom bar height */
+  scrollbar-width: thin; /* Shows thin scrollbars for Firefox */
+  scrollbar-color: #888 #f1f1f1; /* thumb and track colors for Firefox */
+}
+
+/* Responsive margin adjustments */
+@media (min-width: 1920px) {
+  .main-content {
+    margin-bottom: 30px; /* Less margin on larger screens */
+  }
+}
+
+@media (max-height: 800px) {
+  .main-content {
+    margin-bottom: 20px; /* Less margin on shorter screens */
+  }
+}
+
+/* Custom scrollbars for main content in WebKit browsers */
+.main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
