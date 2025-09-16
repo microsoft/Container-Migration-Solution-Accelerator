@@ -35,24 +35,6 @@ variables:
   vmImageName: 'ubuntu-latest'
   tag: '$(Build.BuildId)'
   containerAppNameSuffix: ${{ parameters.containerAppNameSuffix }}
-  images: |
-    [
-      {
-        "name": "frontend",
-        "dockerfilePath": "$(Build.SourcesDirectory)/src/frontend/Dockerfile",
-        "containerAppName": "ca-frontend-$(containerAppNameSuffix)"
-      },
-      {
-        "name": "backend-api", 
-        "dockerfilePath": "$(Build.SourcesDirectory)/src/backend-api/Dockerfile",
-        "containerAppName": "ca-backend-api-$(containerAppNameSuffix)"
-      },
-      {
-        "name": "processor",
-        "dockerfilePath": "$(Build.SourcesDirectory)/src/processor/Dockerfile", 
-        "containerAppName": "ca-processor-$(containerAppNameSuffix)"
-      }
-    ]
 
 stages:
 - stage: Build
