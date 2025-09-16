@@ -1,0 +1,115 @@
+# Azure Infrastructure Pipeline
+# This pipeline deploys the Azure infrastructure using Bicep templates
+# and outputs the resource information for use by other pipelines
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infra/*
+
+# Manual trigger support
+pr: none
+
+parameters:
+- name: environmentName
+  displayName: Environment Name
+  type: string
+  default: 'conmig'
+- name: resourceGroupName
+  displayName: Resource Group Name
+  type: string
+  default: 'rg-conmig-dev'
+- name: containerRegistryHost
+  displayName: Container Registry Host (exclude https://)
+  type: string
+  default: 'acrcontainermigrationdev.azurecr.io'
+- name: tags
+  displayName: Resource Tags
+  type: object
+  default:
+    SecurityControl: 'Ignore'
+- name: enableMonitoring
+  displayName: Enable Monitoring
+  type: boolean
+  default: true
+
+variables:
+  azureServiceConnection: 'azureserviceconnection'
+  vmImageName: 'ubuntu-latest'
+  envName: ${{ parameters.environmentName }}
+  resourceGroupName: ${{ parameters.resourceGroupName }}
+  containerRegistryHost: ${{ parameters.containerRegistryHost }}
+  tags: ${{ convertToJson(parameters.tags) }}
+  enableMonitoring: ${{ parameters.enableMonitoring }}
+
+stages:
+- stage: Infrastructure
+  displayName: Deploy Infrastructure
+  jobs:
+  - job: DeployInfrastructure
+    displayName: Deploy Azure Infrastructure
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Deploy Infrastructure with Bicep'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -e  # Exit immediately if any command fails
+          set -o pipefail  # Ensure pipeline failures are caught
+          
+          echo "Deploying infrastructure with Bicep..."
+          echo "Environment Name: $(envName)"
+          echo "Resource Group: $(resourceGroupName)"
+          
+          # Deploy infrastructure and capture outputs
+          echo "Starting Bicep deployment..."
+
+          # Deploy Bicep template with explicit error handling
+          echo "Executing Bicep deployment..."
+          DEPLOYMENT_OUTPUT=$(az deployment group create \
+            --name "deploy.$(envName).$(Build.BuildId)" \
+            --resource-group $(resourceGroupName) \
+            --template-file $(Build.SourcesDirectory)/infra/main.bicep \
+            --parameters solutionName=$(envName) containerRegistryHost='$(containerRegistryHost)' tags='$(tags)' enableMonitoring=$(enableMonitoring) \
+            --query "properties.outputs" \
+            --output json) || {
+            echo "❌ ERROR: Bicep deployment failed!"
+            echo "Deployment name: deploy.$(envName).$(Build.BuildId)"
+            echo "Resource group: $(resourceGroupName)"
+            echo "Template file: $(Build.SourcesDirectory)/infra/main.bicep"
+            echo "Parameters: solutionName=$(envName) containerRegistryHost='$(containerRegistryHost)'"
+            
+            # Try to get deployment error details
+            echo "Attempting to retrieve deployment error details..."
+            az deployment group show \
+              --name "deploy.$(envName).$(Build.BuildId)" \
+              --resource-group $(resourceGroupName) \
+              --query "properties.error" \
+              --output json || echo "Could not retrieve deployment error details"
+            
+            exit 1
+          }
+          
+          # Validate deployment output
+          if [ -z "$DEPLOYMENT_OUTPUT" ] || [ "$DEPLOYMENT_OUTPUT" = "null" ]; then
+            echo "❌ ERROR: Deployment completed but no output was returned."
+            exit 1
+          fi
+          
+          echo "✅ Infrastructure deployment completed successfully!"
+          echo "Raw deployment outputs: $DEPLOYMENT_OUTPUT"
+          
+          # Create summary of deployed resources
+          echo "=== Infrastructure Deployment Summary ==="
+          echo "Environment: $(envName)"
+          echo "Resource Group: $(resourceGroupName)"
+          echo "Location: $RG_LOCATION"
+          echo "Deployment completed at: $(date)"
+          echo "============================================"

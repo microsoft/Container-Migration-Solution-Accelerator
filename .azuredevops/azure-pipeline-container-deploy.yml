@@ -1,0 +1,223 @@
+# Azure Build and Deploy Pipeline
+# This pipeline builds the Docker image and deploys to Azure Container Apps
+# It requires infrastructure to be deployed separately via the infrastructure pipeline
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/*
+      - pyproject.toml
+      - uv.lock
+
+# Manual trigger support
+pr: none
+
+parameters:
+- name: resourceGroupName
+  displayName: Resource Group Name
+  type: string
+  default: 'rg-conmig-dev'
+- name: containerAppNameSuffix
+  displayName: Container App Name Suffix
+  type: string
+  default: 'conmigjos3w'
+- name: containerRegistryEndpoint
+  displayName: Container Registry Endpoint (e.g., myacr.azurecr.io)
+  type: string
+  default: 'acrcontainermigrationdev.azurecr.io'
+
+variables:
+  azureServiceConnection: 'azureserviceconnection'
+  dockerServiceConnection: 'dockerserviceconnection'
+  vmImageName: 'ubuntu-latest'
+  tag: '$(Build.BuildId)'
+  containerAppNameSuffix: ${{ parameters.containerAppNameSuffix }}
+  images: |
+    [
+      {
+        "name": "frontend",
+        "dockerfilePath": "$(Build.SourcesDirectory)/src/frontend/Dockerfile",
+        "containerAppName": "ca-frontend-$(containerAppNameSuffix)"
+      },
+      {
+        "name": "backend-api", 
+        "dockerfilePath": "$(Build.SourcesDirectory)/src/backend-api/Dockerfile",
+        "containerAppName": "ca-backend-api-$(containerAppNameSuffix)"
+      },
+      {
+        "name": "processor",
+        "dockerfilePath": "$(Build.SourcesDirectory)/src/processor/Dockerfile", 
+        "containerAppName": "ca-processor-$(containerAppNameSuffix)"
+      }
+    ]
+
+stages:
+- stage: Build
+  displayName: Build and Push Docker Images
+  jobs:
+  - job: BuildFrontend
+    displayName: Build Frontend Image
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: 'Build and Push Frontend Image'
+      inputs:
+        containerRegistry: $(dockerServiceConnection)
+        repository: 'frontend'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/src/frontend/Dockerfile'
+        tags: |
+          $(tag)
+          latest
+        buildContext: '$(Build.SourcesDirectory)/src/frontend'
+
+  - job: BuildBackendAPI
+    displayName: Build Backend API Image
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: 'Build and Push Backend API Image'
+      inputs:
+        containerRegistry: $(dockerServiceConnection)
+        repository: 'backend-api'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/src/backend-api/Dockerfile'
+        tags: |
+          $(tag)
+          latest
+        buildContext: '$(Build.SourcesDirectory)/src/backend-api'
+
+  - job: BuildProcessor
+    displayName: Build Processor Image
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: 'Build and Push Processor Image'
+      inputs:
+        containerRegistry: $(dockerServiceConnection)
+        repository: 'processor'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/src/processor/Dockerfile'
+        tags: |
+          $(tag)
+          latest
+        buildContext: '$(Build.SourcesDirectory)/src/processor'
+
+- stage: Deploy
+  displayName: Deploy to Container Apps
+  dependsOn: Build
+  condition: succeeded('Build')
+  jobs:
+  - deployment: DeployFrontend
+    displayName: Deploy Frontend to Azure Container Apps
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: 'Update Frontend Container App'
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Updating Frontend Container App with new image..."
+                
+                IMAGE_NAME="${{ parameters.containerRegistryEndpoint }}/frontend:$(tag)"
+                CONTAINER_APP_NAME="ca-frontend-$(containerAppNameSuffix)"
+                
+                echo "Deployment Details:"
+                echo "  Container App: $CONTAINER_APP_NAME"
+                echo "  Resource Group: ${{ parameters.resourceGroupName }}"
+                echo "  Image: $IMAGE_NAME"
+                echo "  Revision Suffix: $(tag)"
+                
+                # Update the container app with the new image
+                az containerapp update \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "${{ parameters.resourceGroupName }}" \
+                  --image "$IMAGE_NAME" \
+                  --revision-suffix "$(tag)"
+                
+                echo "Frontend Container App updated successfully!"
+
+  - deployment: DeployBackendAPI
+    displayName: Deploy Backend API to Azure Container Apps
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: 'Update Backend API Container App'
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Updating Backend API Container App with new image..."
+                
+                IMAGE_NAME="${{ parameters.containerRegistryEndpoint }}/backend-api:$(tag)"
+                CONTAINER_APP_NAME="ca-backend-api-$(containerAppNameSuffix)"
+                
+                echo "Deployment Details:"
+                echo "  Container App: $CONTAINER_APP_NAME"
+                echo "  Resource Group: ${{ parameters.resourceGroupName }}"
+                echo "  Image: $IMAGE_NAME"
+                echo "  Revision Suffix: $(tag)"
+                
+                # Update the container app with the new image
+                az containerapp update \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "${{ parameters.resourceGroupName }}" \
+                  --image "$IMAGE_NAME" \
+                  --revision-suffix "$(tag)"
+                
+                echo "Backend API Container App updated successfully!"
+
+  - deployment: DeployProcessor
+    displayName: Deploy Processor to Azure Container Apps
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: 'Update Processor Container App'
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Updating Processor Container App with new image..."
+                
+                IMAGE_NAME="${{ parameters.containerRegistryEndpoint }}/processor:$(tag)"
+                CONTAINER_APP_NAME="ca-processor-$(containerAppNameSuffix)"
+                
+                echo "Deployment Details:"
+                echo "  Container App: $CONTAINER_APP_NAME"
+                echo "  Resource Group: ${{ parameters.resourceGroupName }}"
+                echo "  Image: $IMAGE_NAME"
+                echo "  Revision Suffix: $(tag)"
+                
+                # Update the container app with the new image
+                az containerapp update \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "${{ parameters.resourceGroupName }}" \
+                  --image "$IMAGE_NAME" \
+                  --revision-suffix "$(tag)"
+                
+                echo "Processor Container App updated successfully!"
