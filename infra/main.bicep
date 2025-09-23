@@ -266,7 +266,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
   params: {
     location: location
     name: 'appcs-${resourcesName}'
-    disableLocalAuth: true
+    disableLocalAuth: false // needed to allow setting app config key values from this module
     enablePurgeProtection: false
     // TODO - private networking
     //privateEndpoints:
