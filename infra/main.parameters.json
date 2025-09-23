@@ -28,6 +28,11 @@
       },
       "aiModelCapacity": {
         "value": "${AZURE_AI_MODEL_CAPACITY}"
+      },
+      "tags": {
+        "value": {
+          "SecurityControl": "Ignore"
+        }
       }
     }
 }
