@@ -266,8 +266,8 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
   params: {
     location: location
     name: 'appcs-${resourcesName}'
-    disableLocalAuth: false // TODO - private networking?
-    //enablePurgeProtection: false // TODO - turn off purge protection after dev env not used or is recreated
+    disableLocalAuth: true
+    enablePurgeProtection: false
     // TODO - private networking
     //privateEndpoints:
     tags: allTags
