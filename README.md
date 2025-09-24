@@ -28,27 +28,29 @@ The solution uses a sophisticated multi-agent orchestration pattern where specia
 
 This solution enables enterprise-grade Kubernetes migration with the following capabilities:
 
-• **Enterprise Batch Processing Architecture**
-Complete solution including React web application for file upload, validation, and queue management coupled with intelligent multi-agent processing engine
+   - **Enterprise Batch Processing Architecture** <br/>
+   Complete solution including React web application for file upload, validation, and queue management coupled with intelligent multi-agent processing engine
 
-• **Intelligent Platform Detection**
-Automatically identifies source Kubernetes platform (GKE/EKS) through configuration analysis and applies platform-specific migration strategies
+   - **Intelligent Platform Detection** <br/>
+   Automatically identifies source Kubernetes platform (GKE/EKS) through configuration analysis and applies platform-specific migration strategies
 
-• **Multi-Agent Expert Orchestration**
-Specialized agents (Technical Architect, Azure Expert, Platform Experts, QA Engineer) collaborate through Semantic Kernel GroupChat orchestration patterns
+   - **Multi-Agent Expert Orchestration** <br/>
+   Specialized agents (Technical Architect, Azure Expert, Platform Experts, QA Engineer) collaborate through Semantic Kernel GroupChat orchestration patterns
 
-• **Process Framework Integration**
-Each migration step (analysis, design, conversion, documentation) is built using Semantic Kernel Process Framework with event routing and step orchestration
+   - **Process Framework Integration** <br/>
+   Each migration step (analysis, design, conversion, documentation) is built using Semantic Kernel Process Framework with event routing and step orchestration
 
-• **MCP Server Tool Integration**
-Agents access intelligent tools through Model Context Protocol servers for file operations, knowledge search, and specialized functions without direct model training
+   - **MCP Server Tool Integration** <br/>
+   Agents access intelligent tools through Model Context Protocol servers for file operations, knowledge search, and specialized functions without direct model training
 
-• **Azure Well-Architected Framework Compliance**
-Configurations transformed according to Azure security, reliability, performance, cost optimization, and operational excellence principles
+   - **Azure Well-Architected Framework Compliance** <br/>
+   Configurations transformed according to Azure security, reliability, performance, cost optimization, and operational excellence principles
 
-• **Comprehensive Migration Reporting**
-Detailed reports capturing expert analysis, transformation decisions, and recommendations from multiple specialized agents
+   - **Comprehensive Migration Reporting** <br/>
+   Detailed reports capturing expert analysis, transformation decisions, and recommendations from multiple specialized agents
+
 ### Agentic Architecture
+
 ## <img src="docs/images/readme/agentic_architecture.png">
 If you want to get know more detail about Agentic Architecture, please take a look at this document: [Agentic Architecture](docs/AgenticArchitecture.md)
 
@@ -230,6 +232,14 @@ Have questions, find a bug, or want to request a feature? [Submit a new issue](h
 
 ## Responsible AI Transparency FAQ
 Please refer to [Transparency FAQ](./TRANSPARENCY_FAQ.md) for responsible AI transparency details of this solution accelerator.
+
+## Data Collection
+
+The software may collect information about you and your use of the software and send it to Microsoft. Microsoft may use this information to provide services and improve our products and services. You may turn off the telemetry as described in the repository. There are also some features in the software that may enable you and Microsoft to collect data from users of your applications. If you use these features, you must comply with applicable law, including providing appropriate notices to users of your applications together with a copy of [Microsoft’s privacy statement](https://go.microsoft.com/fwlink/?LinkID=824704). You can learn more about data collection and use in the help documentation and our privacy statement. Your use of the software operates as your consent to these practices.
+
+## Trademarks
+
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow Microsoft’s Trademark & Brand Guidelines. Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party’s policies.
 
 ## Disclaimers
 
