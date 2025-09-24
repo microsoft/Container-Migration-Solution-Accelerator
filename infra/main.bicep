@@ -207,7 +207,7 @@ module cosmosDb 'modules/cosmosDb.bicep' = {
 
 var aiModelDeploymentName = aiModelName
 
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.3.0' = {
+module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
   params: {
     #disable-next-line BCP334
