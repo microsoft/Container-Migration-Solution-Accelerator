@@ -28,6 +28,9 @@
       },
       "aiModelCapacity": {
         "value": "${AZURE_AI_MODEL_CAPACITY}"
+      },
+      "enableTelemetry": {
+        "value": true
       }
     }
 }
