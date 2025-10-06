@@ -1,4 +1,4 @@
-name: ContainerMigration 
+name: validate Deployment 
 on:
   push:
     branches:
@@ -14,7 +14,9 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    outputs:
+      RESOURCE_GROUP_NAME: ${{ steps.check_create_rg.outputs.RESOURCE_GROUP_NAME }}
+      DEPLOYMENT_SUCCESS: ${{ steps.deployment_status.outputs.SUCCESS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
