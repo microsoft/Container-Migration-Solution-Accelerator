@@ -33,8 +33,8 @@ jobs:
           export AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
           export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           export AZURE_REGIONS="${{ vars.AZURE_REGIONS }}"
-          chmod +x scripts/quota_check.sh
-          if ! scripts/quota_check.sh; then
+          chmod +x scripts/checkquota.sh
+          if ! scripts/checkquota.sh; then
             # If quota check fails due to insufficient quota, set the flag
             if grep -q "No region with sufficient quota found" scripts/quota_check.sh; then
               echo "QUOTA_FAILED=true" >> $GITHUB_ENV
