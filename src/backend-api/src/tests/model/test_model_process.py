@@ -8,7 +8,7 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from routers.model.model_process import FileInfo, enlist_process_queue_response # noqa: E402
+from routers.model.model_process import FileInfo, enlist_process_queue_response  # noqa: E402
 
 
 class TestFileInfo:
