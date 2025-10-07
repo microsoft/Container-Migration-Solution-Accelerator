@@ -6,9 +6,8 @@ import os
 # Add src directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-
 # Now import and test the configuration
-from app.libs.application.application_context import Configuration
+from app.libs.application.application_context import Configuration  # noqa: E402
 
 
 def test_configuration():
