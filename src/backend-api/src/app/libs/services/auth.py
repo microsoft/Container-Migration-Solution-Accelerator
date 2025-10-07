@@ -13,6 +13,7 @@ sample_user = {
     "x-ms-client-principal": "your_base_64_encoded_token"
 }
 
+
 class UserDetails:
     def __init__(self, user_details: Dict):
         self.user_principal_id = user_details.get("user_principal_id")
