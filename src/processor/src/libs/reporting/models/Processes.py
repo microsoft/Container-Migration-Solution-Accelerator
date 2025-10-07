@@ -2,8 +2,6 @@ from logging import getLogger
 from datetime import UTC, datetime
 from typing import Any
 
-logger = getLogger(__name__)
-
 from pydantic import Field
 from sas.cosmosdb.sql import EntityBase, RootEntityBase, RepositoryBase
 
@@ -11,9 +9,13 @@ from src.libs.application.application_context import AppContext
 
 from .Processes import Process
 
+logger = getLogger(__name__)
+
+
 def _get_utc_timestamp(self) -> str:
     """Get current UTC timestamp in human-readable format"""
     return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+
 
 class AgentActivityHistory(EntityBase):
     timestamp: str = Field(default_factory=_get_utc_timestamp)
@@ -21,7 +23,8 @@ class AgentActivityHistory(EntityBase):
     message_preview: str = ""
     step: str = ""
     tool_used: str = ""
-    
+
+
 class AgentActivity(EntityBase):
     name: str
     current_action: str = "idle"
@@ -41,10 +44,12 @@ class AgentActivity(EntityBase):
     message_word_count: int = 0
     activity_history: list[AgentActivityHistory] = Field(default_factory=list)
     step_reset_count: int = 0
-    
+
+
 class Agent(EntityBase):
     name: str
     activity: AgentActivity
+
 
 class Step(EntityBase):
     name: str
@@ -54,8 +59,9 @@ class Step(EntityBase):
     result: dict[str, Any]
     agents: list[str] = Field(default_factory=list)
 
+
 class Process(RootEntityBase[Process, str]):
-    id : str = Field(...)
+    id: str = Field(...)
     start_time: str = Field(datetime.now().isoformat())
     end_time: str = Field(datetime.now().isoformat())
     elapsed_time: float = Field(0.0)
@@ -65,7 +71,6 @@ class Process(RootEntityBase[Process, str]):
     steps: list[Step] = Field(default_factory=list)
 
 
-
 class ProcessRepository(RepositoryBase[Process, str]):
     def __init__(self, app_context: AppContext):
         config = app_context.configuration
@@ -73,19 +78,18 @@ class ProcessRepository(RepositoryBase[Process, str]):
             raise ValueError("Configuration is required")
 
         super().__init__(
-            account_url = config.cosmos_db_account_url,
-            database_name = config.cosmos_db_database_name,
-            container_name = config.cosmos_db_container_name
+            account_url=config.cosmos_db_account_url,
+            database_name=config.cosmos_db_database_name,
+            container_name=config.cosmos_db_container_name
         )
 
 
-
 class ProcessTelemetry:
-    process_repository : ProcessRepository
-    
+    process_repository: ProcessRepository
+
     def __init__(self, app_context: AppContext):
         self.app_context = app_context
-        #self.process_repository = ProcessRepository(app_context)
+        # self.process_repository = ProcessRepository(app_context)
 
     # Async context manager methods
     async def __aenter__(self):
@@ -94,9 +98,8 @@ class ProcessTelemetry:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.process_repository.__aexit__(exc_type, exc_val, exc_tb)
-        
 
-    async def create_process(self, process_id: str, step: str, phase : str):
+    async def create_process(self, process_id: str, step: str, phase: str):
         if not self.process_repository:
             raise ValueError("Process repository is not initialized")
 
@@ -108,7 +111,6 @@ class ProcessTelemetry:
             await process_repo.add_async(process)
             logger.info(f"Process created: {process.id}")
             return process
-
 
     async def get_process(self, process_id: str):
         if not self.process_repository:
