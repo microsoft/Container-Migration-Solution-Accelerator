@@ -119,4 +119,5 @@ class ProcessTelemetry:
         async with self.process_repository as process_repo:
             logger.info(f"Getting process: {process_id}")
             return await process_repo.get_async(process_id)
+
         
