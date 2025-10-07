@@ -10,7 +10,7 @@ sample_user = {
     "x-ms-client-principal-name": "dev.user@example.com",
     "x-ms-client-principal-idp": "aad",
     "x-ms-token-aad-id-token": "dev.token",
-    "x-ms-client-principal": "your_base_64_encoded_token"
+    "x-ms-client-principal": "your_base_64_encoded_token",
 }
 
 
@@ -38,7 +38,7 @@ def get_tenant_id(client_principal_b64: str) -> str:
         decoded_string = decoded_bytes.decode("utf-8")
         user_info = json.loads(decoded_string)
         return user_info.get("tid", "")
-    except Exception :
+    except Exception:
         logger.exception("Error decoding client principal")
         return ""
 
