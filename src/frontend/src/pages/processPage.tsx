@@ -415,8 +415,8 @@ const ProcessPage: React.FC = () => {
                   }}
                 >
                   The migration stopped before completion and no results were generated.
-                  {/* <br />
-                  Please check the logs using Process ID: {batchId} for more details. */}
+                  <br />
+                  Please check the logs using Process ID: {batchId} for more details.
                 </MessageBar>
               </div>
             )}
