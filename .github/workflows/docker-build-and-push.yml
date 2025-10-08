@@ -44,7 +44,13 @@ jobs:
       - name: Get registry
         id: registry
         run: |
-          echo "ext_registry=${{ env.ACR_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
+          if [[ -n "${{ env.ACR_LOGIN_SERVER }}" ]]; then
+            echo "ext_registry=${{ env.ACR_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
+            echo "has_registry=true" >> $GITHUB_OUTPUT
+          else
+            echo "ext_registry=temp-registry" >> $GITHUB_OUTPUT
+            echo "has_registry=false" >> $GITHUB_OUTPUT
+          fi
         
       - name: Set Docker image tags
         id: tag
