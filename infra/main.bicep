@@ -301,6 +301,7 @@ var privateDnsZones = [
   'privatelink.vaultcore.azure.net'
   'privatelink${environment().suffixes.sqlServerHostname}'
   'privatelink.search.windows.net'
+  'privatelink.azconfig.io'
 ]
 
 // DNS Zone Index Constants
@@ -316,6 +317,7 @@ var dnsZoneIndex = {
   keyVault: 8
   sqlServer: 9
   searchService: 10
+  appConfig: 11
 }
 
 // List of DNS zone indices that correspond to AI-related services.
@@ -557,6 +559,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
           }
         ]
       : []
+      
     // WAF aligned configuration for Role-based Access Control
     roleAssignments: [
       {
@@ -847,6 +850,16 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
 // }
 
 var aiModelDeploymentName = aiModelName
+var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
+
+var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
+  ? split(existingFoundryProjectResourceId, '/')[8]
+  : 'aif-${resourcesName}'
+
+// AI Project resource id: /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>/projects/<project-name>
+
+// NOTE: Required version 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' not available in AVM
+
 
 module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
@@ -855,6 +868,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
     baseName: take(resourcesName, 12)
     baseUniqueName: null
     location: azureAiServiceLocation
+
     aiFoundryConfiguration: {
       allowProjectManagement: true
       roleAssignments: [
@@ -874,15 +888,15 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
         }
       ]
-      // TODO - private networking
-      // networking: {
-      //   aiServicesPrivateDnsZoneId: ''
-      //   openAiPrivateDnsZoneId: ''
-      //   cognitiveServicesPrivateDnsZoneId: ''
-      // }
+      networking: enablePrivateNetworking ? {
+        // If you created a dedicated agent subnet use: network!.outputs.subnetAgentServiceResourceId
+        agentServiceSubnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+      } : null
     }
-    // TODO - private networking
-    //privateEndpointSubnetId:
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
     aiModelDeployments: [
       {
         name: aiModelDeploymentName
@@ -910,7 +924,20 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     disableLocalAuth: false // needed to allow setting app config key values from this module
     enablePurgeProtection: false
     // TODO - private networking
-    //privateEndpoints:
+    privateEndpoints: enablePrivateNetworking ? [
+      {
+        name: 'pep-appcs-${resourcesName}'
+        customNetworkInterfaceName: 'nic-appcs-${resourcesName}'
+        subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: [
+            {
+              privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.appConfig]!.outputs.resourceId
+            }
+          ]
+        }
+      }
+    ] : []
     tags: allTags
     keyValues: [
       {
@@ -1013,7 +1040,9 @@ var containerAppsEnvironmentName = 'cae-${resourcesName}'
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.3' = {
   name: take('avm.res.app.managed-environment.${containerAppsEnvironmentName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: [logAnalyticsWorkspace, applicationInsights] // required due to optional flags that could change dependency
+  dependsOn: enableMonitoring
+    ? [logAnalyticsWorkspace, applicationInsights]
+    : [logAnalyticsWorkspace] // required due to optional flags that could change dependency
   params: {
     name: containerAppsEnvironmentName
     infrastructureResourceGroupName: '${resourceGroup().name}-ME-${containerAppsEnvironmentName}'
@@ -1055,7 +1084,7 @@ var backendContainerAppName = take('ca-backend-api-${resourcesName}', 32)
 module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: [applicationInsights]
+  dependsOn: enableMonitoring ? [applicationInsights] : []
   params: {
     name: backendContainerAppName
     location: solutionLocation
@@ -1190,7 +1219,7 @@ var processorContainerAppName = take('ca-processor-${resourcesName}', 32)
 module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: [applicationInsights]
+  dependsOn: enableMonitoring ? [applicationInsights] : []
   params: {
     name: processorContainerAppName
     location: solutionLocation
