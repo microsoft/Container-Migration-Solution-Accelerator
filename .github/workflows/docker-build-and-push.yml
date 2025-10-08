@@ -73,7 +73,7 @@ jobs:
         with:
           context: ./src/backend-api
           file: ./src/backend-api/Dockerfile
-          push: ${{ github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix' }}
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
@@ -83,7 +83,7 @@ jobs:
         with:
           context: ./src/processor
           file: ./src/processor/Dockerfile
-          push: ${{ github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix' }}
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
@@ -93,7 +93,7 @@ jobs:
         with:
           context: ./src/frontend
           file: ./src/frontend/Dockerfile
-          push: ${{ github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix' }}
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/frontend:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/frontend:${{ env.DATE_TAG }}
