@@ -128,10 +128,10 @@ class GeneratedFilesCollection(KernelBaseModel):
         This ensures the count is always accurate and prevents hardcoded values.
         """
         return (
-            len(self.analysis) +
-            len(self.design) +
-            len(self.yaml) +
-            len(self.documentation)
+            len(self.analysis)
+            + len(self.design)
+            + len(self.yaml)
+            + len(self.documentation)
         )
 
 

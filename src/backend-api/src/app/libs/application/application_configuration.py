@@ -39,15 +39,15 @@ class Configuration(_configuration_base, KernelBaseSettings):
     )
 
     cosmos_db_account_url: str | None = Field(default=None, env="COSMOS_DB_ACCOUNT_URL")
-    cosmos_db_database_name: str | None = Field(default=None, env="COSMOS_DB_DATABASE_NAME")
+    cosmos_db_database_name: str | None = Field(
+        default=None, env="COSMOS_DB_DATABASE_NAME"
+    )
 
     cosmos_db_process_container: str | None = Field(
         default=None, env="COSMOS_DB_PROCESS_CONTAINER"
     )
 
-    storage_account_name: str | None = Field(
-        default=None, env="STORAGE_ACCOUNT_NAME"
-    )
+    storage_account_name: str | None = Field(default=None, env="STORAGE_ACCOUNT_NAME")
     storage_account_blob_url: str | None = Field(
         default=None, env="STORAGE_ACCOUNT_BLOB_URL"
     )

@@ -62,7 +62,7 @@ def parse_agent_selection_safely(
     if valid_agents and clean_agent not in valid_agents:
         # Try fuzzy matching
         clean_agent = _find_closest_agent(clean_agent, valid_agents)
-    
+
     # Step 3.5: Final validation - ensure we never return invalid agent names
     if valid_agents and clean_agent not in valid_agents:
         logger.error(

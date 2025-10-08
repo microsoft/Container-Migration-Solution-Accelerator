@@ -1,0 +1,60 @@
+# Dependabot configuration for Container Migration Solution Accelerator
+# This file configures automated dependency updates for all package managers used in the project
+
+version: 2
+updates:
+  # Frontend Node.js dependencies (grouped)
+  - package-ecosystem: "npm"
+    directory: "/src/frontend"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "build"
+    target-branch: "dependabotchanges"
+    open-pull-requests-limit: 50
+    groups:
+      all-npm:
+        patterns:
+          - "*"
+
+  # Backend API Python dependencies (grouped)
+  - package-ecosystem: "pip"
+    directory: "/src/backend-api"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "build"
+    target-branch: "dependabotchanges"
+    open-pull-requests-limit: 50
+    groups:
+      all-pip:
+        patterns:
+          - "*"
+
+  # Processor Python dependencies (grouped)
+  - package-ecosystem: "pip"
+    directory: "/src/processor"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "build"
+    target-branch: "dependabotchanges"
+    open-pull-requests-limit: 50
+    groups:
+      all-pip:
+        patterns:
+          - "*"
+
+  # GitHub Actions dependencies (grouped)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "build"
+    target-branch: "dependabotchanges"
+    open-pull-requests-limit: 50
+    groups:
+      all-actions:
+        patterns:
+          - "*"

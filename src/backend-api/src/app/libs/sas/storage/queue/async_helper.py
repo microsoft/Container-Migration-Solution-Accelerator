@@ -247,9 +247,9 @@ class AsyncStorageQueueHelper:
                 "pop_receipt": message.pop_receipt,
                 "inserted_on": message.inserted_on if message.inserted_on else None,
                 "expires_on": message.expires_on if message.expires_on else None,
-                "next_visible_on": message.next_visible_on
-                if message.next_visible_on
-                else None,
+                "next_visible_on": (
+                    message.next_visible_on if message.next_visible_on else None
+                ),
             }
         except Exception as e:
             self.logger.error(f"Failed to send message to queue '{queue_name}': {e}")

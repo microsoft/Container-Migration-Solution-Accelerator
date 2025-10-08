@@ -31,6 +31,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.options("/upload")
 async def upload_file_options():
     """Handle CORS preflight for upload endpoint"""
@@ -42,6 +43,7 @@ async def upload_file_options():
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
         },
     )
+
 
 @router.post("/upload")
 async def upload_file(
@@ -65,7 +67,7 @@ async def upload_file(
 
         if not file.filename:
             raise HTTPException(status_code=400, detail="No filename provided")
-        
+
         async with app.app_context.create_scope() as scope:
             processRepository = scope.get_service(ProcessRepository)
             fileRepository = scope.get_service(FileRepository)
@@ -84,7 +86,9 @@ async def upload_file(
                     data=file_content,
                     overwrite=True,
                 )
-                logger.log_info(f"File {file_name} saved to Azure Blob Storage under process ID {process_id}.")
+                logger.log_info(
+                    f"File {file_name} saved to Azure Blob Storage under process ID {process_id}."
+                )
 
             file_record = File(
                 id=file_id,
@@ -96,14 +100,18 @@ async def upload_file(
             await fileRepository.add_async(file_record)
             logger.log_info(f"File {file_name} ({file_id}) record saved.")
 
-            processFileCount = await fileRepository.count_async({"process_id": process_id})
+            processFileCount = await fileRepository.count_async(
+                {"process_id": process_id}
+            )
 
             process_record.source_file_count = processFileCount
             if process_record.source_file_count > 0:
                 process_record.status = "ready_to_process"
 
             await processRepository.update_async(process_record)
-            logger.log_info(f"Process {process_id} source count updated to {process_record.source_file_count}.")
+            logger.log_info(
+                f"Process {process_id} source count updated to {process_record.source_file_count}."
+            )
 
             return FileUploadResult(
                 batch_id=process_record.id,
