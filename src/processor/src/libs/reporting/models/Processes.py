@@ -1,4 +1,4 @@
-from logging import getLogger
+from logging import *
 from datetime import UTC, datetime
 from typing import Any
 

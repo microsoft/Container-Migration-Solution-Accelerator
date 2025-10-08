@@ -618,11 +618,9 @@ class AsyncStorageBlobHelper:
                     "size": blob.size,
                     "last_modified": blob.last_modified,
                     "etag": blob.etag,
-                    "content_type": (
-                        getattr(blob.content_settings, "content_type", None)
-                        if blob.content_settings
-                        else None
-                    ),
+                    "content_type": getattr(blob.content_settings, "content_type", None)
+                    if blob.content_settings
+                    else None,
                     "blob_tier": getattr(blob, "blob_tier", None),
                     "blob_type": str(blob.blob_type) if blob.blob_type else None,
                 }
@@ -777,16 +775,12 @@ class AsyncStorageBlobHelper:
                 "size": properties.size,
                 "last_modified": properties.last_modified,
                 "etag": properties.etag,
-                "content_type": (
-                    properties.content_settings.content_type
-                    if properties.content_settings
-                    else None
-                ),
-                "content_encoding": (
-                    properties.content_settings.content_encoding
-                    if properties.content_settings
-                    else None
-                ),
+                "content_type": properties.content_settings.content_type
+                if properties.content_settings
+                else None,
+                "content_encoding": properties.content_settings.content_encoding
+                if properties.content_settings
+                else None,
                 "metadata": properties.metadata or {},
                 "blob_tier": properties.blob_tier,
                 "blob_type": str(properties.blob_type),

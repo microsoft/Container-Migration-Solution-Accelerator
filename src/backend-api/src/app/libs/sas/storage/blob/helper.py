@@ -621,11 +621,9 @@ class StorageBlobHelper:
                     "size": blob.size,
                     "last_modified": blob.last_modified,
                     "etag": blob.etag,
-                    "content_type": (
-                        blob.content_settings.content_type
-                        if blob.content_settings
-                        else None
-                    ),
+                    "content_type": blob.content_settings.content_type
+                    if blob.content_settings
+                    else None,
                     "blob_tier": blob.blob_tier,
                     "blob_type": blob.blob_type,
                 }
@@ -676,11 +674,9 @@ class StorageBlobHelper:
                             "size": item.size,
                             "last_modified": item.last_modified,
                             "etag": item.etag,
-                            "content_type": (
-                                item.content_settings.content_type
-                                if item.content_settings
-                                else None
-                            ),
+                            "content_type": item.content_settings.content_type
+                            if item.content_settings
+                            else None,
                             "blob_tier": item.blob_tier,
                             "blob_type": item.blob_type,
                         }
@@ -717,16 +713,12 @@ class StorageBlobHelper:
                 "size": properties.size,
                 "last_modified": properties.last_modified,
                 "etag": properties.etag,
-                "content_type": (
-                    properties.content_settings.content_type
-                    if properties.content_settings
-                    else None
-                ),
-                "content_encoding": (
-                    properties.content_settings.content_encoding
-                    if properties.content_settings
-                    else None
-                ),
+                "content_type": properties.content_settings.content_type
+                if properties.content_settings
+                else None,
+                "content_encoding": properties.content_settings.content_encoding
+                if properties.content_settings
+                else None,
                 "blob_tier": properties.blob_tier,
                 "blob_type": properties.blob_type,
                 "metadata": properties.metadata,
