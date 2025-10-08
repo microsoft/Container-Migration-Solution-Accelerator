@@ -1035,12 +1035,12 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     publicNetworkAccess: 'Enabled'
     zoneRedundant: enableRedundancy && enablePrivateNetworking
     //infrastructureSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetContainerAppsInfraResourceId : null
-    workloadProfiles: enablePrivateNetworking ? [
-      {
-        name: 'Consumption'
-        workloadProfileType: 'Consumption'
-      }
-    ] : []
+    // workloadProfiles: enablePrivateNetworking ? [
+    //   {
+    //     name: 'Consumption'
+    //     workloadProfileType: 'Consumption'
+    //   }
+    // ] : []
     managedIdentities: {
       userAssignedResourceIds: [
         appIdentity.outputs.resourceId
