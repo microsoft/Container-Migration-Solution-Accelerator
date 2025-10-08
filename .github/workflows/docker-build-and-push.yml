@@ -32,23 +32,19 @@ jobs:
           curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
           az --version  # Verify installation
 
+
       - name: Log in to Azure Container Registry
-        if: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix')) || 
-                 (github.event_name == 'workflow_dispatch' && (github.ref_name == 'dependabotchanges' || github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix')) }}
-        uses: azure/docker-login@v2 
+        if: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) || (github.event_name == 'workflow_dispatch' && (github.ref_name == 'dependabotchanges'||github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) }}
+        uses: azure/docker-login@v2
         with:
-          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ env.ACR_USERNAME }}
+          password: ${{ env.ACR_PASSWORD }}
       
       - name: Get registry
         id: registry
         run: |
-          if [ -z "${{ env.ACR_LOGIN_SERVER }}" ]; then
-            echo "ext_registry=local" >> $GITHUB_OUTPUT
-          else
-            echo "ext_registry=${{ env.ACR_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
-          fi
+          echo "ext_registry=${{ env.ACR_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
         
       - name: Set Docker image tags
         id: tag

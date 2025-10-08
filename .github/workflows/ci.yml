@@ -299,7 +299,7 @@ jobs:
             fi
           done
       - name: Send Notification on Failure
-        if: failure() || needs.deploy.result == 'failure' || needs.e2e-test.result == 'failure'
+        if: failure() || needs.deploy.result == 'failure' 
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           EMAIL_BODY=$(cat <<EOF
