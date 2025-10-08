@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class ProcessStartQueueMessage(BaseModel):
     process_id: str
     user_id: str
