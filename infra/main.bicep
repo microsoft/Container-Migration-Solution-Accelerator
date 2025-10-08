@@ -301,7 +301,6 @@ var privateDnsZones = [
   'privatelink.vaultcore.azure.net'
   'privatelink${environment().suffixes.sqlServerHostname}'
   'privatelink.search.windows.net'
-  'privatelink.azconfig.io'
 ]
 
 // DNS Zone Index Constants
@@ -317,7 +316,6 @@ var dnsZoneIndex = {
   keyVault: 8
   sqlServer: 9
   searchService: 10
-  appConfig: 11
 }
 
 // List of DNS zone indices that correspond to AI-related services.
@@ -1000,19 +998,6 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         value: storageAccount.outputs.name
       }
     ]
-        privateEndpoints: enablePrivateNetworking ? [
-      {
-        name: 'pep-appcs-${resourcesName}'
-        subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
-        privateDnsZoneGroup: {
-          privateDnsZoneGroupConfigs: [
-            {
-              privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.appConfig]!.outputs.resourceId
-            }
-          ]
-        }
-      }
-    ] : []
     roleAssignments: [
       {
         principalId: appIdentity.outputs.principalId
@@ -1027,20 +1012,16 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
 var containerAppsEnvironmentName = 'cae-${resourcesName}'
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.3' = {
   name: take('avm.res.app.managed-environment.${containerAppsEnvironmentName}', 64)
-  dependsOn: [logAnalyticsWorkspace, applicationInsights]
+  #disable-next-line no-unnecessary-dependson
+  dependsOn: [logAnalyticsWorkspace, applicationInsights] // required due to optional flags that could change dependency
   params: {
     name: containerAppsEnvironmentName
     infrastructureResourceGroupName: '${resourceGroup().name}-ME-${containerAppsEnvironmentName}'
     location: solutionLocation
-    publicNetworkAccess: 'Enabled'
     zoneRedundant: enableRedundancy && enablePrivateNetworking
-    //infrastructureSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetContainerAppsInfraResourceId : null
-    // workloadProfiles: enablePrivateNetworking ? [
-    //   {
-    //     name: 'Consumption'
-    //     workloadProfileType: 'Consumption'
-    //   }
-    // ] : []
+    publicNetworkAccess: 'Enabled' // public access required for frontend
+    // TODO - private networking:
+    //infrastructureSubnetResourceId: enablePrivateNetworking ? network.outputs.subnetWebResourceId : null
     managedIdentities: {
       userAssignedResourceIds: [
         appIdentity.outputs.resourceId
@@ -1050,10 +1031,20 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     appLogsConfiguration: enableMonitoring ? {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
+        customerId: logAnalyticsWorkspace!.outputs!.logAnalyticsWorkspaceId
         sharedKey: logAnalyticsWorkspace!.outputs!.primarySharedKey
       }
     } : {}
+    // TODO - private networking:
+    // workloadProfiles: enablePrivateNetworking
+    //   ? [
+    //       // NOTE: workload profiles are required for private networking
+    //       {
+    //         name: 'Consumption'
+    //         workloadProfileType: 'Consumption'
+    //       }
+    //     ]
+    //   : []
     tags: allTags
     enableTelemetry: enableTelemetry
   }
