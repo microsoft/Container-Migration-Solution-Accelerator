@@ -156,6 +156,8 @@ Using the Migration Solution Accelerator, the complete processing flow works as 
 3. **Queue Generation**: After successful inspection, the system generates processing jobs with unique identifiers and submits them to Azure Storage Queue
 4. **Migration Processor Activation**: The multi-agent migration processor (this solution) monitors the queue, picks up processing jobs, and begins intelligent analysis
 
+>  ⚠️ **Important Note on Processing**: This is a **synchronous system**. Users can upload either a single file or multiple files for processing, but only one migration batch runs at a time. Once a batch has started, users must wait for it to complete before the next upload begins. If additional files are uploaded while a migration is in progress, they will automatically queue and start only after the current batch finishes.
+
 ### **AI-Powered Migration Process**
 
 Once the migration processor receives a queue message, expert AI agents automatically:
