@@ -14,6 +14,8 @@ param solutionUniqueText string = substring(uniqueString(subscription().id, reso
 @description('Optional. Azure region for all services. Defaults to the resource group location.')
 param location string
 var solutionLocation = empty(location) ? resourceGroup().location : location
+@description('Optional. Location for all AI service resources. This location can be different from the resource group location.')
+param aiDeploymentLocation string?
 
 @allowed([
   'australiaeast'
@@ -860,15 +862,13 @@ var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
 
 // NOTE: Required version 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' not available in AVM
 
-
 module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
   params: {
     #disable-next-line BCP334
     baseName: take(resourcesName, 12)
     baseUniqueName: null
-    location: azureAiServiceLocation
-
+    location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
     aiFoundryConfiguration: {
       allowProjectManagement: true
       roleAssignments: [
@@ -888,6 +888,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
         }
       ]
+      // TODO - private networking
       networking: enablePrivateNetworking ? {
         // If you created a dedicated agent subnet use: network!.outputs.subnetAgentServiceResourceId
         agentServiceSubnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
@@ -896,7 +897,9 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
         openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
       } : null
     }
+    includeAssociatedResources: true
     privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
+    // TODO - private networking
     aiModelDeployments: [
       {
         name: aiModelDeploymentName
@@ -915,6 +918,61 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
     enableTelemetry: enableTelemetry
   }
 }
+
+// module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
+//   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
+//   params: {
+//     #disable-next-line BCP334
+//     baseName: take(resourcesName, 12)
+//     baseUniqueName: null
+//     location: azureAiServiceLocation
+    
+//     aiFoundryConfiguration: {
+//       allowProjectManagement: true
+//       roleAssignments: [
+//         {
+//           principalId: appIdentity.outputs.principalId
+//           principalType: 'ServicePrincipal'
+//           roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+//         }
+//         {
+//           principalId: appIdentity.outputs.principalId
+//           principalType: 'ServicePrincipal'
+//           roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+//         }
+//         {
+//           principalId: appIdentity.outputs.principalId
+//           principalType: 'ServicePrincipal'
+//           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+//         }
+//       ]
+//       networking: enablePrivateNetworking ? {
+//         // If you created a dedicated agent subnet use: network!.outputs.subnetAgentServiceResourceId
+//         agentServiceSubnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+//         aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+//         cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+//         openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+//       } : null
+//     }
+//     privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
+//     aiModelDeployments: [
+//       {
+//         name: aiModelDeploymentName
+//         model: {
+//           format: 'OpenAI'
+//           name: aiModelName
+//           version: aiModelVersion
+//         }
+//         sku: {
+//           name: aiDeploymentType
+//           capacity: aiModelCapacity
+//         }
+//       }
+//     ]
+//     tags: allTags
+//     enableTelemetry: enableTelemetry
+//   }
+// }
 
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${resourcesName}', 64)
@@ -1040,9 +1098,7 @@ var containerAppsEnvironmentName = 'cae-${resourcesName}'
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.3' = {
   name: take('avm.res.app.managed-environment.${containerAppsEnvironmentName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: enableMonitoring
-    ? [logAnalyticsWorkspace, applicationInsights]
-    : [logAnalyticsWorkspace] // required due to optional flags that could change dependency
+  dependsOn: [logAnalyticsWorkspace, applicationInsights] // required due to optional flags that could change dependency
   params: {
     name: containerAppsEnvironmentName
     infrastructureResourceGroupName: '${resourceGroup().name}-ME-${containerAppsEnvironmentName}'
@@ -1084,7 +1140,7 @@ var backendContainerAppName = take('ca-backend-api-${resourcesName}', 32)
 module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: enableMonitoring ? [applicationInsights] : []
+  dependsOn: [applicationInsights]
   params: {
     name: backendContainerAppName
     location: solutionLocation
@@ -1219,7 +1275,7 @@ var processorContainerAppName = take('ca-processor-${resourcesName}', 32)
 module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: enableMonitoring ? [applicationInsights] : []
+  dependsOn: [applicationInsights]
   params: {
     name: processorContainerAppName
     location: solutionLocation
