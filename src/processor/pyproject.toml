@@ -9,7 +9,7 @@ dependencies = [
     "art==6.5",
     "azure-ai-agents==1.2.0b3",
     "azure-ai-inference==1.0.0b9",
-    "azure-ai-projects==1.0.0b3",
+    "azure-ai-projects==1.0.0b12",
 
     "azure-appconfiguration==1.7.1",
     "azure-identity==1.24.0",
