@@ -81,7 +81,7 @@ jobs:
         with:
           context: ./src/backend-api
           file: ./src/backend-api/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix'||github.ref_name == 'psl-pinversions') }}
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
@@ -91,7 +91,7 @@ jobs:
         with:
           context: ./src/processor
           file: ./src/processor/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix'|| github.ref_name == 'psl-pinversions') }}
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
