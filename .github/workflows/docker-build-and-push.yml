@@ -2,7 +2,7 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [main, dev, demo, hotfix]
+    branches: [main, dev, demo, hotfix, psl-pinversions]
   pull_request:
     branches: [main, dev, demo, hotfix]
     types: [opened, ready_for_review, reopened, synchronize]
@@ -66,6 +66,8 @@ jobs:
             BASE_TAG="demo"
           elif [[ "$BRANCH" == "hotfix" ]]; then
             BASE_TAG="hotfix"
+          elif [[ "$BRANCH" == "psl-pinversions" ]]; then
+            BASE_TAG="version-pinning"
           else
             BASE_TAG="pullrequest-ignore"
           fi
