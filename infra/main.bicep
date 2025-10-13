@@ -58,8 +58,17 @@ param aiModelName string = 'o3'
 @description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
 param aiModelVersion string = '2025-04-16'
 
-@description('Optional. AI model deployment token capacity. Defaults to 500K tokens per minute.')
-param aiModelCapacity int = 500
+@description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
+param aiModelCapacity int = 1
+
+@description('Deploy AI model during initial provisioning. Set false to allow account creation to succeed when quota or model availability causes failures.')
+param deployAiModel bool = false
+
+@description('Optional fallback model name to use instead of primary when deployAiModel is true and primary model is not desired. Leave empty to use aiModelName.')
+param aiFallbackModelName string = ''
+
+@description('Optional fallback model version for aiFallbackModelName. Leave empty to reuse aiModelVersion.')
+param aiFallbackModelVersion string = ''
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -852,72 +861,16 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
 // }
 
 var aiModelDeploymentName = aiModelName
-var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
+// var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId) // (unused)
 
-var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
-  ? split(existingFoundryProjectResourceId, '/')[8]
-  : 'aif-${resourcesName}'
+// Computed name retained for potential future use (currently unused) – commented out to avoid lint error.
+// var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
+//   ? split(existingFoundryProjectResourceId, '/')[8]
+//   : 'aif-${resourcesName}'
 
 // AI Project resource id: /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>/projects/<project-name>
 
 // NOTE: Required version 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' not available in AVM
-
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
-  name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
-  params: {
-    #disable-next-line BCP334
-    baseName: take(resourcesName, 12)
-    baseUniqueName: null
-    location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
-    aiFoundryConfiguration: {
-      allowProjectManagement: true
-      roleAssignments: [
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        }
-      ]
-      // TODO - private networking
-      networking: enablePrivateNetworking ? {
-        // If you created a dedicated agent subnet use: network!.outputs.subnetAgentServiceResourceId
-        agentServiceSubnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
-        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-      } : null
-    }
-    includeAssociatedResources: true
-    privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
-    // TODO - private networking
-    aiModelDeployments: [
-      {
-        name: aiModelDeploymentName
-        model: {
-          format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
-        }
-        sku: {
-          name: aiDeploymentType
-          capacity: aiModelCapacity
-        }
-      }
-    ]
-    tags: allTags
-    enableTelemetry: enableTelemetry
-  }
-}
 
 // module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
 //   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
@@ -925,8 +878,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
 //     #disable-next-line BCP334
 //     baseName: take(resourcesName, 12)
 //     baseUniqueName: null
-//     location: azureAiServiceLocation
-    
+//     location: empty(aiDeploymentLocation) ? location : aiDeploymentLocation
 //     aiFoundryConfiguration: {
 //       allowProjectManagement: true
 //       roleAssignments: [
@@ -946,15 +898,15 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
 //           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
 //         }
 //       ]
-//       networking: enablePrivateNetworking ? {
-//         // If you created a dedicated agent subnet use: network!.outputs.subnetAgentServiceResourceId
-//         agentServiceSubnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
-//         aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-//         cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-//         openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-//       } : null
+//       // TODO - private networking
+//       // networking: {
+//       //   aiServicesPrivateDnsZoneId: ''
+//       //   openAiPrivateDnsZoneId: ''
+//       //   cognitiveServicesPrivateDnsZoneId: ''
+//       // }
 //     }
-//     privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
+//     // TODO - private networking
+//     //privateEndpointSubnetId:
 //     aiModelDeployments: [
 //       {
 //         name: aiModelDeploymentName
@@ -974,6 +926,62 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
 //   }
 // }
 
+module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
+  name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
+  params: {
+    #disable-next-line BCP334
+    baseName: take(resourcesName, 12)
+    baseUniqueName: null
+    location: azureAiServiceLocation
+    
+    aiFoundryConfiguration: {
+      allowProjectManagement: true
+      roleAssignments: [
+        {
+          principalId: appIdentity.outputs.principalId
+          principalType: 'ServicePrincipal'
+          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        }
+        {
+          principalId: appIdentity.outputs.principalId
+          principalType: 'ServicePrincipal'
+          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        }
+        {
+          principalId: appIdentity.outputs.principalId
+          principalType: 'ServicePrincipal'
+          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        }
+      ]
+      networking: enablePrivateNetworking ? {
+        // Use dedicated agent subnet with Microsoft.App/environments delegation for capability hosting
+        agentServiceSubnetResourceId: network!.outputs.subnetAgentServiceResourceId
+        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+      } : null
+    }
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
+    // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
+    aiModelDeployments: deployAiModel ? [
+      {
+        name: aiModelDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: empty(aiFallbackModelName) ? aiModelName : aiFallbackModelName
+          version: empty(aiFallbackModelName) ? aiModelVersion : (empty(aiFallbackModelVersion) ? aiModelVersion : aiFallbackModelVersion)
+        }
+        sku: {
+          name: aiDeploymentType
+          capacity: aiModelCapacity
+        }
+      }
+    ] : []
+    tags: allTags
+    enableTelemetry: enableTelemetry
+  }
+}
+
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${resourcesName}', 64)
   params: {
@@ -981,23 +989,25 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     name: 'appcs-${resourcesName}'
     disableLocalAuth: false // needed to allow setting app config key values from this module
     enablePurgeProtection: false
-    // TODO - private networking
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    // Only create private endpoints when private networking is enabled AND network module exists
     privateEndpoints: enablePrivateNetworking ? [
       {
-        name: 'pep-appcs-${resourcesName}'
-        customNetworkInterfaceName: 'nic-appcs-${resourcesName}'
-        subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+        name: 'pep-appconfig-private-endpoint-${resourcesName}'
         privateDnsZoneGroup: {
           privateDnsZoneGroupConfigs: [
             {
+              name: 'appconfig-dns-zone-group'
               privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.appConfig]!.outputs.resourceId
             }
           ]
         }
+        subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
       }
     ] : []
     tags: allTags
-    keyValues: [
+    // Only set key values when private networking is disabled to avoid access restrictions during deployment
+    keyValues: !enablePrivateNetworking ? [
       {
         name: 'APP_LOGGING_ENABLE'
         value: 'true'
@@ -1071,7 +1081,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         value: processCosmosContainerName
       }
       {
-        name: 'COSMOS_DB_PROCESS_LOG_CONTAINER' // TODO - is this being used?
+        name: 'COSMOS_DB_PROCESS_LOG_CONTAINER'
         value: agentTelemetryCosmosContainerName
       }
       {
@@ -1079,10 +1089,10 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         value: 'AzureOpenAI'
       }
       {
-        name: 'STORAGE_QUEUE_ACCOUNT' // TODO - is this being used?
+        name: 'STORAGE_QUEUE_ACCOUNT'
         value: storageAccount.outputs.name
       }
-    ]
+    ] : []
     roleAssignments: [
       {
         principalId: appIdentity.outputs.principalId
@@ -1093,6 +1103,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     enableTelemetry: enableTelemetry
   }
 }
+
 
 var containerAppsEnvironmentName = 'cae-${resourcesName}'
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.3' = {

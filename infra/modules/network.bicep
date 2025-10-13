@@ -70,7 +70,12 @@ module network 'network/main.bicep' = {
     location: location
     logAnalyticsWorkSpaceResourceId: logAnalyticsWorkSpaceResourceId
     tags: tags
-    addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
+    // Expanded VNet address space to include a 192.168.0.0/20 block so that subnets needing 172.x or 192.x ranges (required by some AI/AML network injections) are valid.
+    // NOTE: Cognitive Services / AI Foundry (AML RP virtual workspace) rejected the previous 10.x based private endpoint subnet with error:
+    //   "Provided subnet must be of the proper address space. Please provide a subnet which has address space in the range of 172 or 192."
+    // Adding a secondary address space avoids re-addressing existing 10.x subnets.
+    // Updated to /20 to accommodate both 'peps' (/23) and 'agents' (/23) subnets within 192.168.0.0/20 range
+    addressPrefixes: ['10.0.0.0/20', '192.168.0.0/20'] // existing workloads + dedicated AI/private endpoints + agent services
     subnets: [
       // Only one delegation per subnet is supported by the AVM module as of June 2025.
       // For subnets that do not require delegation, leave the value empty.
@@ -125,12 +130,54 @@ module network 'network/main.bicep' = {
       }
       {
         name: 'peps'
-        addressPrefixes: ['10.0.2.0/23'] // /23 (10.0.2.0 - 10.0.3.255), 512 addresses
+        // Moved to 192.168.0.0/22 to satisfy AML / Cognitive Services requirement for 172.x or 192.x address space for the virtual workspace / network injection.
+        // /22 (192.168.0.0 - 192.168.3.255) 1024 addresses - split into two /23 subnets
+        addressPrefixes: ['192.168.0.0/23']
         privateEndpointNetworkPolicies: 'Disabled'
         privateLinkServiceNetworkPolicies: 'Disabled'
         networkSecurityGroup: {
           name: 'nsg-peps'
           securityRules: []
+        }
+      }
+      {
+        name: 'agents'
+        // Dedicated subnet for AI Foundry agent services with required Microsoft.App/environment delegation
+        // /23 (192.168.2.0 - 192.168.3.255) 512 addresses  
+        addressPrefixes: ['192.168.2.0/23']
+        privateEndpointNetworkPolicies: 'Disabled'
+        privateLinkServiceNetworkPolicies: 'Disabled'
+        delegation: 'Microsoft.App/environments'
+        networkSecurityGroup: {
+          name: 'nsg-agents'
+          securityRules: [
+            {
+              name: 'AllowAzureLoadBalancer'
+              properties: {
+                access: 'Allow'
+                direction: 'Inbound'
+                priority: 100
+                protocol: '*'
+                sourcePortRange: '*'
+                destinationPortRange: '*'
+                sourceAddressPrefix: 'AzureLoadBalancer'
+                destinationAddressPrefix: '192.168.2.0/23'
+              }
+            }
+            {
+              name: 'AllowIntraSubnetTraffic'
+              properties: {
+                access: 'Allow'
+                direction: 'Inbound'
+                priority: 200
+                protocol: '*'
+                sourcePortRange: '*'
+                destinationPortRange: '*'
+                sourceAddressPrefixes: ['192.168.2.0/23']
+                destinationAddressPrefixes: ['192.168.2.0/23']
+              }
+            }
+          ]
         }
       }
     ]
@@ -243,6 +290,9 @@ output subnetWebResourceId string = first(filter(network.outputs.subnets, s => s
 
 @description('Resource ID of the "peps" subnet for Private Endpoints.')
 output subnetPrivateEndpointsResourceId string = first(filter(network.outputs.subnets, s => s.name == 'peps')).?resourceId ?? ''
+
+@description('Resource ID of the "agents" subnet for AI Foundry agent services.')
+output subnetAgentServiceResourceId string = first(filter(network.outputs.subnets, s => s.name == 'agents')).?resourceId ?? ''
 
 @description('Resource ID of the Bastion Host.')
 output bastionResourceId string = network.outputs.bastionHostId
