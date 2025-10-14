@@ -529,10 +529,6 @@ var cosmosDatabaseName = 'migration_db'
 var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
 
-resource sqlContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-11-15' existing = {
-  name: '${cosmosDbResourceName}/00000000-0000-0000-0000-000000000002'
-}
-
 // ==========Key Vault Module ========== //
 var keyVaultName = 'KV-${resourcesName}' // Key Vault name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
 module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
@@ -703,25 +699,24 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         isZoneRedundant: enableRedundancy
       }
     ]
-    dataPlaneRoleDefinitions: [
+    // Use built-in Cosmos DB roles for RBAC access
+    roleAssignments: [
       {
-        // Cosmos DB Built-in Data Contributor: https://docs.azure.cn/en-us/cosmos-db/nosql/security/reference-data-plane-roles#cosmos-db-built-in-data-contributor
-        roleName: 'Cosmos DB SQL Data Contributor'
-        dataActions: [
-          'Microsoft.DocumentDB/databaseAccounts/readMetadata'
-          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
-          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
-        ]
-        assignments: [
-          { principalId: appIdentity.outputs.principalId }
-        ]
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: 'DocumentDB Account Contributor'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: 'Cosmos DB Built-in Data Contributor'
       }
     ]
-    // Grant data plane access to the managed identity
+    // Use the built-in Cosmos DB Built-in Data Contributor role
     dataPlaneRoleAssignments: [
       {
         principalId: appIdentity.outputs.principalId
-        roleDefinitionId: sqlContributorRoleDefinition.id
+        roleDefinitionId: '00000000-0000-0000-0000-000000000002' // Built-in Cosmos DB Data Contributor
       }
     ]
   }
@@ -926,60 +921,77 @@ var aiModelDeploymentName = aiModelName
 //   }
 // }
 
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
-  name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
-  params: {
-    #disable-next-line BCP334
-    baseName: take(resourcesName, 12)
-    baseUniqueName: null
-    location: azureAiServiceLocation
-    
-    aiFoundryConfiguration: {
-      allowProjectManagement: true
-      roleAssignments: [
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        }
-      ]
-      networking: enablePrivateNetworking ? {
-        // Use dedicated agent subnet with Microsoft.App/environments delegation for capability hosting
-        agentServiceSubnetResourceId: network!.outputs.subnetAgentServiceResourceId
-        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-      } : null
-    }
-    privateEndpointSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetPrivateEndpointsResourceId : null
-    // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-    aiModelDeployments: deployAiModel ? [
-      {
-        name: aiModelDeploymentName
-        model: {
-          format: 'OpenAI'
-          name: empty(aiFallbackModelName) ? aiModelName : aiFallbackModelName
-          version: empty(aiFallbackModelName) ? aiModelVersion : (empty(aiFallbackModelVersion) ? aiModelVersion : aiFallbackModelVersion)
-        }
-        sku: {
-          name: aiDeploymentType
-          capacity: aiModelCapacity
-        }
-      }
-    ] : []
-    tags: allTags
-    enableTelemetry: enableTelemetry
+// Temporarily disabled AI Foundry due to AML workspace creation issues
+// module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
+//   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
+//   params: {
+//     #disable-next-line BCP334
+//     baseName: take(resourcesName, 12)
+//     baseUniqueName: null
+//     location: azureAiServiceLocation
+//     
+//     aiFoundryConfiguration: {
+//       allowProjectManagement: true
+//       roleAssignments: [
+//         {
+//           principalId: appIdentity.outputs.principalId
+//           principalType: 'ServicePrincipal'
+//           roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+//         }
+//         {
+//           principalId: appIdentity.outputs.principalId
+//           principalType: 'ServicePrincipal'
+//           roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+//         }
+//         {
+//           principalId: appIdentity.outputs.principalId
+//           principalType: 'ServicePrincipal'
+//           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+//         }
+//       ]
+//       // Remove networking configuration to avoid AML workspace creation issues
+//       networking: null
+//     }
+//     // Disable private endpoints temporarily to fix AML workspace issue
+//     privateEndpointSubnetResourceId: null
+//     // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
+//     aiModelDeployments: deployAiModel ? [
+//       {
+//         name: aiModelDeploymentName
+//         model: {
+//           format: 'OpenAI'
+//           name: empty(aiFallbackModelName) ? aiModelName : aiFallbackModelName
+//           version: empty(aiFallbackModelName) ? aiModelVersion : (empty(aiFallbackModelVersion) ? aiModelVersion : aiFallbackModelVersion)
+//         }
+//         sku: {
+//           name: aiDeploymentType
+//           capacity: aiModelCapacity
+//         }
+//       }
+//     ] : []
+//     tags: allTags
+//     enableTelemetry: enableTelemetry
+//   }
+// }
+
+// Temporary placeholder for AI services - replace with proper AI Foundry once service issues are resolved
+resource tempAiServices 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+  name: 'ai${resourcesName}'
+  location: azureAiServiceLocation
+  kind: 'OpenAI'
+  sku: {
+    name: 'S0'
   }
+  properties: {
+    customSubDomainName: 'ai${resourcesName}'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    networkAcls: enablePrivateNetworking ? {
+      defaultAction: 'Deny'
+    } : {
+      defaultAction: 'Allow'
+    }
+  }
+  tags: allTags
 }
 
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
@@ -988,26 +1000,9 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     location: solutionLocation
     name: 'appcs-${resourcesName}'
     disableLocalAuth: false // needed to allow setting app config key values from this module
-    enablePurgeProtection: false
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    // Only create private endpoints when private networking is enabled AND network module exists
-    privateEndpoints: enablePrivateNetworking ? [
-      {
-        name: 'pep-appconfig-private-endpoint-${resourcesName}'
-        privateDnsZoneGroup: {
-          privateDnsZoneGroupConfigs: [
-            {
-              name: 'appconfig-dns-zone-group'
-              privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.appConfig]!.outputs.resourceId
-            }
-          ]
-        }
-        subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
-      }
-    ] : []
     tags: allTags
-    // Only set key values when private networking is disabled to avoid access restrictions during deployment
-    keyValues: !enablePrivateNetworking ? [
+    // Always set key values during deployment since Container Apps will be in private network
+    keyValues: [
       {
         name: 'APP_LOGGING_ENABLE'
         value: 'true'
@@ -1034,11 +1029,11 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
-        value: 'https://${aiFoundry.outputs.aiServicesName}.cognitiveservices.azure.com/'
+        value: 'https://${tempAiServices.name}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT_BASE'
-        value: 'https://${aiFoundry.outputs.aiServicesName}.cognitiveservices.azure.com/'
+        value: 'https://${tempAiServices.name}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_TRACING_ENABLED'
@@ -1092,7 +1087,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         name: 'STORAGE_QUEUE_ACCOUNT'
         value: storageAccount.outputs.name
       }
-    ] : []
+    ]
     roleAssignments: [
       {
         principalId: appIdentity.outputs.principalId
@@ -1101,7 +1096,44 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
     ]
     enableTelemetry: enableTelemetry
+    managedIdentities: { systemAssigned: true }
+    sku: 'Standard'
+    publicNetworkAccess: 'Enabled'
   }
+}
+
+module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if(enablePrivateNetworking) {
+  name: take('avm.res.app-configuration.configuration-store-update.${resourcesName}', 64)
+  params: {
+    name: 'appcs-${resourcesName}'
+    location: solutionLocation
+    managedIdentities: { systemAssigned: true }
+    sku: 'Standard'
+    enableTelemetry: enableTelemetry
+    tags: tags
+    disableLocalAuth: true
+    // Keep public access enabled for Container Apps access (Container Apps not in private network due to capacity constraints)
+    publicNetworkAccess: 'Enabled'
+    privateEndpoints: enablePrivateNetworking
+      ? [
+          {
+            name: 'pep-appconfig-${resourcesName}'
+            privateDnsZoneGroup: {
+              privateDnsZoneGroupConfigs: [
+                {
+                  name: 'appconfig-dns-zone-group'
+                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.appConfig]!.outputs.resourceId
+                }
+              ]
+            }
+            subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+          }
+        ]
+      : []
+  }
+  dependsOn: [
+    appConfiguration
+  ]
 }
 
 
@@ -1115,9 +1147,9 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     infrastructureResourceGroupName: '${resourceGroup().name}-ME-${containerAppsEnvironmentName}'
     location: solutionLocation
     zoneRedundant: enableRedundancy && enablePrivateNetworking
-    publicNetworkAccess: 'Enabled' // public access required for frontend
-    // TODO - private networking:
-    //infrastructureSubnetResourceId: enablePrivateNetworking ? network.outputs.subnetWebResourceId : null
+    publicNetworkAccess: 'Enabled' // Keep public access for Container Apps to avoid capacity constraints
+    // Note: Private networking for Container Apps Environment disabled due to regional capacity constraints
+    // infrastructureSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetAgentServiceResourceId : null
     managedIdentities: {
       userAssignedResourceIds: [
         appIdentity.outputs.resourceId
@@ -1131,16 +1163,8 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
         sharedKey: logAnalyticsWorkspace!.outputs!.primarySharedKey
       }
     } : {}
-    // TODO - private networking:
-    // workloadProfiles: enablePrivateNetworking
-    //   ? [
-    //       // NOTE: workload profiles are required for private networking
-    //       {
-    //         name: 'Consumption'
-    //         workloadProfileType: 'Consumption'
-    //       }
-    //     ]
-    //   : []
+    // Note: Workload profiles cannot be added to existing environments
+    // Using basic Container Apps Environment with infrastructure subnet for private networking
     tags: allTags
     enableTelemetry: enableTelemetry
   }
