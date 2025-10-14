@@ -66,7 +66,6 @@ jobs:
             BASE_TAG="demo"
           elif [[ "$BRANCH" == "hotfix" ]]; then
             BASE_TAG="hotfix"
-
           else
             BASE_TAG="pullrequest-ignore"
           fi
