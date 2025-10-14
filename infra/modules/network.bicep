@@ -25,14 +25,12 @@ param vmAdminPassword string
 @description('Required. VM size for the Jumpbox VM.')
 param vmSize string
 
-
 // VM Size Notes:
 // 1 B-series VMs (like Standard_B2ms) do not support accelerated networking.
 // 2 Pick a VM size that does support accelerated networking (the usual jump-box candidates):
 //     Standard_DS2_v2 (2 vCPU, 7 GiB RAM, Premium SSD) // The most broadly available (it’s a legacy SKU supported in virtually every region).
 //     Standard_D2s_v3 (2 vCPU, 8 GiB RAM, Premium SSD) //  next most common
 //     Standard_D2s_v4 (2 vCPU, 8 GiB RAM, Premium SSD)  // Newest, so fewer regions availabl
-
 
 // Subnet Classless Inter-Doman Routing (CIDR)  Sizing Reference Table (Best Practices)
 // | CIDR      | # of Addresses | # of /24s | Notes                                 |
@@ -75,7 +73,7 @@ module network 'network/main.bicep' = {
     //   "Provided subnet must be of the proper address space. Please provide a subnet which has address space in the range of 172 or 192."
     // Adding a secondary address space avoids re-addressing existing 10.x subnets.
     // Updated to /20 to accommodate both 'peps' (/23) and 'agents' (/23) subnets within 192.168.0.0/20 range
-    addressPrefixes: ['10.0.0.0/20', '192.168.0.0/20'] // existing workloads + dedicated AI/private endpoints + agent services
+    addressPrefixes: ['10.0.0.0/20'] // existing workloads + dedicated AI/private endpoints + agent services
     subnets: [
       // Only one delegation per subnet is supported by the AVM module as of June 2025.
       // For subnets that do not require delegation, leave the value empty.
@@ -132,7 +130,7 @@ module network 'network/main.bicep' = {
         name: 'peps'
         // Moved to 192.168.0.0/22 to satisfy AML / Cognitive Services requirement for 172.x or 192.x address space for the virtual workspace / network injection.
         // /22 (192.168.0.0 - 192.168.3.255) 1024 addresses - split into two /23 subnets
-        addressPrefixes: ['192.168.0.0/23']
+        addressPrefixes: ['10.0.5.0/24']
         privateEndpointNetworkPolicies: 'Disabled'
         privateLinkServiceNetworkPolicies: 'Disabled'
         networkSecurityGroup: {
@@ -141,40 +139,77 @@ module network 'network/main.bicep' = {
         }
       }
       {
-        name: 'agents'
-        // Dedicated subnet for AI Foundry agent services with required Microsoft.App/environment delegation
-        // /23 (192.168.2.0 - 192.168.3.255) 512 addresses  
-        addressPrefixes: ['192.168.2.0/23']
-        privateEndpointNetworkPolicies: 'Disabled'
-        privateLinkServiceNetworkPolicies: 'Disabled'
+        name: 'containers'
+        addressPrefixes: ['10.0.2.0/24'] // /24 (10.0.2.0 - 10.0.2.255), 256 addresses
         delegation: 'Microsoft.App/environments'
         networkSecurityGroup: {
-          name: 'nsg-agents'
+          name: 'nsg-containers'
           securityRules: [
+            //Inbound Rules
             {
-              name: 'AllowAzureLoadBalancer'
+              name: 'AllowHttpsInbound'
               properties: {
                 access: 'Allow'
                 direction: 'Inbound'
                 priority: 100
-                protocol: '*'
+                protocol: 'Tcp'
+                sourceAddressPrefix: 'Internet'
                 sourcePortRange: '*'
-                destinationPortRange: '*'
-                sourceAddressPrefix: 'AzureLoadBalancer'
-                destinationAddressPrefix: '192.168.2.0/23'
+                destinationPortRanges: ['443', '80']
+                destinationAddressPrefixes: ['10.0.2.0/24']
               }
             }
             {
-              name: 'AllowIntraSubnetTraffic'
+              name: 'AllowAzureLoadBalancerInbound'
               properties: {
                 access: 'Allow'
                 direction: 'Inbound'
-                priority: 200
+                priority: 102
+                protocol: '*'
+                sourceAddressPrefix: 'AzureLoadBalancer'
+                sourcePortRange: '*'
+                destinationPortRanges: ['30000-32767']
+                destinationAddressPrefixes: ['10.0.2.0/24']
+              }
+            }
+            {
+              name: 'AllowSideCarsInbound'
+              properties: {
+                access: 'Allow'
+                direction: 'Inbound'
+                priority: 103
                 protocol: '*'
                 sourcePortRange: '*'
+                sourceAddressPrefixes: ['10.0.2.0/24']
                 destinationPortRange: '*'
-                sourceAddressPrefixes: ['192.168.2.0/23']
-                destinationAddressPrefixes: ['192.168.2.0/23']
+                destinationAddressPrefix: '*'
+              }
+            }
+            //Outbound Rules
+            {
+              name: 'AllowOutboundToAzureServices'
+              properties: {
+                access: 'Allow'
+                direction: 'Outbound'
+                priority: 200
+                protocol: '*'
+                sourceAddressPrefixes: ['10.0.2.0/24']
+                sourcePortRange: '*'
+                destinationPortRange: '*'
+                destinationAddressPrefix: '*'
+              }
+            }
+            {
+              name: 'deny-hop-outbound'
+              properties: {
+                access: 'Deny'
+                direction: 'Outbound'
+                priority: 100
+                protocol: '*'
+                sourcePortRange: '*'
+                destinationPortRanges: ['3389', '22']
+                sourceAddressPrefix: 'VirtualNetwork'
+                destinationAddressPrefix: '*'
               }
             }
           ]
@@ -291,8 +326,8 @@ output subnetWebResourceId string = first(filter(network.outputs.subnets, s => s
 @description('Resource ID of the "peps" subnet for Private Endpoints.')
 output subnetPrivateEndpointsResourceId string = first(filter(network.outputs.subnets, s => s.name == 'peps')).?resourceId ?? ''
 
-@description('Resource ID of the "agents" subnet for AI Foundry agent services.')
-output subnetAgentServiceResourceId string = first(filter(network.outputs.subnets, s => s.name == 'agents')).?resourceId ?? ''
+@description('Resource ID of the "containers" subnet for AI Foundry container services.')
+output subnetContainerServiceResourceId string = first(filter(network.outputs.subnets, s => s.name == 'containers')).?resourceId ?? ''
 
 @description('Resource ID of the Bastion Host.')
 output bastionResourceId string = network.outputs.bastionHostId
