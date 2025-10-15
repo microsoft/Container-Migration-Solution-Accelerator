@@ -194,22 +194,6 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
   }
 }
 
-// ========== Network Module ========== //
-module network 'modules/network.bicep' = if (enablePrivateNetworking) {
-  name: take('network-${resourcesName}-deployment', 64)
-  params: {
-    resourcesName: resourcesName
-    // logAnalyticsWorkSpaceResourceId: logAnalyticsWorkspace.outputs.resourceId
-    logAnalyticsWorkSpaceResourceId: logAnalyticsWorkspaceResourceId
-    vmAdminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
-    vmAdminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
-    vmSize: vmSize ??  'Standard_DS2_v2' // Default VM size 
-    location: solutionLocation
-    tags: allTags
-    enableTelemetry: enableTelemetry
-  }
-}
-
 // ========== Log Analytics Workspace ========== //
 // WAF best practices for Log Analytics: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-log-analytics
 // WAF PSRules for Log Analytics: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#azure-monitor-logs
@@ -296,6 +280,108 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
   }
 }
 
+// ========== Virtual Network ========== //
+module virtualNetwork './modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
+  name: take('module.virtual-network.${resourcesName}', 64)
+  params: {
+    name: 'vnet-${resourcesName}'
+    addressPrefixes: ['10.0.0.0/20']
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceId: enableMonitoring ? logAnalyticsWorkspace!.outputs.resourceId : ''
+    resourceSuffix: resourcesName
+    enableTelemetry: enableTelemetry
+  }
+}
+
+// Azure Bastion Host
+var bastionHostName = 'bas-${resourcesName}' // Bastion host name must be between 3 and 15 characters in length and use numbers and lower-case letters only.
+module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePrivateNetworking) {
+  name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
+  params: {
+    name: bastionHostName
+    skuName: 'Standard'
+    location: location
+    virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
+    diagnosticSettings: enableMonitoring ? [
+      {
+        name: 'bastionDiagnostics'
+        workspaceResourceId: logAnalyticsWorkspace!.outputs.resourceId
+        logCategoriesAndGroups: [
+          {
+            categoryGroup: 'allLogs'
+            enabled: true
+          }
+        ]
+      }
+    ] : null
+    tags: tags
+    enableTelemetry: enableTelemetry
+    publicIPAddressObject: {
+      name: 'pip-${bastionHostName}'
+      zones: []
+    }
+  }
+}
+// Jumpbox Virtual Machine
+var jumpboxVmName = take('vm-jumpbox-${resourcesName}', 15)
+module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enablePrivateNetworking) {
+  name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
+  params: {
+    name: take(jumpboxVmName, 15) // Shorten VM name to 15 characters to avoid Azure limits
+    vmSize: vmSize ?? 'Standard_DS2_v2'
+    location: location
+    adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
+    adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
+    tags: tags
+    zone: 0
+    imageReference: {
+      offer: 'WindowsServer'
+      publisher: 'MicrosoftWindowsServer'
+      sku: '2019-datacenter'
+      version: 'latest'
+    }
+    osType: 'Windows'
+    osDisk: {
+      name: 'osdisk-${jumpboxVmName}'
+      managedDisk: {
+        storageAccountType: 'Standard_LRS'
+      }
+    }
+    encryptionAtHost: false // Some Azure subscriptions do not support encryption at host
+    nicConfigurations: [
+      {
+        name: 'nic-${jumpboxVmName}'
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: virtualNetwork!.outputs.jumpboxSubnetResourceId
+          }
+        ]
+        diagnosticSettings: enableMonitoring ? [
+          {
+            name: 'jumpboxDiagnostics'
+            workspaceResourceId: logAnalyticsWorkspace!.outputs.resourceId
+            logCategoriesAndGroups: [
+              {
+                categoryGroup: 'allLogs'
+                enabled: true
+              }
+            ]
+            metricCategories: [
+              {
+                category: 'AllMetrics'
+                enabled: true
+              }
+            ]
+          }
+        ] : null
+      }
+    ]
+    enableTelemetry: enableTelemetry
+  }
+}
+
 var processBlobContainerName = 'processes'
 var processQueueName = 'processes-queue'
 
@@ -353,8 +439,8 @@ module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
       enableTelemetry: enableTelemetry
       virtualNetworkLinks: [
         {
-          name: take('vnetlink-${network!.outputs.vnetName}-${split(zone, '.')[1]}', 80)
-          virtualNetworkResourceId: network!.outputs.vnetResourceId
+          name: take('vnetlink-${virtualNetwork!.outputs.name}-${split(zone, '.')[1]}', 80)
+          virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
         }
       ]
     }
@@ -407,7 +493,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
                 }
               ]
             }
-            subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
             service: 'blob'
           }
           {
@@ -420,7 +506,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
                 }
               ]
             }
-            subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
             service: 'queue'
           }
         ]
@@ -562,7 +648,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
               ]
             }
             service: 'vault'
-            subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
@@ -616,7 +702,6 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
     location: cosmosLocation
     tags: tags
     enableTelemetry: enableTelemetry
-
     sqlDatabases: [
       {
         name: cosmosDatabaseName
@@ -648,18 +733,18 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         ]
       }
     ]
-
+ 
     diagnosticSettings: enableMonitoring ? [
       {
         workspaceResourceId: logAnalyticsWorkspaceResourceId
       }
     ] : null
-
+ 
     networkRestrictions: {
       networkAclBypass: 'None'
       publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     }
-
+ 
     privateEndpoints: enablePrivateNetworking
       ? [
           {
@@ -671,11 +756,11 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
               ]
             }
             service: 'Sql'
-            subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
-
+ 
     zoneRedundant: enableRedundancy ? true : false
     capabilitiesToAdd: enableRedundancy ? null : [
       'EnableServerless'
@@ -706,17 +791,21 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         principalType: 'ServicePrincipal'
         roleDefinitionIdOrName: 'DocumentDB Account Contributor'
       }
-      {
-        principalId: appIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'Cosmos DB Built-in Data Contributor'
-      }
     ]
-    // Use the built-in Cosmos DB Built-in Data Contributor role
-    dataPlaneRoleAssignments: [
+    // Create custom data plane role definition and assignment
+    dataPlaneRoleDefinitions: [
       {
-        principalId: appIdentity.outputs.principalId
-        roleDefinitionId: '00000000-0000-0000-0000-000000000002' // Built-in Cosmos DB Data Contributor
+        roleName: 'CosmosDB Data Contributor Custom'
+        dataActions: [
+          'Microsoft.DocumentDB/databaseAccounts/readMetadata'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
+        ]
+        assignments: [
+          { principalId: appIdentity.outputs.principalId }
+        ]
       }
     ]
   }
@@ -922,77 +1011,77 @@ var aiModelDeploymentName = aiModelName
 // }
 
 // Temporarily disabled AI Foundry due to AML workspace creation issues
-// module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
-//   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
-//   params: {
-//     #disable-next-line BCP334
-//     baseName: take(resourcesName, 12)
-//     baseUniqueName: null
-//     location: azureAiServiceLocation
-//     
-//     aiFoundryConfiguration: {
-//       allowProjectManagement: true
-//       roleAssignments: [
-//         {
-//           principalId: appIdentity.outputs.principalId
-//           principalType: 'ServicePrincipal'
-//           roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-//         }
-//         {
-//           principalId: appIdentity.outputs.principalId
-//           principalType: 'ServicePrincipal'
-//           roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-//         }
-//         {
-//           principalId: appIdentity.outputs.principalId
-//           principalType: 'ServicePrincipal'
-//           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-//         }
-//       ]
-//       // Remove networking configuration to avoid AML workspace creation issues
-//       networking: null
-//     }
-//     // Disable private endpoints temporarily to fix AML workspace issue
-//     privateEndpointSubnetResourceId: null
-//     // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-//     aiModelDeployments: deployAiModel ? [
-//       {
-//         name: aiModelDeploymentName
-//         model: {
-//           format: 'OpenAI'
-//           name: empty(aiFallbackModelName) ? aiModelName : aiFallbackModelName
-//           version: empty(aiFallbackModelName) ? aiModelVersion : (empty(aiFallbackModelVersion) ? aiModelVersion : aiFallbackModelVersion)
-//         }
-//         sku: {
-//           name: aiDeploymentType
-//           capacity: aiModelCapacity
-//         }
-//       }
-//     ] : []
-//     tags: allTags
-//     enableTelemetry: enableTelemetry
-//   }
-// }
+module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
+  name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
+  params: {
+    #disable-next-line BCP334
+    baseName: take(resourcesName, 12)
+    baseUniqueName: null
+    location: azureAiServiceLocation
+    
+    aiFoundryConfiguration: {
+      allowProjectManagement: true
+      roleAssignments: [
+        {
+          principalId: appIdentity.outputs.principalId
+          principalType: 'ServicePrincipal'
+          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        }
+        {
+          principalId: appIdentity.outputs.principalId
+          principalType: 'ServicePrincipal'
+          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        }
+        {
+          principalId: appIdentity.outputs.principalId
+          principalType: 'ServicePrincipal'
+          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        }
+      ]
+      // Remove networking configuration to avoid AML workspace creation issues
+      networking: null
+    }
+    // Disable private endpoints temporarily to fix AML workspace issue
+    privateEndpointSubnetResourceId: enablePrivateNetworking? virtualNetwork!.outputs.backendSubnetResourceId : null
+    // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
+    aiModelDeployments: deployAiModel ? [
+      {
+        name: aiModelDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: empty(aiFallbackModelName) ? aiModelName : aiFallbackModelName
+          version: empty(aiFallbackModelName) ? aiModelVersion : (empty(aiFallbackModelVersion) ? aiModelVersion : aiFallbackModelVersion)
+        }
+        sku: {
+          name: aiDeploymentType
+          capacity: aiModelCapacity
+        }
+      }
+    ] : []
+    tags: allTags
+    enableTelemetry: enableTelemetry
+  }
+}
 
 // Temporary placeholder for AI services - replace with proper AI Foundry once service issues are resolved
-resource tempAiServices 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
-  name: 'ai${resourcesName}'
-  location: azureAiServiceLocation
-  kind: 'OpenAI'
-  sku: {
-    name: 'S0'
-  }
-  properties: {
-    customSubDomainName: 'ai${resourcesName}'
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    networkAcls: enablePrivateNetworking ? {
-      defaultAction: 'Deny'
-    } : {
-      defaultAction: 'Allow'
-    }
-  }
-  tags: allTags
-}
+// resource tempAiServices 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+//   name: 'ai${resourcesName}'
+//   location: azureAiServiceLocation
+//   kind: 'OpenAI'
+//   sku: {
+//     name: 'S0'
+//   }
+//   properties: {
+//     customSubDomainName: 'ai${resourcesName}'
+//     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+//     networkAcls: enablePrivateNetworking ? {
+//       defaultAction: 'Deny'
+//     } : {
+//       defaultAction: 'Allow'
+//     }
+//   }
+//   tags: allTags
+// }
 
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${resourcesName}', 64)
@@ -1029,11 +1118,11 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
-        value: 'https://${tempAiServices.name}.cognitiveservices.azure.com/'
+        value: 'https://${aiFoundry.name}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT_BASE'
-        value: 'https://${tempAiServices.name}.cognitiveservices.azure.com/'
+        value: 'https://${aiFoundry.name}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_TRACING_ENABLED'
@@ -1126,7 +1215,7 @@ module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-st
                 }
               ]
             }
-            subnetResourceId: network!.outputs.subnetPrivateEndpointsResourceId
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
@@ -1136,37 +1225,37 @@ module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-st
   ]
 }
 
-
-var containerAppsEnvironmentName = 'cae-${resourcesName}'
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.3' = {
-  name: take('avm.res.app.managed-environment.${containerAppsEnvironmentName}', 64)
-  #disable-next-line no-unnecessary-dependson
-  dependsOn: [logAnalyticsWorkspace, applicationInsights] // required due to optional flags that could change dependency
+// ========== Container App Environment ========== //
+module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.2' = {
+  name: take('avm.res.app.managed-environment.${resourcesName}', 64)
   params: {
-    name: containerAppsEnvironmentName
-    infrastructureResourceGroupName: '${resourceGroup().name}-ME-${containerAppsEnvironmentName}'
-    location: solutionLocation
-    zoneRedundant: enableRedundancy && enablePrivateNetworking
-    publicNetworkAccess: 'Enabled' // Keep public access for Container Apps to avoid capacity constraints
-    // Note: Private networking for Container Apps Environment disabled due to regional capacity constraints
-    // infrastructureSubnetResourceId: enablePrivateNetworking ? network!.outputs.subnetAgentServiceResourceId : null
-    managedIdentities: {
-      userAssignedResourceIds: [
-        appIdentity.outputs.resourceId
-      ]
-    }
-    appInsightsConnectionString: enableMonitoring ? applicationInsights!.outputs.connectionString : null
+    name: 'cae-${resourcesName}'
+    location: location
+    managedIdentities: { systemAssigned: true }
     appLogsConfiguration: enableMonitoring ? {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: logAnalyticsWorkspace!.outputs!.logAnalyticsWorkspaceId
-        sharedKey: logAnalyticsWorkspace!.outputs!.primarySharedKey
+        customerId: logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
+        sharedKey: logAnalyticsWorkspace.outputs.primarySharedKey
       }
-    } : {}
-    // Note: Workload profiles cannot be added to existing environments
-    // Using basic Container Apps Environment with infrastructure subnet for private networking
-    tags: allTags
+    } : null
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
     enableTelemetry: enableTelemetry
+    publicNetworkAccess: 'Enabled' // Always enabled for Container Apps Environment
+
+    // <========== WAF related parameters
+
+    platformReservedCidr: '172.17.17.0/24'
+    platformReservedDnsIP: '172.17.17.17'
+    zoneRedundant: (enablePrivateNetworking) ? true : false // Enable zone redundancy if private networking is enabled
+    infrastructureSubnetResourceId: (enablePrivateNetworking)
+      ? virtualNetwork.outputs.containersSubnetResourceId // Use the container app subnet
+      : null // Use the container app subnet
   }
 }
 
