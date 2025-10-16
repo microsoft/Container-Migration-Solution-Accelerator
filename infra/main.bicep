@@ -61,15 +61,6 @@ param aiModelVersion string = '2025-04-16'
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param aiModelCapacity int = 1
 
-@description('Deploy AI model during initial provisioning. Set false to allow account creation to succeed when quota or model availability causes failures.')
-param deployAiModel bool = false
-
-@description('Optional fallback model name to use instead of primary when deployAiModel is true and primary model is not desired. Leave empty to use aiModelName.')
-param aiFallbackModelName string = ''
-
-@description('Optional fallback model version for aiFallbackModelName. Leave empty to reuse aiModelVersion.')
-param aiFallbackModelVersion string = ''
-
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
 
@@ -1044,20 +1035,20 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
     // Disable private endpoints temporarily to fix AML workspace issue
     privateEndpointSubnetResourceId: enablePrivateNetworking? virtualNetwork!.outputs.backendSubnetResourceId : null
     // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-    aiModelDeployments: deployAiModel ? [
+    aiModelDeployments:[
       {
         name: aiModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: empty(aiFallbackModelName) ? aiModelName : aiFallbackModelName
-          version: empty(aiFallbackModelName) ? aiModelVersion : (empty(aiFallbackModelVersion) ? aiModelVersion : aiFallbackModelVersion)
+          name: aiModelName
+          version: aiModelVersion
         }
         sku: {
           name: aiDeploymentType
           capacity: aiModelCapacity
         }
       }
-    ] : []
+    ]
     tags: allTags
     enableTelemetry: enableTelemetry
   }
@@ -1118,11 +1109,11 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
-        value: 'https://${aiFoundry.name}.cognitiveservices.azure.com/'
+        value: 'https://${aiFoundry.outputs.aiServicesName}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT_BASE'
-        value: 'https://${aiFoundry.name}.cognitiveservices.azure.com/'
+        value: 'https://${aiFoundry.outputs.aiServicesName}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_TRACING_ENABLED'
@@ -1462,3 +1453,6 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
 
 @description('The name of the resource group.')
 output resourceGroupName string = resourceGroup().name
+
+@description('The name of the ai foundry.')
+output debugAiFoundryOutputs object = aiFoundry.outputs
