@@ -31,14 +31,13 @@ param aiDeploymentLocation string?
   'westus3'
 ])
 @metadata({
-  azd : {
+  azd: {
     type: 'location'
-    usageName : [
+    usageName: [
       'OpenAI.GlobalStandard.o3, 500'
     ]
   }
 })
-
 @description('Required. Location for AI Foundry deployment. This is the location where the AI Foundry resources will be deployed.')
 param azureAiServiceLocation string
 
@@ -98,15 +97,19 @@ var existingLawSubscription = useExistingLogAnalytics ? split(existingLogAnalyti
 var existingLawResourceGroup = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : ''
 var existingLawName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
 
-// resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = if (useExistingLogAnalytics) {
-//   name: existingLawName
-//   scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
-// }
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = if (useExistingLogAnalytics) {
+  name: existingLawName
+  scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
+}
 
-var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics  ? existingLogAnalyticsWorkspaceId  : logAnalyticsWorkspace!.outputs.resourceId
+var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
+  ? existingLogAnalyticsWorkspaceId
+  : logAnalyticsWorkspace!.outputs.resourceId
 
 @description('Tag, Created by user name')
-param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
+param createdBy string = contains(deployer(), 'userPrincipalName')
+  ? split(deployer().userPrincipalName, '@')[0]
+  : deployer().objectId
 
 @description('Optional. Resource ID of an existing Foundry project')
 param existingFoundryProjectResourceId string = ''
@@ -189,7 +192,7 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
 // WAF best practices for Log Analytics: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-log-analytics
 // WAF PSRules for Log Analytics: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#azure-monitor-logs
 var logAnalyticsWorkspaceResourceName = 'log-${resourcesName}'
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = if (enableMonitoring || enablePrivateNetworking) {
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = if ((enableMonitoring || enablePrivateNetworking) && !useExistingLogAnalytics) {
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
     name: logAnalyticsWorkspaceResourceName
@@ -255,7 +258,7 @@ var applicationInsightsResourceName = 'appi-${resourcesName}'
 module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (enableMonitoring) {
   name: take('avm.res.insights.component.${applicationInsightsResourceName}', 64)
   #disable-next-line no-unnecessary-dependson
-  dependsOn: [logAnalyticsWorkspace]
+  //dependsOn: [logAnalyticsWorkspace]
   params: {
     name: applicationInsightsResourceName
     location: solutionLocation
@@ -279,7 +282,7 @@ module virtualNetwork './modules/virtualNetwork.bicep' = if (enablePrivateNetwor
     addressPrefixes: ['10.0.0.0/20']
     location: location
     tags: tags
-    logAnalyticsWorkspaceId: enableMonitoring ? logAnalyticsWorkspace!.outputs.resourceId : ''
+    logAnalyticsWorkspaceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
     resourceSuffix: resourcesName
     enableTelemetry: enableTelemetry
   }
@@ -294,18 +297,20 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePr
     skuName: 'Standard'
     location: location
     virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
-    diagnosticSettings: enableMonitoring ? [
-      {
-        name: 'bastionDiagnostics'
-        workspaceResourceId: logAnalyticsWorkspace!.outputs.resourceId
-        logCategoriesAndGroups: [
+    diagnosticSettings: enableMonitoring
+      ? [
           {
-            categoryGroup: 'allLogs'
-            enabled: true
+            name: 'bastionDiagnostics'
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+            logCategoriesAndGroups: [
+              {
+                categoryGroup: 'allLogs'
+                enabled: true
+              }
+            ]
           }
         ]
-      }
-    ] : null
+      : null
     tags: tags
     enableTelemetry: enableTelemetry
     publicIPAddressObject: {
@@ -349,24 +354,26 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
             subnetResourceId: virtualNetwork!.outputs.jumpboxSubnetResourceId
           }
         ]
-        diagnosticSettings: enableMonitoring ? [
-          {
-            name: 'jumpboxDiagnostics'
-            workspaceResourceId: logAnalyticsWorkspace!.outputs.resourceId
-            logCategoriesAndGroups: [
+        diagnosticSettings: enableMonitoring
+          ? [
               {
-                categoryGroup: 'allLogs'
-                enabled: true
+                name: 'jumpboxDiagnostics'
+                workspaceResourceId: logAnalyticsWorkspaceResourceId
+                logCategoriesAndGroups: [
+                  {
+                    categoryGroup: 'allLogs'
+                    enabled: true
+                  }
+                ]
+                metricCategories: [
+                  {
+                    category: 'AllMetrics'
+                    enabled: true
+                  }
+                ]
               }
             ]
-            metricCategories: [
-              {
-                category: 'AllMetrics'
-                enabled: true
-              }
-            ]
-          }
-        ] : null
+          : null
       }
     ]
     enableTelemetry: enableTelemetry
@@ -422,7 +429,10 @@ var aiRelatedDnsZoneIndices = [
 // ===================================================
 @batchSize(5)
 module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
-  for (zone, i) in privateDnsZones: if (enablePrivateNetworking && (empty(existingFoundryProjectResourceId) || !contains(aiRelatedDnsZoneIndices, i))) {
+  for (zone, i) in privateDnsZones: if (enablePrivateNetworking && (empty(existingFoundryProjectResourceId) || !contains(
+    aiRelatedDnsZoneIndices,
+    i
+  ))) {
     name: 'dns-zone-${i}'
     params: {
       name: zone
@@ -527,8 +537,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   dependsOn: [keyvault]
 }
 
-
-
 // module storageAccount 'modules/storageAccount.bicep' = {
 //   name: take('module.storageAccount.${resourcesName}', 64)
 //   #disable-next-line no-unnecessary-dependson
@@ -561,7 +569,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 //   }
 // }
 
-
 //========== AVM WAF ========== //
 //========== Cosmos DB module ========== //
 
@@ -578,7 +585,6 @@ param azureOpenaiAPIVersion string = '2025-04-01-preview'
 param embeddingModel string = 'text-embedding-ada-002'
 
 var azureSearchIndex = 'transcripts_index'
-
 
 var cosmosDbResourceName = 'cosmos-${resourcesName}'
 var cosmosDbDatabaseName = 'db_conversation_history'
@@ -643,7 +649,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
           }
         ]
       : []
-      
+
     // WAF aligned configuration for Role-based Access Control
     roleAssignments: [
       {
@@ -653,34 +659,34 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
       }
     ]
     secrets: [
-        {
-          name: 'SQLDB-SERVER'
-          value: sqlServerFqdn
-        }
-        {
-          name: 'SQLDB-DATABASE'
-          value: sqlDbName
-        }
-        {
-          name: 'AZURE-OPENAI-PREVIEW-API-VERSION'
-          value: azureOpenaiAPIVersion
-        }
-        // {
-        //   name: 'AZURE-OPENAI-ENDPOINT'
-        //   value: aiFoundry.outputs.endpoints['OpenAI Language Model Instance API']
-        // }
-        {
-          name: 'AZURE-OPENAI-EMBEDDING-MODEL'
-          value: embeddingModel
-        }
-        {
-          name: 'AZURE-SEARCH-INDEX'
-          value: azureSearchIndex
-        }
-        // {
-        //   name: 'AZURE-SEARCH-ENDPOINT'
-        //   value: 'https://${aiSearchName}.search.windows.net'
-        // }
+      {
+        name: 'SQLDB-SERVER'
+        value: sqlServerFqdn
+      }
+      {
+        name: 'SQLDB-DATABASE'
+        value: sqlDbName
+      }
+      {
+        name: 'AZURE-OPENAI-PREVIEW-API-VERSION'
+        value: azureOpenaiAPIVersion
+      }
+      // {
+      //   name: 'AZURE-OPENAI-ENDPOINT'
+      //   value: aiFoundry.outputs.endpoints['OpenAI Language Model Instance API']
+      // }
+      {
+        name: 'AZURE-OPENAI-EMBEDDING-MODEL'
+        value: embeddingModel
+      }
+      {
+        name: 'AZURE-SEARCH-INDEX'
+        value: azureSearchIndex
+      }
+      // {
+      //   name: 'AZURE-SEARCH-ENDPOINT'
+      //   value: 'https://${aiSearchName}.search.windows.net'
+      // }
     ]
     enableTelemetry: enableTelemetry
   }
@@ -715,27 +721,29 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
               '/_partitionKey'
             ]
           }
-            {
-              name: 'process_statuses'
-              paths: [
-                '/_partitionKey'
-              ]
-            }
+          {
+            name: 'process_statuses'
+            paths: [
+              '/_partitionKey'
+            ]
+          }
         ]
       }
     ]
- 
-    diagnosticSettings: enableMonitoring ? [
-      {
-        workspaceResourceId: logAnalyticsWorkspaceResourceId
-      }
-    ] : null
- 
+
+    diagnosticSettings: enableMonitoring
+      ? [
+          {
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+          }
+        ]
+      : null
+
     networkRestrictions: {
       networkAclBypass: 'None'
       publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     }
- 
+
     privateEndpoints: enablePrivateNetworking
       ? [
           {
@@ -751,30 +759,34 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
           }
         ]
       : []
- 
+
     zoneRedundant: enableRedundancy ? true : false
-    capabilitiesToAdd: enableRedundancy ? null : [
-      'EnableServerless'
-    ]
+    capabilitiesToAdd: enableRedundancy
+      ? null
+      : [
+          'EnableServerless'
+        ]
     automaticFailover: enableRedundancy ? true : false
-    failoverLocations: enableRedundancy ? [
-      {
-        failoverPriority: 0
-        isZoneRedundant: true
-        locationName: solutionLocation
-      }
-      {
-        failoverPriority: 1
-        isZoneRedundant: true
-        locationName: cosmosDbHaLocation
-      }
-    ] : [
-      {
-        locationName: solutionLocation
-        failoverPriority: 0
-        isZoneRedundant: enableRedundancy
-      }
-    ]
+    failoverLocations: enableRedundancy
+      ? [
+          {
+            failoverPriority: 0
+            isZoneRedundant: true
+            locationName: solutionLocation
+          }
+          {
+            failoverPriority: 1
+            isZoneRedundant: true
+            locationName: cosmosDbHaLocation
+          }
+        ]
+      : [
+          {
+            locationName: solutionLocation
+            failoverPriority: 0
+            isZoneRedundant: enableRedundancy
+          }
+        ]
     // Use built-in Cosmos DB roles for RBAC access
     roleAssignments: [
       {
@@ -938,7 +950,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
 var aiModelDeploymentName = aiModelName
 // var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId) // (unused)
 
-// Computed name retained for potential future use (currently unused) – commented out to avoid lint error.
+// //Computed name retained for potential future use (currently unused) – commented out to avoid lint error.
 // var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
 //   ? split(existingFoundryProjectResourceId, '/')[8]
 //   : 'aif-${resourcesName}'
@@ -1001,15 +1013,82 @@ var aiModelDeploymentName = aiModelName
 //   }
 // }
 
+var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
+var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
+  ? split(existingFoundryProjectResourceId, '/')[4]
+  : 'rg-${resourcesName}'
+var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
+  ? split(existingFoundryProjectResourceId, '/')[2]
+  : subscription().id
+var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
+  ? split(existingFoundryProjectResourceId, '/')[8]
+  : 'aif-${resourcesName}'
+var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject
+  ? split(existingFoundryProjectResourceId, '/')[10]
+  : 'proj-${resourcesName}'
+
+var aiFoundryAiProjectDescription = 'AI Foundry Project'
+
+resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
+  name: aiFoundryAiServicesResourceName
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+}
+
+module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('module.ai-services-model-deployments.${existingAiFoundryAiServices.name}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    name: existingAiFoundryAiServices.name
+    deployments: [
+      {
+        name: aiModelDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: aiModelName
+          version: aiModelVersion
+        }
+        sku: {
+          name: aiDeploymentType
+          capacity: aiModelCapacity
+        }
+      }
+    ]
+    roleAssignments: [
+      {
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+      }
+    ]
+  }
+}
+
+// resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
+//   name: aiFoundryAiProjectResourceName
+//   parent: existingAiFoundryAiServices
+// }
+
+
+
 // Temporarily disabled AI Foundry due to AML workspace creation issues
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
+module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiFoundryAiProject) {
   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
   params: {
     #disable-next-line BCP334
     baseName: take(resourcesName, 12)
     baseUniqueName: null
     location: azureAiServiceLocation
-    
+
     aiFoundryConfiguration: {
       allowProjectManagement: true
       roleAssignments: [
@@ -1033,9 +1112,9 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
       networking: null
     }
     // Disable private endpoints temporarily to fix AML workspace issue
-    privateEndpointSubnetResourceId: enablePrivateNetworking? virtualNetwork!.outputs.backendSubnetResourceId : null
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : null
     // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-    aiModelDeployments:[
+    aiModelDeployments: [
       {
         name: aiModelDeploymentName
         model: {
@@ -1074,6 +1153,8 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
 //   tags: allTags
 // }
 
+var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices.name : aiFoundry.outputs.aiServicesName
+
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${resourcesName}', 64)
   params: {
@@ -1109,11 +1190,11 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
-        value: 'https://${aiFoundry.outputs.aiServicesName}.cognitiveservices.azure.com/'
+        value: 'https://${aiServicesName}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT_BASE'
-        value: 'https://${aiFoundry.outputs.aiServicesName}.cognitiveservices.azure.com/'
+        value: 'https://${aiServicesName}.cognitiveservices.azure.com/'
       }
       {
         name: 'AZURE_TRACING_ENABLED'
@@ -1182,7 +1263,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
   }
 }
 
-module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if(enablePrivateNetworking) {
+module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if (enablePrivateNetworking) {
   name: take('avm.res.app-configuration.configuration-store-update.${resourcesName}', 64)
   params: {
     name: 'appcs-${resourcesName}'
@@ -1216,6 +1297,12 @@ module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-st
   ]
 }
 
+var logAnalyticsPrimarySharedKey = useExistingLogAnalytics
+  ? existingLogAnalyticsWorkspace!.listKeys().primarySharedKey
+  : logAnalyticsWorkspace!.outputs!.primarySharedKey
+var logAnalyticsWorkspaceId = useExistingLogAnalytics
+  ? existingLogAnalyticsWorkspace!.properties.customerId
+  : logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
 // ========== Container App Environment ========== //
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.2' = {
   name: take('avm.res.app.managed-environment.${resourcesName}', 64)
@@ -1223,13 +1310,15 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     name: 'cae-${resourcesName}'
     location: location
     managedIdentities: { systemAssigned: true }
-    appLogsConfiguration: enableMonitoring ? {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
-        sharedKey: logAnalyticsWorkspace.outputs.primarySharedKey
-      }
-    } : null
+    appLogsConfiguration: enableMonitoring
+      ? {
+          destination: 'log-analytics'
+          logAnalyticsConfiguration: {
+            customerId: logAnalyticsWorkspaceId
+            sharedKey: logAnalyticsPrimarySharedKey
+          }
+        }
+      : null
     workloadProfiles: [
       {
         name: 'Consumption'
@@ -1300,16 +1389,18 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
     scaleSettings: {
       maxReplicas: enableScaling ? 3 : 1
       minReplicas: 1
-      rules: enableScaling ? [
-        {
-          name: 'http-scaler'
-          http: {
-            metadata: {
-              concurrentRequests: 100
+      rules: enableScaling
+        ? [
+            {
+              name: 'http-scaler'
+              http: {
+                metadata: {
+                  concurrentRequests: 100
+                }
+              }
             }
-          }
-        }
-      ] : []
+          ]
+        : []
     }
     corsPolicy: {
       allowedOrigins: [
@@ -1370,16 +1461,18 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
     scaleSettings: {
       maxReplicas: enableScaling ? 3 : 1
       minReplicas: 1
-      rules: enableScaling ? [
-        {
-          name: 'http-scaler'
-          http: {
-            metadata: {
-              concurrentRequests: 100
+      rules: enableScaling
+        ? [
+            {
+              name: 'http-scaler'
+              http: {
+                metadata: {
+                  concurrentRequests: 100
+                }
+              }
             }
-          }
-        }
-      ] : []
+          ]
+        : []
     }
     tags: allTags
     enableTelemetry: enableTelemetry
@@ -1432,7 +1525,8 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
               ]
             : []
         )
-        resources: { // TODO - assess increasing resource limits
+        resources: {
+          // TODO - assess increasing resource limits
           cpu: 2
           memory: '4.0Gi'
         }
@@ -1453,6 +1547,3 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
 
 @description('The name of the resource group.')
 output resourceGroupName string = resourceGroup().name
-
-@description('The name of the ai foundry.')
-output debugAiFoundryOutputs object = aiFoundry.outputs
