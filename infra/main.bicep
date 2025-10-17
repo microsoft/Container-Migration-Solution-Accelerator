@@ -103,19 +103,6 @@ param vmAdminPassword string?
 @description('Optional. Size of the Jumpbox Virtual Machine when created. Set to custom value if enablePrivateNetworking is true.')
 param vmSize string?
 
-@description('Optional. Enable purge protection for the Key Vault')
-param enablePurgeProtection bool = false
-
-@description('Optional. API version for the Azure OpenAI service.')
-param azureOpenaiAPIVersion string = '2025-04-01-preview'
-
-@minLength(1)
-@description('Optional. Name of the Text Embedding model to deploy:')
-@allowed([
-  'text-embedding-ada-002'
-])
-param embeddingModel string = 'text-embedding-ada-002'
-
 // Extracts subscription, resource group, and workspace name from the resource ID when using an existing Log Analytics workspace
 var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
 var existingLawSubscription = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[2] : ''
@@ -525,7 +512,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       ]
     }
   }
- // dependsOn: [keyvault]
 }
 
 //========== AVM WAF ========== //
