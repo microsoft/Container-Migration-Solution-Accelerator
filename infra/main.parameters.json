@@ -37,6 +37,12 @@
       },
       "existingFoundryProjectResourceId":{
         "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
+      },
+      "vmAdminUsername": {
+        "value": "${AZURE_ENV_VM_ADMIN_USERNAME}"
+      },
+      "vmAdminPassword": {
+        "value": "${AZURE_ENV_VM_ADMIN_PASSWORD}"
       }
     }
 }
