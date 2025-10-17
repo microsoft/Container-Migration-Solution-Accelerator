@@ -831,7 +831,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
   name: take('avm.ptn.ai-ml.ai-foundry.${solutionSuffix}', 64)
   params: {
     #disable-next-line BCP334
-    baseName: aiFoundryAiServicesResourceName
+    baseName: take('aif-${solutionSuffix}', 12)
     baseUniqueName: null
     location: azureAiServiceLocation
 
