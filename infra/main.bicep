@@ -389,14 +389,9 @@ var privateDnsZones = [
   'privatelink.cognitiveservices.azure.com'
   'privatelink.openai.azure.com'
   'privatelink.services.ai.azure.com'
-  'privatelink.azurewebsites.net'
+  'privatelink.documents.azure.com'
   'privatelink.blob.${environment().suffixes.storage}'
   'privatelink.queue.${environment().suffixes.storage}'
-  'privatelink.file.${environment().suffixes.storage}'
-  'privatelink.documents.azure.com'
-  'privatelink.vaultcore.azure.net'
-  'privatelink${environment().suffixes.sqlServerHostname}'
-  'privatelink.search.windows.net'
   'privatelink.azconfig.io'
 ]
 
@@ -405,15 +400,10 @@ var dnsZoneIndex = {
   cognitiveServices: 0
   openAI: 1
   aiServices: 2
-  appService: 3
+  cosmosDB: 3
   storageBlob: 4
   storageQueue: 5
-  storageFile: 6
-  cosmosDB: 7
-  keyVault: 8
-  sqlServer: 9
-  searchService: 10
-  appConfig: 11
+  appConfig: 6
 }
 
 // List of DNS zone indices that correspond to AI-related services.
@@ -540,13 +530,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 
 //========== AVM WAF ========== //
 //========== Cosmos DB module ========== //
-
-var sqlServerFqdn = 'sql-${solutionSuffix}.database.windows.net'
-var sqlDbName = 'sqldb-${solutionSuffix}'
-var azureSearchIndex = 'transcripts_index'
-
 var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
-
 var cosmosDbZoneRedundantHaRegionPairs = {
   australiaeast: 'uksouth' //'southeastasia'
   centralus: 'eastus2'
@@ -564,87 +548,6 @@ var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().loca
 var cosmosDatabaseName = 'migration_db'
 var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
-
-// ==========Key Vault Module ========== //
-var keyVaultName = 'kv-${solutionSuffix}' // Key Vault name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
-module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
-  name: take('avm.res.key-vault.vault.${keyVaultName}', 64)
-  params: {
-    name: keyVaultName
-    location: solutionLocation
-    tags: allTags
-    sku: 'standard'
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    networkAcls: {
-      defaultAction: 'Allow'
-    }
-    enableVaultForDeployment: true
-    enableVaultForDiskEncryption: true
-    enableVaultForTemplateDeployment: true
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    enablePurgeProtection: enablePurgeProtection
-    softDeleteRetentionInDays: 7
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : []
-    // WAF aligned configuration for Private Networking
-    privateEndpoints: enablePrivateNetworking
-      ? [
-          {
-            name: 'pep-${keyVaultName}'
-            customNetworkInterfaceName: 'nic-${keyVaultName}'
-            privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [
-                { privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }
-              ]
-            }
-            service: 'vault'
-            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
-          }
-        ]
-      : []
-
-    // WAF aligned configuration for Role-based Access Control
-    roleAssignments: [
-      {
-        principalId: appIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'Key Vault Administrator'
-      }
-    ]
-    secrets: [
-      {
-        name: 'SQLDB-SERVER'
-        value: sqlServerFqdn
-      }
-      {
-        name: 'SQLDB-DATABASE'
-        value: sqlDbName
-      }
-      {
-        name: 'AZURE-OPENAI-PREVIEW-API-VERSION'
-        value: azureOpenaiAPIVersion
-      }
-      // {
-      //   name: 'AZURE-OPENAI-ENDPOINT'
-      //   value: aiFoundry.outputs.endpoints['OpenAI Language Model Instance API']
-      // }
-      {
-        name: 'AZURE-OPENAI-EMBEDDING-MODEL'
-        value: embeddingModel
-      }
-      {
-        name: 'AZURE-SEARCH-INDEX'
-        value: azureSearchIndex
-      }
-      // {
-      //   name: 'AZURE-SEARCH-ENDPOINT'
-      //   value: 'https://${aiSearchName}.search.windows.net'
-      // }
-    ]
-    enableTelemetry: enableTelemetry
-  }
-}
-
 module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
@@ -855,7 +758,11 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
         }
       ]
       // Remove networking configuration to avoid AML workspace creation issues
-      networking: null
+      networking: enablePrivateNetworking? {
+        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+      } : null
     }
     // Disable private endpoints temporarily to fix AML workspace issue
     privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : null
