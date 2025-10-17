@@ -485,7 +485,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     privateEndpoints: enablePrivateNetworking
       ? [
           {
-            name: storageAccountName
+            name: 'pep-storage-${storageAccountName}'
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: [
                 {
