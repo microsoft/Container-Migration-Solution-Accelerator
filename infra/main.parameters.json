@@ -31,6 +31,12 @@
       },
       "enableTelemetry": {
         "value": true
+      },
+      "existingLogAnalyticsWorkspaceId": {
+        "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
+      },
+      "existingFoundryProjectResourceId":{
+        "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
       }
     }
 }

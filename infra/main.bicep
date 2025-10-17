@@ -14,8 +14,6 @@ param solutionUniqueText string = substring(uniqueString(subscription().id, reso
 @description('Optional. Azure region for all services. Defaults to the resource group location.')
 param location string
 var solutionLocation = empty(location) ? resourceGroup().location : location
-@description('Optional. Location for all AI service resources. This location can be different from the resource group location.')
-param aiDeploymentLocation string?
 
 @allowed([
   'australiaeast'
@@ -63,15 +61,8 @@ param aiModelCapacity int = 1
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
 
-@description('Optional. Enable scaling for the container apps. Defaults to false.')
-param enableScaling bool = false
-
 @description('Optional. Enable redundancy for applicable resources. Defaults to false.')
 param enableRedundancy bool = false
-
-@metadata({ azd: { type: 'location' } })
-@description('Optional. The secondary location for the Cosmos DB account if redundancy is enabled.')
-param secondaryLocation string?
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -90,21 +81,6 @@ param cosmosLocation string = 'eastus2'
 
 @description('Optional. Existing Log Analytics Workspace Resource ID')
 param existingLogAnalyticsWorkspaceId string = ''
-
-// Extracts subscription, resource group, and workspace name from the resource ID when using an existing Log Analytics workspace
-var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
-var existingLawSubscription = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[2] : ''
-var existingLawResourceGroup = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : ''
-var existingLawName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
-
-resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = if (useExistingLogAnalytics) {
-  name: existingLawName
-  scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
-}
-
-var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
-  ? existingLogAnalyticsWorkspaceId
-  : logAnalyticsWorkspace!.outputs.resourceId
 
 @description('Tag, Created by user name')
 param createdBy string = contains(deployer(), 'userPrincipalName')
@@ -130,7 +106,32 @@ param vmSize string?
 @description('Optional. Enable purge protection for the Key Vault')
 param enablePurgeProtection bool = false
 
-var resourcesName = toLower(trim(replace(
+@description('Optional. API version for the Azure OpenAI service.')
+param azureOpenaiAPIVersion string = '2025-04-01-preview'
+
+@minLength(1)
+@description('Optional. Name of the Text Embedding model to deploy:')
+@allowed([
+  'text-embedding-ada-002'
+])
+param embeddingModel string = 'text-embedding-ada-002'
+
+// Extracts subscription, resource group, and workspace name from the resource ID when using an existing Log Analytics workspace
+var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
+var existingLawSubscription = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[2] : ''
+var existingLawResourceGroup = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : ''
+var existingLawName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
+
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = if (useExistingLogAnalytics) {
+  name: existingLawName
+  scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
+}
+
+var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
+  ? existingLogAnalyticsWorkspaceId
+  : logAnalyticsWorkspace!.outputs.resourceId
+
+var solutionSuffix = toLower(trim(replace(
   replace(
     replace(replace(replace(replace('${solutionName}${solutionUniqueText}', '-', ''), '_', ''), '.', ''), '/', ''),
     ' ',
@@ -177,7 +178,7 @@ var replicaLocation = replicaRegionPairs[resourceGroup().location]
 
 // ========== User Assigned Identity ========== //
 // WAF best practices for identity and access management: https://learn.microsoft.com/en-us/azure/well-architected/security/identity-access
-var userAssignedIdentityResourceName = 'id-${resourcesName}'
+var userAssignedIdentityResourceName = 'id-${solutionSuffix}'
 module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = {
   name: take('avm.res.managed-identity.user-assigned-identity.${userAssignedIdentityResourceName}', 64)
   params: {
@@ -191,7 +192,7 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
 // ========== Log Analytics Workspace ========== //
 // WAF best practices for Log Analytics: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-log-analytics
 // WAF PSRules for Log Analytics: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#azure-monitor-logs
-var logAnalyticsWorkspaceResourceName = 'log-${resourcesName}'
+var logAnalyticsWorkspaceResourceName = 'log-${solutionSuffix}'
 module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = if ((enableMonitoring || enablePrivateNetworking) && !useExistingLogAnalytics) {
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
@@ -254,7 +255,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
 // ========== Application Insights ========== //
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
 // WAF PSRules for  Application Insights: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#application-insights
-var applicationInsightsResourceName = 'appi-${resourcesName}'
+var applicationInsightsResourceName = 'appi-${solutionSuffix}'
 module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (enableMonitoring) {
   name: take('avm.res.insights.component.${applicationInsightsResourceName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -276,20 +277,20 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
 
 // ========== Virtual Network ========== //
 module virtualNetwork './modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
-  name: take('module.virtual-network.${resourcesName}', 64)
+  name: take('module.virtual-network.${solutionSuffix}', 64)
   params: {
-    name: 'vnet-${resourcesName}'
+    name: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20']
     location: location
     tags: tags
     logAnalyticsWorkspaceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
-    resourceSuffix: resourcesName
+    resourceSuffix: solutionSuffix
     enableTelemetry: enableTelemetry
   }
 }
 
 // Azure Bastion Host
-var bastionHostName = 'bas-${resourcesName}' // Bastion host name must be between 3 and 15 characters in length and use numbers and lower-case letters only.
+var bastionHostName = 'bas-${solutionSuffix}' // Bastion host name must be between 3 and 15 characters in length and use numbers and lower-case letters only.
 module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePrivateNetworking) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {
@@ -320,7 +321,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePr
   }
 }
 // Jumpbox Virtual Machine
-var jumpboxVmName = take('vm-jumpbox-${resourcesName}', 15)
+var jumpboxVmName = take('vm-jumpbox-${solutionSuffix}', 15)
 module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
@@ -450,7 +451,7 @@ module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
 
 // ========== AVM WAF ========== //
 // ========== Storage account module ========== //
-var storageAccountName = 'st${resourcesName}' // Storage account name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
+var storageAccountName = 'st${solutionSuffix}' // Storage account name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
 module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -498,7 +499,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
             service: 'blob'
           }
           {
-            name: 'pep-queue-${resourcesName}'
+            name: 'pep-queue-${solutionSuffix}'
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: [
                 {
@@ -540,21 +541,11 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 //========== AVM WAF ========== //
 //========== Cosmos DB module ========== //
 
-var sqlServerFqdn = 'sql-${resourcesName}.database.windows.net'
-var sqlDbName = 'sqldb-${resourcesName}'
-@description('Optional. API version for the Azure OpenAI service.')
-param azureOpenaiAPIVersion string = '2025-04-01-preview'
-
-@minLength(1)
-@description('Optional. Name of the Text Embedding model to deploy:')
-@allowed([
-  'text-embedding-ada-002'
-])
-param embeddingModel string = 'text-embedding-ada-002'
-
+var sqlServerFqdn = 'sql-${solutionSuffix}.database.windows.net'
+var sqlDbName = 'sqldb-${solutionSuffix}'
 var azureSearchIndex = 'transcripts_index'
 
-var cosmosDbResourceName = 'cosmos-${resourcesName}'
+var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 
 var cosmosDbZoneRedundantHaRegionPairs = {
   australiaeast: 'uksouth' //'southeastasia'
@@ -575,7 +566,7 @@ var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
 
 // ==========Key Vault Module ========== //
-var keyVaultName = 'KV-${resourcesName}' // Key Vault name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
+var keyVaultName = 'KV-${solutionSuffix}' // Key Vault name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
 module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
   name: take('avm.res.key-vault.vault.${keyVaultName}', 64)
   params: {
@@ -782,18 +773,14 @@ var aiModelDeploymentName = aiModelName
 var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[4]
-  : 'rg-${resourcesName}'
+  : 'rg-${solutionSuffix}'
 var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[2]
   : subscription().id
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[8]
-  : 'aif-${resourcesName}'
-// var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject
-//   ? split(existingFoundryProjectResourceId, '/')[10]
-//   : 'proj-${resourcesName}'
+  : 'aif-${solutionSuffix}'
 
-// var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
@@ -841,10 +828,10 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
 
 // Temporarily disabled AI Foundry due to AML workspace creation issues
 module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiFoundryAiProject) {
-  name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
+  name: take('avm.ptn.ai-ml.ai-foundry.${solutionSuffix}', 64)
   params: {
     #disable-next-line BCP334
-    baseName: take(resourcesName, 12)
+    baseName: aiFoundryAiServicesResourceName
     baseUniqueName: null
     location: azureAiServiceLocation
 
@@ -892,33 +879,12 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
   }
 }
 
-// Temporary placeholder for AI services - replace with proper AI Foundry once service issues are resolved
-// resource tempAiServices 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
-//   name: 'ai${resourcesName}'
-//   location: azureAiServiceLocation
-//   kind: 'OpenAI'
-//   sku: {
-//     name: 'S0'
-//   }
-//   properties: {
-//     customSubDomainName: 'ai${resourcesName}'
-//     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-//     networkAcls: enablePrivateNetworking ? {
-//       defaultAction: 'Deny'
-//     } : {
-//       defaultAction: 'Allow'
-//     }
-//   }
-//   tags: allTags
-// }
-
 var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices.name : aiFoundry.outputs.aiServicesName
-
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
-  name: take('avm.res.app-config.store.${resourcesName}', 64)
+  name: take('avm.res.app-config.store.${solutionSuffix}', 64)
   params: {
     location: solutionLocation
-    name: 'appcs-${resourcesName}'
+    name: 'appcs-${solutionSuffix}'
     disableLocalAuth: false // needed to allow setting app config key values from this module
     tags: allTags
     // Always set key values during deployment since Container Apps will be in private network
@@ -1023,9 +989,9 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
 }
 
 module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if (enablePrivateNetworking) {
-  name: take('avm.res.app-configuration.configuration-store-update.${resourcesName}', 64)
+  name: take('avm.res.app-configuration.configuration-store-update.${solutionSuffix}', 64)
   params: {
-    name: 'appcs-${resourcesName}'
+    name: 'appcs-${solutionSuffix}'
     location: solutionLocation
     managedIdentities: { systemAssigned: true }
     sku: 'Standard'
@@ -1037,7 +1003,7 @@ module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-st
     privateEndpoints: enablePrivateNetworking
       ? [
           {
-            name: 'pep-appconfig-${resourcesName}'
+            name: 'pep-appconfig-${solutionSuffix}'
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: [
                 {
@@ -1064,9 +1030,9 @@ var logAnalyticsWorkspaceId = useExistingLogAnalytics
   : logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
 // ========== Container App Environment ========== //
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.2' = {
-  name: take('avm.res.app.managed-environment.${resourcesName}', 64)
+  name: take('avm.res.app.managed-environment.${solutionSuffix}', 64)
   params: {
-    name: 'cae-${resourcesName}'
+    name: 'cae-${solutionSuffix}'
     location: location
     managedIdentities: { systemAssigned: true }
     appLogsConfiguration: enableMonitoring
@@ -1099,7 +1065,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 }
 
 var backendContainerPort = 80
-var backendContainerAppName = take('ca-backend-api-${resourcesName}', 32)
+var backendContainerAppName = take('ca-backend-api-${solutionSuffix}', 32)
 module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1146,9 +1112,9 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
     ingressTargetPort: backendContainerPort
     ingressExternal: true
     scaleSettings: {
-      maxReplicas: enableScaling ? 3 : 1
+      maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1
-      rules: enableScaling
+      rules: enableScalability
         ? [
             {
               name: 'http-scaler'
@@ -1183,7 +1149,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   }
 }
 
-var frontEndContainerAppName = take('ca-frontend-${resourcesName}', 32)
+var frontEndContainerAppName = take('ca-frontend-${solutionSuffix}', 32)
 module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${frontEndContainerAppName}', 64)
   params: {
@@ -1218,9 +1184,9 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
     ingressTargetPort: 3000
     ingressExternal: true
     scaleSettings: {
-      maxReplicas: enableScaling ? 3 : 1
+      maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1
-      rules: enableScaling
+      rules: enableScalability
         ? [
             {
               name: 'http-scaler'
@@ -1238,7 +1204,7 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
   }
 }
 
-var processorContainerAppName = take('ca-processor-${resourcesName}', 32)
+var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1295,7 +1261,7 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
     disableIngress: true
     ingressExternal: false
     scaleSettings: {
-      maxReplicas: enableScaling ? 3 : 1
+      maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1
       //rules: [] - TODO - what scaling rules to use here?
     }
