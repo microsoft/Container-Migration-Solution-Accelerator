@@ -17,8 +17,8 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_AI_MODEL_NAME`           | string  | `o3`                    | Specifies the `o` model name.                                                         |
 | `AZURE_AI_MODEL_VERSION`        | string  | `2025-04-16`            | Specifies the `o` model version.                                                      |
 | `AZURE_AI_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available `o` capacity). |
-| `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      |                                                                                       |
-| `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      |                                                                                       |
+| `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                   |
+| `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                   |
 
 ## How to Set a Parameter
 
