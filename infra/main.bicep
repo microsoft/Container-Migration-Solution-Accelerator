@@ -184,7 +184,7 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
   params: {
     name: userAssignedIdentityResourceName
     location: solutionLocation
-    tags: tags
+    tags: allTags
     enableTelemetry: enableTelemetry
   }
 }
@@ -218,7 +218,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     dataSources: enablePrivateNetworking
       ? [
           {
-            tags: tags
+            tags: allTags
             eventLogName: 'Application'
             eventTypes: [
               {
@@ -282,7 +282,7 @@ module virtualNetwork './modules/virtualNetwork.bicep' = if (enablePrivateNetwor
     name: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20']
     location: location
-    tags: tags
+    tags: allTags
     logAnalyticsWorkspaceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
     resourceSuffix: solutionSuffix
     enableTelemetry: enableTelemetry
@@ -312,7 +312,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePr
           }
         ]
       : null
-    tags: tags
+    tags: allTags
     enableTelemetry: enableTelemetry
     publicIPAddressObject: {
       name: 'pip-${bastionHostName}'
@@ -330,7 +330,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
     location: location
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
-    tags: tags
+    tags: allTags
     zone: 0
     imageReference: {
       offer: 'WindowsServer'
@@ -437,7 +437,7 @@ module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
     name: 'dns-zone-${i}'
     params: {
       name: zone
-      tags: tags
+      tags: allTags
       enableTelemetry: enableTelemetry
       virtualNetworkLinks: [
         {
@@ -535,7 +535,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       ]
     }
   }
-  dependsOn: [keyvault]
+ // dependsOn: [keyvault]
 }
 
 //========== AVM WAF ========== //
@@ -566,13 +566,13 @@ var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
 
 // ==========Key Vault Module ========== //
-var keyVaultName = 'KV-${solutionSuffix}' // Key Vault name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
+var keyVaultName = 'kv-${solutionSuffix}' // Key Vault name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
 module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
   name: take('avm.res.key-vault.vault.${keyVaultName}', 64)
   params: {
     name: keyVaultName
     location: solutionLocation
-    tags: tags
+    tags: allTags
     sku: 'standard'
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkAcls: {
@@ -650,7 +650,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   params: {
     name: cosmosDbResourceName
     location: cosmosLocation
-    tags: tags
+    tags: allTags
     enableTelemetry: enableTelemetry
     sqlDatabases: [
       {
@@ -765,7 +765,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
       }
     ]
   }
-  dependsOn: [keyvault, storageAccount]
+  dependsOn: [storageAccount]
 }
 
 var aiModelDeploymentName = aiModelName
@@ -831,11 +831,11 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
   name: take('avm.ptn.ai-ml.ai-foundry.${solutionSuffix}', 64)
   params: {
     #disable-next-line BCP334
-    baseName: take('aif-${solutionSuffix}', 12)
+    baseName: take(aiFoundryAiServicesResourceName, 12)
     baseUniqueName: null
     location: azureAiServiceLocation
-
     aiFoundryConfiguration: {
+      accountName:aiFoundryAiServicesResourceName
       allowProjectManagement: true
       roleAssignments: [
         {
@@ -996,7 +996,7 @@ module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-st
     managedIdentities: { systemAssigned: true }
     sku: 'Standard'
     enableTelemetry: enableTelemetry
-    tags: tags
+    tags: allTags
     disableLocalAuth: true
     // Keep public access enabled for Container Apps access (Container Apps not in private network due to capacity constraints)
     publicNetworkAccess: 'Enabled'
