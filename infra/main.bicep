@@ -537,38 +537,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   dependsOn: [keyvault]
 }
 
-// module storageAccount 'modules/storageAccount.bicep' = {
-//   name: take('module.storageAccount.${resourcesName}', 64)
-//   #disable-next-line no-unnecessary-dependson
-//   dependsOn: [logAnalyticsWorkspace]
-//   params: {
-//     name: take('sa${resourcesName}', 24)
-//     location: solutionLocation
-//     skuName: enableRedundancy ? 'Standard_GZRS' : 'Standard_LRS'
-//     // TODO - private networking
-//     // privateEndpointSubnetResourceId: privateEndpointSubnetResourceId
-//     // blobPrivateDnsZoneResourceId: blobPrivateDnsZoneResourceId
-//     // queuePrivateDnsZoneResourceId: queuePrivateDnsZoneResourceId
-//     containers: [processBlobContainerName]
-//     queues: [processQueueName, '${processQueueName}-dead-letter']
-//     logAnalyticsWorkspaceResourceId: enableMonitoring ? logAnalyticsWorkspace!.outputs!.resourceId : ''
-//     roleAssignments: [
-//       {
-//         roleDefinitionIdOrName: 'Storage Blob Data Contributor'
-//         principalId: appIdentity.properties.principalId
-//         principalType: 'ServicePrincipal'
-//       }
-//       {
-//         roleDefinitionIdOrName: 'Storage Queue Data Contributor'
-//         principalId: appIdentity.properties.principalId
-//         principalType: 'ServicePrincipal'
-//       }
-//     ]
-//     enableTelemetry: enableTelemetry
-//     tags: allTags
-//   }
-// }
-
 //========== AVM WAF ========== //
 //========== Cosmos DB module ========== //
 
@@ -587,8 +555,6 @@ param embeddingModel string = 'text-embedding-ada-002'
 var azureSearchIndex = 'transcripts_index'
 
 var cosmosDbResourceName = 'cosmos-${resourcesName}'
-var cosmosDbDatabaseName = 'db_conversation_history'
-var collectionName = 'conversations'
 
 var cosmosDbZoneRedundantHaRegionPairs = {
   australiaeast: 'uksouth' //'southeastasia'
@@ -603,10 +569,6 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   westeurope: 'northeurope'
 }
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().location]
-
-import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.5.1'
-@description('Optional. Array of role assignments to create.')
-param roleAssignments roleAssignmentType[]?
 
 var cosmosDatabaseName = 'migration_db'
 var processCosmosContainerName = 'processes'
@@ -815,203 +777,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   dependsOn: [keyvault, storageAccount]
 }
 
-// module cosmosDb 'br/public:avm/res/document-db/database-account:0.16.0' = {
-//   name: take('avm.res.document-db.account.${cosmosDbResourceName}', 64)
-//   params: {
-//     name: cosmosDbResourceName
-//     enableAnalyticalStorage: true
-//     location: cosmosLocation
-//     minimumTlsVersion: 'Tls12'
-//     defaultConsistencyLevel: 'Session'
-//     networkRestrictions: {
-//       networkAclBypass: 'None'
-//       publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-//       //ipRules: []
-//       //virtualNetworkRules: []
-//     }
-//     zoneRedundant: enableRedundancy ? true : false
-//     automaticFailover: enableRedundancy ? true : false
-//     failoverLocations: !empty(secondaryLocation)
-//       ? [
-//           {
-//             failoverPriority: 0
-//             isZoneRedundant: enableRedundancy
-//             locationName: location
-//           }
-//           {
-//             failoverPriority: 1
-//             isZoneRedundant: enableRedundancy
-//             locationName: secondaryLocation!
-//           }
-//         ]
-//       : []
-//     enableMultipleWriteLocations: !empty(secondaryLocation)
-//     backupPolicyType: !empty(secondaryLocation) ? 'Periodic' : 'Continuous'
-//     backupStorageRedundancy: enableRedundancy ? 'Zone' : 'Local'
-//     disableKeyBasedMetadataWriteAccess: false
-//     disableLocalAuthentication: true
-//     diagnosticSettings: !empty(logAnalyticsWorkspaceResourceId)? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }]: []
-//     // privateEndpoints: enablePrivateNetworking
-//     //   ? [
-//     //       {
-//     //         privateDnsZoneGroup: {
-//     //           privateDnsZoneGroupConfigs: [
-//     //             {
-//     //               privateDnsZoneResourceId: sqlPrivateDnsZoneResourceId!
-//     //             }
-//     //           ]
-//     //         }
-//     //         service: 'Sql'
-//     //         subnetResourceId: privateEndpointSubnetResourceId!
-//     //       }
-//     //     ]
-//     //   : []
-//     sqlDatabases: [
-//       {
-//         containers: [
-//           {
-//             indexingPolicy: {
-//               automatic: true
-//             }
-//             name: processCosmosContainerName
-//             paths: [
-//               '/_partitionKey'
-//             ]
-//           }
-//           {
-//             indexingPolicy: {
-//               automatic: true
-//             }
-//             name: agentTelemetryCosmosContainerName
-//             paths: [
-//               '/_partitionKey'
-//             ]
-//           }
-//           {
-//             indexingPolicy: {
-//               automatic: true
-//             }
-//             name: 'files'
-//             paths: [
-//               '/_partitionKey'
-//             ]
-//           }
-//           {
-//             indexingPolicy: {
-//               automatic: true
-//             }
-//             name: 'process_statuses'
-//             paths: [
-//               '/_partitionKey'
-//             ]
-//           }
-//         ]
-//         name: cosmosDatabaseName
-//       }
-//     ]
-//     dataPlaneRoleAssignments: !empty(appIdentity.properties.principalId) ? [
-//       {
-//         principalId: appIdentity.properties.principalId!
-//         roleDefinitionId: sqlContributorRoleDefinition.id
-//       }
-//     ] : []
-//     roleAssignments: roleAssignments
-//     tags: allTags
-//     enableTelemetry: enableTelemetry
-//   }
-// }
-
-// module cosmosDb 'modules/cosmosDb.bicep' = {
-//   name: take('module.cosmosdb.${resourcesName}', 64)
-//   #disable-next-line no-unnecessary-dependson
-//   dependsOn: [logAnalyticsWorkspace]
-//   params: {
-//     name: take('cosmos-${resourcesName}', 44)
-//     location: solutionLocation
-//     zoneRedundant: enableRedundancy
-//     secondaryLocation: enableRedundancy && !empty(secondaryLocation) ? secondaryLocation : ''
-//     databaseName: cosmosDatabaseName
-//     containers: [
-//       processCosmosContainerName
-//       agentTelemetryCosmosContainerName
-//       'files'
-//       'process_statuses'
-//     ]
-//     // TODO - private networking
-//     // privateEndpointSubnetResourceId: privateEndpointSubnetResourceId
-//     // sqlPrivateDnsZoneResourceId: sqlPrivateDnsZoneResourceId
-//     dataAccessIdentityPrincipalId: appIdentity.properties.principalId
-//     logAnalyticsWorkspaceResourceId: enableMonitoring ? logAnalyticsWorkspace!.outputs!.resourceId : ''
-//     enableTelemetry: enableTelemetry
-//     tags: allTags
-//   }
-// }
-
 var aiModelDeploymentName = aiModelName
-// var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId) // (unused)
-
-// //Computed name retained for potential future use (currently unused) – commented out to avoid lint error.
-// var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
-//   ? split(existingFoundryProjectResourceId, '/')[8]
-//   : 'aif-${resourcesName}'
-
-// AI Project resource id: /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>/projects/<project-name>
-
-// NOTE: Required version 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' not available in AVM
-
-// module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
-//   name: take('avm.ptn.ai-ml.ai-foundry.${resourcesName}', 64)
-//   params: {
-//     #disable-next-line BCP334
-//     baseName: take(resourcesName, 12)
-//     baseUniqueName: null
-//     location: empty(aiDeploymentLocation) ? location : aiDeploymentLocation
-//     aiFoundryConfiguration: {
-//       allowProjectManagement: true
-//       roleAssignments: [
-//         {
-//           principalId: appIdentity.outputs.principalId
-//           principalType: 'ServicePrincipal'
-//           roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-//         }
-//         {
-//           principalId: appIdentity.outputs.principalId
-//           principalType: 'ServicePrincipal'
-//           roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-//         }
-//         {
-//           principalId: appIdentity.outputs.principalId
-//           principalType: 'ServicePrincipal'
-//           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-//         }
-//       ]
-//       // TODO - private networking
-//       // networking: {
-//       //   aiServicesPrivateDnsZoneId: ''
-//       //   openAiPrivateDnsZoneId: ''
-//       //   cognitiveServicesPrivateDnsZoneId: ''
-//       // }
-//     }
-//     // TODO - private networking
-//     //privateEndpointSubnetId:
-//     aiModelDeployments: [
-//       {
-//         name: aiModelDeploymentName
-//         model: {
-//           format: 'OpenAI'
-//           name: aiModelName
-//           version: aiModelVersion
-//         }
-//         sku: {
-//           name: aiDeploymentType
-//           capacity: aiModelCapacity
-//         }
-//       }
-//     ]
-//     tags: allTags
-//     enableTelemetry: enableTelemetry
-//   }
-// }
 
 var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
@@ -1023,11 +789,11 @@ var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[8]
   : 'aif-${resourcesName}'
-var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject
-  ? split(existingFoundryProjectResourceId, '/')[10]
-  : 'proj-${resourcesName}'
+// var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject
+//   ? split(existingFoundryProjectResourceId, '/')[10]
+//   : 'proj-${resourcesName}'
 
-var aiFoundryAiProjectDescription = 'AI Foundry Project'
+// var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
@@ -1072,13 +838,6 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
     ]
   }
 }
-
-// resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
-//   name: aiFoundryAiProjectResourceName
-//   parent: existingAiFoundryAiServices
-// }
-
-
 
 // Temporarily disabled AI Foundry due to AML workspace creation issues
 module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiFoundryAiProject) {
