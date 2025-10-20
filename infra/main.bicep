@@ -36,13 +36,8 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
     ]
   }
 })
-@description('Required. Location for AI Foundry deployment. This is the location where the AI Foundry resources will be deployed.')
-param azureAiServiceLocation string
 @description('Optional. Location for all AI service resources. This location can be different from the resource group location.')
 param aiDeploymentLocation string
-
-@description('Optional. Azure AI Service location for the AI Foundry module.')
-param azureAiServiceLocation string = aiDeploymentLocation
 
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
@@ -728,7 +723,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
     #disable-next-line BCP334
     baseName: take(aiFoundryAiServicesResourceName, 12)
     baseUniqueName: null
-    location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
+    location: empty(aiDeploymentLocation) ? location : aiDeploymentLocation
     aiFoundryConfiguration: {
       accountName:aiFoundryAiServicesResourceName
       allowProjectManagement: true
