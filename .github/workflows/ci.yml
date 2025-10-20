@@ -111,7 +111,9 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --template-file infra/main.bicep \
             --parameters solutionName=${{env.SOLUTION_PREFIX}} \
-            --parameters aiDeploymentLocation=${{ env.AZURE_LOCATION }} 
+            --parameters location=${{ env.AZURE_LOCATION }} \
+            --parameters aiDeploymentLocation=${{ env.AZURE_LOCATION }} \
+            --parameters azureAiServiceLocation=${{ env.AZURE_LOCATION }} 
 
 
       - name: Extract AI Services and Key Vault Names
