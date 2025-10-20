@@ -160,7 +160,7 @@ By default, the **o3 model capacity** in deployment is set to **200k tokens**.
 
 > **We recommend increasing the capacity to 500k tokens, if available, for optimal performance.**
 
-To adjust quota settings, follow these [steps](./AzureAIModelQuotaSettings.md.md).
+To adjust quota settings, follow these [steps](./AzureAIModelQuotaSettings.md).
 
 **⚠️ Warning:** Insufficient quota can cause deployment errors. Please ensure you have the recommended capacity or request additional capacity before deploying this solution.
 
