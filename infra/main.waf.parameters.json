@@ -32,17 +32,26 @@
       "enableTelemetry": {
         "value": true
       },
-      "existingLogAnalyticsWorkspaceId": {
-        "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
+      "enableMonitoring": {
+        "value": true
       },
-      "existingFoundryProjectResourceId":{
-        "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
+      "enablePrivateNetworking": {
+        "value": true
+      },
+      "enableScalability": {
+        "value": true
       },
       "vmAdminUsername": {
         "value": "${AZURE_ENV_VM_ADMIN_USERNAME}"
       },
       "vmAdminPassword": {
         "value": "${AZURE_ENV_VM_ADMIN_PASSWORD}"
+      },
+      "existingLogAnalyticsWorkspaceId": {
+        "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
+      },
+      "existingFoundryProjectResourceId":{
+        "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
       }
     }
 }
