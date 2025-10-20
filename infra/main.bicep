@@ -38,6 +38,9 @@ param location string = resourceGroup().location
 @description('Optional. Location for all AI service resources. This location can be different from the resource group location.')
 param aiDeploymentLocation string
 
+@description('Optional. Azure AI Service location for the AI Foundry module.')
+param azureAiServiceLocation string = aiDeploymentLocation
+
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
 
@@ -213,7 +216,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = {
     #disable-next-line BCP334
     baseName: take(resourcesName, 12)
     baseUniqueName: null
-    location: empty(aiDeploymentLocation) ? location : aiDeploymentLocation
+    location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
     aiFoundryConfiguration: {
       allowProjectManagement: true
       roleAssignments: [
