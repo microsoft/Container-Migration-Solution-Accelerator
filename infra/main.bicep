@@ -11,7 +11,7 @@ param solutionUniqueText string = substring(uniqueString(subscription().id, reso
 
 @minLength(3)
 @metadata({ azd: { type: 'location' } })
-@description('Optional. Azure region for all services. Defaults to the resource group location.')
+@description('Required. Azure region for container apps, storage, and other services. Choose a region close to your users.')
 param location string
 var solutionLocation = empty(location) ? resourceGroup().location : location
 
@@ -36,7 +36,23 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
     ]
   }
 })
-@description('Optional. Location for all AI service resources. This location can be different from the resource group location.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
+param azureAiServiceLocation string
+
+@allowed([
+  'australiaeast'
+  'eastus'
+  'eastus2'
+  'francecentral'
+  'japaneast'
+  'norwayeast'
+  'southindia'
+  'swedencentral'
+  'uksouth'
+  'westus'
+  'westus3'
+])
+@description('Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance.')
 param aiDeploymentLocation string
 
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')

@@ -5,6 +5,9 @@ on:
       - main
       - dev
       - demo
+  pull_request:
+    branches:
+      - dev
   schedule:
     - cron: '0 9,21 * * *'  # Runs at 9:00 AM and 9:00 PM GMT
   workflow_dispatch:  # Allow manual triggering
@@ -110,9 +113,7 @@ jobs:
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --template-file infra/main.bicep \
-            --parameters solutionName=${{env.SOLUTION_PREFIX}} \
-            --parameters location=${{ env.AZURE_LOCATION }} \
-            --parameters aiDeploymentLocation=${{ env.AZURE_LOCATION }} 
+            --parameters solutionName=${{env.SOLUTION_PREFIX}} 
 
 
       - name: Extract AI Services and Key Vault Names
