@@ -53,7 +53,7 @@ param azureAiServiceLocation string
   'westus3'
 ])
 @description('Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance.')
-param aiDeploymentLocation string
+param aiDeploymentLocation string = azureAiServiceLocation
 
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
@@ -739,7 +739,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
     #disable-next-line BCP334
     baseName: take(aiFoundryAiServicesResourceName, 12)
     baseUniqueName: null
-    location: empty(aiDeploymentLocation) ? location : aiDeploymentLocation
+    location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
     aiFoundryConfiguration: {
       accountName:aiFoundryAiServicesResourceName
       allowProjectManagement: true
