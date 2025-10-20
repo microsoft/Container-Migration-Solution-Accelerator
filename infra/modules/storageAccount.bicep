@@ -58,7 +58,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.26.2' = {
     enableTelemetry: enableTelemetry
     publicNetworkAccess: privateNetworkingEnabled ? 'Disabled' : 'Enabled'
     accessTier: 'Hot'
-    allowBlobPublicAccess: !privateNetworkingEnabled
+    allowBlobPublicAccess: false
     allowSharedKeyAccess: false
     allowCrossTenantReplication: false
     blobServices: {

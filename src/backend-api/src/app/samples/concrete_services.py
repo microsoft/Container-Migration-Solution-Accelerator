@@ -7,6 +7,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.get("/demo")
 def concrete_services_demo(request: Request):
     """Demonstrate using concrete services without interfaces"""
@@ -37,6 +38,7 @@ def concrete_services_demo(request: Request):
         "data_saved": data_service.get_data("concrete_demo"),
         "note": "You can register services either as interfaces or concrete classes",
     }
+
 
 @router.get("/info")
 def service_registration_info():
