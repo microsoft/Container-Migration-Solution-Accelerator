@@ -1,5 +1,5 @@
 name: AZD Template Validation
-on: 
+on:
   workflow_dispatch:
 
 permissions:

@@ -36,7 +36,7 @@ param location string = resourceGroup().location
   }
 })
 @description('Optional. Location for all AI service resources. This location can be different from the resource group location.')
-param aiDeploymentLocation string?
+param aiDeploymentLocation string
 
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
@@ -612,3 +612,21 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
 
 @description('The name of the resource group.')
 output resourceGroupName string = resourceGroup().name
+
+@description('The name of the web app container app.')
+output CONTAINER_WEB_APP_NAME string = containerAppFrontend.outputs.name
+
+@description('The FQDN of the web app container app.')
+output CONTAINER_WEB_APP_FQDN string = containerAppFrontend.outputs.fqdn
+
+@description('The name of the API container app.')
+output CONTAINER_API_APP_NAME string = containerAppBackend.outputs.name
+
+@description('The FQDN of the API container app.')
+output CONTAINER_API_APP_FQDN string = containerAppBackend.outputs.fqdn
+
+@description('The Azure subscription ID.')
+output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
+
+@description('The Azure resource group name.')
+output AZURE_RESOURCE_GROUP string = resourceGroup().name
