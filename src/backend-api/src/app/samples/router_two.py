@@ -8,6 +8,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.get("/hello")
 def hello(request: Request):
     """Basic hello endpoint"""
@@ -18,6 +19,7 @@ def hello(request: Request):
     logger_service.log_info("Router Two hello endpoint called")
 
     return {"message": "Hello from Router Two"}
+
 
 @router.get("/test-transient")
 def test_transient_service(request: Request):

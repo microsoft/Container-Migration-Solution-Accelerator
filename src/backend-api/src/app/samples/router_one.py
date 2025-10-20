@@ -8,6 +8,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.get("/hello")
 def hello(request: Request):
     # Type hint for better IntelliSense support
@@ -34,6 +35,7 @@ def hello(request: Request):
         "saved_data": saved_data,
         "services_registered": len(app.app_context.get_registered_services()),
     }  # Now VS Code will recognize app_context and provide IntelliSense
+
 
 @router.get("/services")
 def get_services(request: Request):

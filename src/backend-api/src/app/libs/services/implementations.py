@@ -7,6 +7,7 @@ from typing import Any, Dict
 import httpx
 from libs.services.interfaces import IDataService, IHttpService, ILoggerService
 
+
 class InMemoryDataService(IDataService):
     """
     In-memory implementation of data service.
@@ -94,4 +95,3 @@ class HttpClientService(IHttpService):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._client.aclose()
-
