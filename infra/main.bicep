@@ -39,6 +39,23 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
 @description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
 param azureAiServiceLocation string
 
+@allowed([
+  'australiaeast'
+  'eastus'
+  'eastus2'
+  'francecentral'
+  'japaneast'
+  'norwayeast'
+  'southindia'
+  'swedencentral'
+  'uksouth'
+  'westus'
+  'westus3'
+])
+@description('Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance.')
+#disable-next-line no-unused-params
+param aiDeploymentLocation string = azureAiServiceLocation
+
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
 

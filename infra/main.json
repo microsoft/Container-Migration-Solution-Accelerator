@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "5153191906296889000"
+      "templateHash": "16862363814500551775"
     }
   },
   "parameters": {
@@ -59,6 +59,26 @@
           ]
         },
         "description": "Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment."
+      }
+    },
+    "aiDeploymentLocation": {
+      "type": "string",
+      "defaultValue": "[parameters('azureAiServiceLocation')]",
+      "allowedValues": [
+        "australiaeast",
+        "eastus",
+        "eastus2",
+        "francecentral",
+        "japaneast",
+        "norwayeast",
+        "southindia",
+        "swedencentral",
+        "uksouth",
+        "westus",
+        "westus3"
+      ],
+      "metadata": {
+        "description": "Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance."
       }
     },
     "containerRegistryHost": {
@@ -26087,8 +26107,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
