@@ -39,22 +39,6 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
 @description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
 param azureAiServiceLocation string
 
-@allowed([
-  'australiaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'norwayeast'
-  'southindia'
-  'swedencentral'
-  'uksouth'
-  'westus'
-  'westus3'
-])
-@description('Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance.')
-param aiDeploymentLocation string = azureAiServiceLocation
-
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
 
@@ -102,6 +86,11 @@ param existingLogAnalyticsWorkspaceId string = ''
 param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
   : deployer().objectId
+
+// Get the current deployer's information for local debugging permissions
+var deployerInfo = deployer()
+var deployingUserPrincipalId = deployerInfo.objectId
+var deployingUserType = !empty(deployerInfo.userPrincipalName) ? 'User' : 'ServicePrincipal'
 
 @description('Optional. Resource ID of an existing Foundry project')
 param existingFoundryProjectResourceId string = ''
@@ -468,6 +457,17 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
+      // Add deployer permissions
+      {
+        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+      }
+      {
+        roleDefinitionIdOrName: 'Storage Queue Data Contributor'
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+      }
     ]
     // WAF aligned networking
     networkAcls: {
@@ -653,6 +653,12 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         principalType: 'ServicePrincipal'
         roleDefinitionIdOrName: 'DocumentDB Account Contributor'
       }
+      // Add deployer for local debugging
+      {
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+        roleDefinitionIdOrName: 'DocumentDB Account Contributor'
+      }
     ]
     // Create custom data plane role definition and assignment
     dataPlaneRoleDefinitions: [
@@ -667,6 +673,8 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         ]
         assignments: [
           { principalId: appIdentity.outputs.principalId }
+          // ADD THIS for local debugging support:
+          { principalId: deployingUserPrincipalId }
         ]
       }
     ]
@@ -697,7 +705,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   name: take('module.ai-services-model-deployments.${existingAiFoundryAiServices.name}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
   params: {
-    name: existingAiFoundryAiServices.name
+    name: aiFoundryAiServicesResourceName  // Fix: use variable instead of resource reference
     deployments: [
       {
         name: aiModelDeploymentName
@@ -713,6 +721,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       }
     ]
     roleAssignments: [
+      // Service Principal permissions
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
@@ -721,12 +730,18 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee'
       }
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+      }
+      // Deployer permissions
+      {
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+        roleDefinitionIdOrName: 'Cognitive Services User'
       }
     ]
   }
@@ -744,6 +759,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
       accountName:aiFoundryAiServicesResourceName
       allowProjectManagement: true
       roleAssignments: [
+        // Service Principal permissions
         {
           principalId: appIdentity.outputs.principalId
           principalType: 'ServicePrincipal'
@@ -758,6 +774,17 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
           principalId: appIdentity.outputs.principalId
           principalType: 'ServicePrincipal'
           roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        }
+        // Deployer permissions for local debugging
+        {
+          principalId: deployingUserPrincipalId
+          principalType: deployingUserType
+          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        }
+        {
+          principalId: deployingUserPrincipalId
+          principalType: deployingUserType
+          roleDefinitionIdOrName: 'Cognitive Services User'
         }
       ]
       // Remove networking configuration to avoid AML workspace creation issues
@@ -789,7 +816,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
   }
 }
 
-var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices.name : aiFoundry.outputs.aiServicesName
+var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices.name : aiFoundryAiServicesResourceName
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${solutionSuffix}', 64)
   params: {
@@ -896,6 +923,8 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     sku: 'Standard'
     publicNetworkAccess: 'Enabled'
   }
+  // Add explicit dependency
+  dependsOn: useExistingAiFoundryAiProject ? [] : [aiFoundry]
 }
 
 module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if (enablePrivateNetworking) {
@@ -969,7 +998,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     platformReservedDnsIP: '172.17.17.17'
     zoneRedundant: (enablePrivateNetworking) ? true : false // Enable zone redundancy if private networking is enabled
     infrastructureSubnetResourceId: (enablePrivateNetworking)
-      ? virtualNetwork.outputs.containersSubnetResourceId // Use the container app subnet
+      ? virtualNetwork!.outputs.containersSubnetResourceId // Use the container app subnet
       : null // Use the container app subnet
   }
 }
@@ -1200,3 +1229,7 @@ output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
 
 @description('The Azure resource group name.')
 output AZURE_RESOURCE_GROUP string = resourceGroup().name
+
+// Log deployer information for debugging
+output deployerObjectId string = deployingUserPrincipalId
+output deployerType string = deployingUserType
