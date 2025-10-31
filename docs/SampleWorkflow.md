@@ -1,48 +1,37 @@
 
 # Sample Workflow
 
-To help you get started, sample Informix queries have been included in the data/informix/functions and data/informix/simple directories. You can choose to upload these files to test the application.
+To help you get started, here’s a **sample process** you can follow in the app.
 
 ## **Process**
 
-> Note: Download Sample Data - You can down load all the sample kubernetes (.yaml) files from EKS & GKE folder from the test_files folder of the repo
-
-### **API Documentation**
-
-_Sample Operation:_
-
-- Task: Click on 'API Documentation' to view and explore the available API endpoints and their details
+> Note: Download sample data files for **EKS & GKE** in data folder from this repository.
 
 ### **Upload**
-The Browse section allows users to explore and retrieve information related to promissory notes. Key functionalities include:
 
 _Sample Qperations:_
 
-- Task: Select File – Choose all 4 files from the downloaded list for data extraction.Process each batch individually
-First Batch -> All 4 files from  EKS folder 
-Second Batch -> All  4 files from GKE folder
-- Task: Upload Files – Click the "Upload" button. Multiple files(All 4) can be uploaded at the same time.
-- Task: Check Upload Status - A green banner with a message "All valid files uploaded successfully!" confirming all the valid files have been uploaded successfully will appear 
-- Task:Click Start Processing Button to Process Files - Once the files have been uploaded, clicking Start Processing Button will trigger the migration process for the current batch.
+- Task: Select all files from **EKS** folder.
+- Task: Click the **Upload** button.
+- Task: Check Upload Status
+  > _Observe: Success message **All valid files uploaded successfully!** is appeared_
+- Task: Click **Start Processing** Button to Process Files.
 
 ### **Review**
-The Generate section enables users to create new promissory notes with customizable options. Key features include:
 
 _Sample Qperation:_
 
-- Task: Review MigrationProcess - 
-The batch Processing page will get opened up and the Migration process will be visible. It will have smaller messages in a caraousel box and the agent working and phase will be provided in the message.
-- Task: Review Migrated FIles & Reports - 
-Once the batch Processing is done for all the files then all the files with 4 reports will be available to review. 
+- Task: The Batch Processing page will appear, showing the migration process with real-time status updates, including agent activity and phase details.
+- Task: Once batch processing is complete, all files along with four detailed reports will be available for review. 
   
 ### **Download**
-The Draft section ensures accuracy and completeness of the generated promissory notes. Key tasks include:
 
 _Sample operation:_
 
-- Task: Download .zip file-
-Once all the files have been migrated the button at the left bottom will be enabled to download a .zip file which contains all the migrated files and reports related to the migration process for the uploaded batch.
+- Task: Once the files are translated, the **Download all as .zip** button at the top left will be enabled to download the translated files.
 
  ![Application](images/sampleworkflow1.png)
+
+ > Note: Follow the same process for the **GKE** folder. 
   
-This structured approach ensures that users can efficiently browse, create, and refine promissory notes while maintaining legal compliance and document accuracy.
+This structured approach simplifies container adoption by automating migration, handling dependencies, and optimizing performance for cloud-native environments, while enhancing existing code for better efficiency and maintainability.
