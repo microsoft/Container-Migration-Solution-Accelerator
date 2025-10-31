@@ -833,6 +833,29 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
   }
 }
 
+// User Role Assignment for Azure OpenAI - New Resources
+module userOpenAiRoleAssignment './modules/role.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('user-openai-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}', 64)
+  params: {
+    name: 'user-openai-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}'
+    principalId: deployingUserPrincipalId
+    aiServiceName: aiFoundryAiServicesResourceName
+    principalType: 'User'
+  }
+}
+
+// User Role Assignment for Azure OpenAI - Existing Resources
+module userOpenAiRoleAssignmentExisting './modules/role.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('user-openai-existing-${uniqueString(deployingUserPrincipalId, existingAiFoundryAiServices.name)}', 64)
+  params: {
+    name: 'user-openai-existing-${uniqueString(deployingUserPrincipalId, existingAiFoundryAiServices.name)}'
+    principalId: deployingUserPrincipalId
+    aiServiceName: existingAiFoundryAiServices.name
+    principalType: 'User'
+  }
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+}
+
 var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices.name : aiFoundryAiServicesResourceName
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${solutionSuffix}', 64)
