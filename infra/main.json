@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "2559522633123475026"
+      "templateHash": "6602336314110917339"
     }
   },
   "parameters": {
@@ -30040,6 +30040,11 @@
               {
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]",
+                "roleDefinitionIdOrName": "Cognitive Services OpenAI Contributor"
+              },
+              {
+                "principalId": "[variables('deployingUserPrincipalId')]",
+                "principalType": "[variables('deployingUserType')]",
                 "roleDefinitionIdOrName": "Cognitive Services User"
               }
             ]
@@ -52083,219 +52088,11 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
-    },
-    "userOpenAiRoleAssignment": {
-      "condition": "[not(variables('useExistingAiFoundryAiProject'))]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "[take(format('user-openai-{0}', uniqueString(variables('deployingUserPrincipalId'), variables('aiFoundryAiServicesResourceName'))), 64)]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "name": {
-            "value": "[format('user-openai-{0}', uniqueString(variables('deployingUserPrincipalId'), variables('aiFoundryAiServicesResourceName')))]"
-          },
-          "principalId": {
-            "value": "[variables('deployingUserPrincipalId')]"
-          },
-          "aiServiceName": {
-            "value": "[variables('aiFoundryAiServicesResourceName')]"
-          },
-          "principalType": {
-            "value": "User"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.38.33.27573",
-              "templateHash": "11967161442175940890"
-            }
-          },
-          "parameters": {
-            "name": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the role assignment."
-              }
-            },
-            "principalId": {
-              "type": "string",
-              "metadata": {
-                "description": "The principal ID to grant access to."
-              }
-            },
-            "aiServiceName": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the existing Azure Cognitive Services account."
-              }
-            },
-            "principalType": {
-              "type": "string",
-              "defaultValue": "ServicePrincipal",
-              "allowedValues": [
-                "Device",
-                "ForeignGroup",
-                "Group",
-                "ServicePrincipal",
-                "User"
-              ]
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServiceName'))]",
-              "name": "[guid(format('{0}-aiuser-{1}', parameters('name'), parameters('principalId')))]",
-              "properties": {
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]"
-              }
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServiceName'))]",
-              "name": "[guid(format('{0}-aidev-{1}', parameters('name'), parameters('principalId')))]",
-              "properties": {
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]"
-              }
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServiceName'))]",
-              "name": "[guid(format('{0}-openai-{1}', parameters('name'), parameters('principalId')))]",
-              "properties": {
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]"
-              }
-            }
-          ]
-        }
-      }
-    },
-    "userOpenAiRoleAssignmentExisting": {
-      "condition": "[variables('useExistingAiFoundryAiProject')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "[take(format('user-openai-existing-{0}', uniqueString(variables('deployingUserPrincipalId'), variables('aiFoundryAiServicesResourceName'))), 64)]",
-      "subscriptionId": "[variables('aiFoundryAiServicesSubscriptionId')]",
-      "resourceGroup": "[variables('aiFoundryAiServicesResourceGroupName')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "name": {
-            "value": "[format('user-openai-existing-{0}', uniqueString(variables('deployingUserPrincipalId'), variables('aiFoundryAiServicesResourceName')))]"
-          },
-          "principalId": {
-            "value": "[variables('deployingUserPrincipalId')]"
-          },
-          "aiServiceName": {
-            "value": "[variables('aiFoundryAiServicesResourceName')]"
-          },
-          "principalType": {
-            "value": "User"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.38.33.27573",
-              "templateHash": "11967161442175940890"
-            }
-          },
-          "parameters": {
-            "name": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the role assignment."
-              }
-            },
-            "principalId": {
-              "type": "string",
-              "metadata": {
-                "description": "The principal ID to grant access to."
-              }
-            },
-            "aiServiceName": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the existing Azure Cognitive Services account."
-              }
-            },
-            "principalType": {
-              "type": "string",
-              "defaultValue": "ServicePrincipal",
-              "allowedValues": [
-                "Device",
-                "ForeignGroup",
-                "Group",
-                "ServicePrincipal",
-                "User"
-              ]
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServiceName'))]",
-              "name": "[guid(format('{0}-aiuser-{1}', parameters('name'), parameters('principalId')))]",
-              "properties": {
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]"
-              }
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServiceName'))]",
-              "name": "[guid(format('{0}-aidev-{1}', parameters('name'), parameters('principalId')))]",
-              "properties": {
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]"
-              }
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServiceName'))]",
-              "name": "[guid(format('{0}-openai-{1}', parameters('name'), parameters('principalId')))]",
-              "properties": {
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')]",
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]"
-              }
-            }
-          ]
-        }
-      }
     },
     "appConfiguration": {
       "type": "Microsoft.Resources/deployments",
