@@ -5,30 +5,28 @@ To help you get started, here’s a **sample process** you can follow in the app
 
 ## **Process**
 
-> Note: Download sample data files for **EKS & GKE** in data folder from this repository.
+> Note: Download sample data files for **EKS & GKE** in data folder from [here](../data).
 
 ### **Upload**
 
-_Sample Qperations:_
+_Sample Operations:_
 
-- Task: Select all files from **EKS** folder.
-- Task: Click the **Upload** button.
-- Task: Check Upload Status
+- Select all files from **EKS** folder.
+- Click the **Upload** button.
+- Check Upload Status
   > _Observe: Success message **All valid files uploaded successfully!** is appeared_
-- Task: Click **Start Processing** Button to Process Files.
+- Click **Start Processing** Button to Process Files.
 
 ### **Review**
 
-_Sample Qperation:_
-
-- Task: The Batch Processing page will appear, showing the migration process with real-time status updates, including agent activity and phase details.
-- Task: Once batch processing is complete, all files along with four detailed reports will be available for review. 
+- The Batch Processing page will appear, showing the migration process with real-time status updates, including agent activity and phase details.
+- Once batch processing is complete, all files along with four detailed reports will be available for review. 
   
 ### **Download**
 
 _Sample operation:_
 
-- Task: Once the files are translated, the **Download all as .zip** button at the top left will be enabled to download the translated files.
+- Once the files are translated, the **Download all as .zip** button at the top left will be enabled to download the translated files.
 
  ![Application](images/sampleworkflow1.png)
 
