@@ -20,7 +20,7 @@ _Sample Operations:_
 ### **Review**
 
 - The Batch Processing page will appear, showing the migration process with real-time status updates, including agent activity and phase details.
-- Once batch processing is complete, all files along with four detailed reports will be available for review. 
+- Once batch processing is complete, all files along with four detailed reports will be available for review.
   
 ### **Download**
 
