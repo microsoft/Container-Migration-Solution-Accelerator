@@ -30,6 +30,5 @@ _Sample operation:_
 
  ![Application](images/sampleworkflow1.png)
 
- > Note: Follow the same process for the **GKE** folder. 
-  
+ > Note: Follow the same process for the **GKE** folder.
 This structured approach simplifies container adoption by automating migration, handling dependencies, and optimizing performance for cloud-native environments, while enhancing existing code for better efficiency and maintainability.
