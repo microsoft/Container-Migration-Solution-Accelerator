@@ -14,7 +14,7 @@ _Sample Operations:_
 - Select all files from **EKS** folder.
 - Click the **Upload** button.
 - Check Upload Status
-  > _Observe: Success message **All valid files uploaded successfully!** is appeared_
+  > _Observe: Success message **All valid files uploaded successfully!** appears_
 - Click **Start Processing** Button to Process Files.
 
 ### **Review**
