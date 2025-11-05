@@ -16,6 +16,7 @@ _Sample Operations:_
 - Check Upload Status
   > _Observe: Success message **All valid files uploaded successfully!** appears_
 - Click **Start Processing** Button to Process Files.
+  > _Note: Average response time is 20-30 minutes._ <br>
 
 ### **Review**
 
@@ -31,4 +32,5 @@ _Sample operation:_
  ![Application](images/sampleworkflow1.png)
 
  > Note: Follow the same process for the **GKE** folder.
+
 This structured approach simplifies container adoption by automating migration, handling dependencies, and optimizing performance for cloud-native environments, while enhancing existing code for better efficiency and maintainability.
