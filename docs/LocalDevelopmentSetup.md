@@ -15,7 +15,7 @@ winget install Git.Git
 
 # Clone and setup
 git clone https://github.com/microsoft/container-migration-solution-accelerator.git
-cd container-migration-solution-accelerator/processor
+cd container-migration-solution-accelerator/src/processor
 
 # Install uv and setup environment
 pip install uv
@@ -43,7 +43,7 @@ source ~/.bashrc
 
 # Setup project (same as Linux)
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd container-migration-solution-accelerator/processor
+cd container-migration-solution-accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -63,7 +63,7 @@ source ~/.bashrc
 
 # Clone and setup
 git clone https://github.com/microsoft/Container-Migration-Solution-Acceleratorr.git
-cd container-migration-solution-accelerator/processor
+cd container-migration-solution-accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -85,7 +85,7 @@ source ~/.bashrc
 
 # Setup (same as above)
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd container-migration-solution-accelerator/processor
+cd container-migration-solution-accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -102,7 +102,7 @@ brew install python@3.12 uv git
 
 # Clone and setup
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd container-migration-solution-accelerator/processor
+cd container-migration-solution-accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
