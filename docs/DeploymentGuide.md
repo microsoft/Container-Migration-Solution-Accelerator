@@ -237,3 +237,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 ### 🛠️ Troubleshooting
 
 If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
+
+## Running the application
+
+To help you get started, here's the [Sample Workflow](./SampleWorkflow.md) you can follow to try it out.

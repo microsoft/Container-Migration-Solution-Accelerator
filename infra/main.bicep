@@ -177,6 +177,7 @@ var replicaRegionPairs = {
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'eastus'
 }
 var replicaLocation = replicaRegionPairs[resourceGroup().location]
 
@@ -545,6 +546,7 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'eastus'
 }
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().location]
 
