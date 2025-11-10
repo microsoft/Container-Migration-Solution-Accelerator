@@ -237,3 +237,10 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 ### 🛠️ Troubleshooting
 
 If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
+
+### Deploy Your local changes
+To Deploy your local changes rename the below files.
+
+Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
+Go to `infra` directory
+Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`. Continue with the [deploying steps](#deploying-with-azd).
