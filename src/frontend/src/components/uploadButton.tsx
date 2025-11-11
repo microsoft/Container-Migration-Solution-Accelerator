@@ -54,10 +54,44 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const [fileLimitExceeded, setFileLimitExceeded] = useState(false);
   const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
   const [isCreatingProcess, setIsCreatingProcess] = useState(false);
+  const [rejectedFiles, setRejectedFiles] = useState<FileRejection[]>([]);
+  const [showFileRejectionError, setShowFileRejectionError] = useState(false);
   const navigate = useNavigate();
 
   const MAX_FILES = 20;
   const dispatch = useDispatch<AppDispatch>();
+
+  // Helper function to create user-friendly error messages for file rejections
+  const getFileRejectionMessage = (rejections: FileRejection[]): { title: string; details: string } => {
+    if (rejections.length === 0) return { title: '', details: '' };
+
+    // Check the rejection reasons
+    const hasInvalidType = rejections.some(r => r.errors.some(e => e.code === 'file-invalid-type'));
+    const hasLargeFile = rejections.some(r => r.errors.some(e => e.code === 'file-too-large'));
+    
+    let title = '';
+    let details = '';
+
+    if (hasInvalidType && hasLargeFile) {
+      title = 'Invalid files detected. Please check file type and size.';
+    } else if (hasInvalidType) {
+      title = 'Invalid file type. Please upload only .yaml or .yml files.';
+    } else if (hasLargeFile) {
+      title = `File too large. Maximum size is ${Math.floor(maxSize / (1024 * 1024))}MB per file.`;
+    } else {
+      title = 'File upload rejected. Please check your files.';
+    }
+
+    // Create details message
+    if (rejections.length === 1) {
+      details = `File rejected: ${rejections[0].file.name}`;
+    } else {
+      const fileNames = rejections.map(r => r.file.name).slice(0, 3);
+      details = `${rejections.length} files rejected: ${fileNames.join(', ')}${rejections.length > 3 ? '...' : ''}`;
+    }
+
+    return { title, details };
+  };
 
   useEffect(() => {
     if (uploadingFiles.length === 0) {
@@ -211,6 +245,12 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           )
         );
         
+        // Clear any file rejection errors when files are successfully uploaded
+        if (showFileRejectionError) {
+          setShowFileRejectionError(false);
+          setRejectedFiles([]);
+        }
+        
         // Files uploaded successfully - user can now click "Start processing" button
         console.log("Files uploaded successfully. User can now click 'Start processing' to begin processing.");
       } catch (uploadError) {
@@ -313,6 +353,12 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
               : f
           )
         );
+        
+        // Clear any file rejection errors when files are successfully uploaded
+        if (showFileRejectionError) {
+          setShowFileRejectionError(false);
+          setRejectedFiles([]);
+        }
       } catch (uploadError) {
         // Clear interval immediately on upload error
         clearInterval(uploadIntervalId);
@@ -382,8 +428,15 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         if (onFileUpload) onFileUpload(acceptedFiles);
       }
 
-      if (onFileReject && fileRejections.length > 0) {
-        onFileReject(fileRejections);
+      // Handle file rejections internally and show error messages
+      if (fileRejections.length > 0) {
+        setRejectedFiles(fileRejections);
+        setShowFileRejectionError(true);
+        
+        // Also call the optional external handler if provided
+        if (onFileReject) {
+          onFileReject(fileRejections);
+        }
       }
     },
     [onFileUpload, onFileReject, uploadingFiles.length, batchId]
@@ -557,6 +610,18 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       return () => clearTimeout(timer);
     }
   }, [fileLimitExceeded]);
+
+  // Auto-hide file rejection error after 8 seconds
+  useEffect(() => {
+    if (showFileRejectionError) {
+      const timer = setTimeout(() => {
+        setShowFileRejectionError(false);
+        setRejectedFiles([]);
+      }, 8000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showFileRejectionError]);
 
   const handleStartProcessing = () => {
     if (uploadState === 'COMPLETED' && onStartTranslating) {
@@ -858,7 +923,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '13px', width: '100%', paddingBottom: 10, borderRadius: '4px', }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '13px', width: '100%', maxWidth: '850px', paddingBottom: 10, borderRadius: '4px', margin: '0 auto' }}>
         {allUploadsComplete && (
           <MessageBar
             messageBarType={MessageBarType.success}
@@ -899,6 +964,39 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             Maximum of {MAX_FILES} files allowed. Some files were not uploaded.
           </MessageBar>
         )}
+
+        {showFileRejectionError && rejectedFiles.length > 0 && (() => {
+          const errorMessages = getFileRejectionMessage(rejectedFiles);
+          return (
+            <MessageBar
+              messageBarType={MessageBarType.error}
+              isMultiline={true}
+              onDismiss={() => {
+                setShowFileRejectionError(false);
+                setRejectedFiles([]);
+              }}
+              dismissButtonAriaLabel="Close"
+              styles={{
+                root: { display: "flex", alignItems: "flex-start" },
+              }}
+            >
+              {/* <X
+                strokeWidth="2.5px"
+                color='#d13438'
+                size='14px'
+                style={{ marginRight: "12px", paddingTop: 3, flexShrink: 0 }}
+              /> */}
+              <div>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  {errorMessages.title}
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  {errorMessages.details}
+                </div>
+              </div>
+            </MessageBar>
+          );
+        })()}
       </div>
 
       {uploadingFiles.length > 0 && (
