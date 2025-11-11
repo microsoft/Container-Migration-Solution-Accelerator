@@ -238,6 +238,10 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
 If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
 
+## Running the application
+
+To help you get started, here's the [Sample Workflow](../docs/SampleWorkflow.md) you can follow to try it out.
+
 ### Deploy Your local changes
 To Deploy your local changes rename the below files.
 
