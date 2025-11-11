@@ -183,6 +183,7 @@ var replicaRegionPairs = {
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'eastus'
 }
 var replicaLocation = replicaRegionPairs[resourceGroup().location]
 
@@ -562,6 +563,7 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'eastus'
 }
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().location]
 
@@ -1134,6 +1136,14 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'APP_ENV'
             value: 'prod'
+          }
+          {
+            name: 'REACT_APP_MSAL_POST_REDIRECT_URL'
+            value: '/'
+          }
+          {
+            name: 'REACT_APP_MSAL_REDIRECT_URL'
+            value: '/'
           }
         ]
         resources: {
