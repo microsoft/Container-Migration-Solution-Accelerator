@@ -240,4 +240,11 @@ If you encounter any issues during the deployment process, please refer [trouble
 
 ## Running the application
 
-To help you get started, here's the [Sample Workflow](./SampleWorkflow.md) you can follow to try it out.
+To help you get started, here's the [Sample Workflow](../docs/SampleWorkflow.md) you can follow to try it out.
+
+### Deploy Your local changes
+To Deploy your local changes rename the below files.
+
+Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
+Go to `infra` directory
+Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`. Continue with the [deploying steps](#deploying-with-azd).
