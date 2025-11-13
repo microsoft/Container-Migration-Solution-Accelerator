@@ -810,23 +810,12 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       const timer = setTimeout(() => {
         setShowFileRejectionError(false);
         setRejectedFiles([]);
-      }, 8000);
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
   }, [showFileRejectionError]);
 
-  // Auto-hide network error after 10 seconds (slightly longer for network issues)
-  useEffect(() => {
-    if (showNetworkError) {
-      const timer = setTimeout(() => {
-        setShowNetworkError(false);
-        setNetworkErrorMessage('');
-      }, 10000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [showNetworkError]);
 
   const handleStartProcessing = () => {
     if (uploadState === 'COMPLETED' && onStartTranslating) {
@@ -1236,45 +1225,6 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
                   />
                   <span>{networkErrorMessage}</span>
                 </div>
-                <Button
-                  appearance="primary"
-                  size="small"
-                  onClick={() => {
-                    // Clear the network error and retry upload
-                    setShowNetworkError(false);
-                    setNetworkErrorMessage('');
-                    
-                    // Get files with error status
-                    const errorFiles = uploadingFiles.filter(f => f.status === 'error');
-                    if (errorFiles.length > 0) {
-                      const filesToRetry = errorFiles.map(f => f.file);
-                      
-                      // Reset files to uploading status
-                      setUploadingFiles(prev =>
-                        prev.map(f =>
-                          errorFiles.some(ef => ef.id === f.id)
-                            ? { ...f, status: 'uploading', progress: 0 }
-                            : f
-                        )
-                      );
-                      
-                      // Retry upload
-                      if (!batchId) {
-                        simulateFileUploadWithProcessCreation(filesToRetry);
-                      } else {
-                        uploadAdditionalFilesToExistingProcess(filesToRetry);
-                      }
-                    }
-                  }}
-                  style={{
-                    minWidth: "60px",
-                    height: "28px",
-                    fontSize: "12px",
-                    marginLeft: "12px"
-                  }}
-                >
-                  Retry
-                </Button>
               </div>
             </MessageBar>
           </div>
