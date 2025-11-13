@@ -100,12 +100,12 @@ If you'd like to customize the solution accelerator, here are some common areas 
 
 The Container Migration Solution Accelerator supports development and deployment across multiple platforms and environments.
 
+**For Azure Deployment:**
+[Click here to launch the deployment guide](docs/DeploymentGuide.md)
+
 **For Local Development:**
 - [Local Development Setup Guide](docs/LocalDevelopmentSetup.md) - Comprehensive setup instructions for Windows, Linux, and macOS
 - Includes native Windows setup, WSL2 configuration, and cross-platform development tools
-
-**For Azure Deployment:**
-[Click here to launch the deployment guide](docs/DeploymentGuide.md)
 
 ![Deployment Architecture](docs/images/readme/deployment-architecture.png)
 
