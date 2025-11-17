@@ -100,14 +100,12 @@ param cosmosLocation string = 'eastus2'
 param existingLogAnalyticsWorkspaceId string = ''
 
 @description('Tag, Created by user name')
-param createdBy string = contains(deployer(), 'userPrincipalName')
-  ? split(deployer().userPrincipalName, '@')[0]
-  : deployer().objectId
+param createdBy string = deployer().objectId
 
 // Get the current deployer's information for local debugging permissions
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
-var deployingUserType = !empty(deployerInfo.userPrincipalName) ? 'User' : 'ServicePrincipal'
+var deployingUserType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
 @description('Optional. Resource ID of an existing Foundry project')
 param existingFoundryProjectResourceId string = ''
