@@ -2,7 +2,9 @@
 
 ## Overview
 
-This guide walks you through deploying the Container Migration Solution Accelerator to Azure. The deployment process takes approximately 10-15 minutes and includes both infrastructure provisioning and application setup.
+This guide walks you through deploying the Container Migration Solution Accelerator to Azure. The deployment process takes approximately 10-15 minutes for the default Development/Testing configuration and includes both infrastructure provisioning and application setup.
+
+🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
 ## Step 1: Prerequisites & Setup
 
@@ -17,7 +19,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 | **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions |
 | **App Registration Creation** | Azure Active Directory | Create and configure authentication |
 
-**✅ How to Check Your Permissions:**
+**🔍 How to Check Your Permissions:**
 
 <details>
 <summary><b>Azure Portal</b></summary>
@@ -72,7 +74,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 - **Default:** 200k tokens (minimum)
 - **Optimal:** 500k tokens (recommended for best performance)
 
-> **Note:** When you run `azd up`, the deployment will automatically show you regions with available quota, so this pre-check is optional but helpful for planning purposes.
+> **Note:** When you run `azd up`, the deployment will automatically show you regions with available quota, so this pre-check is optional but helpful for planning purposes. You can customize these settings later in [Step 3.3: Advanced Configuration](#33-advanced-configuration-optional).
 
 📖 **Adjust Quota:** Follow [Azure AI Model Quota Settings](./AzureAIModelQuotaSettings.md) if needed.
 
@@ -84,9 +86,9 @@ Select one of the following options to deploy the Container Migration Solution A
 
 | **Option** | **Best For** | **Prerequisites** | **Setup Time** |
 |------------|--------------|-------------------|----------------|
-| **[GitHub Codespaces](#option-a-github-codespaces-easiest)** | Quick deployment, no local setup required | GitHub account | ~3-5 minutes |
-| **[VS Code Dev Containers](#option-b-vs-code-dev-containers)** | Fast deployment with local tools | Docker Desktop, VS Code | ~5-10 minutes |
-| **[Local Environment](#option-c-local-environment)** | Enterprise environments, full control | All tools individually | ~15-30 minutes |
+| **GitHub Codespaces** | Quick deployment, no local setup required | GitHub account | ~3-5 minutes |
+| **VS Code Dev Containers** | Fast deployment with local tools | Docker Desktop, VS Code | ~5-10 minutes |
+| **Local Environment** | Enterprise environments, full control | All tools individually | ~15-30 minutes |
 
 **💡 Recommendation:** For fastest deployment, start with **GitHub Codespaces** - no local installation required.
 
@@ -318,9 +320,37 @@ If deployment fails or you need to clean up manually:
 
 ## Managing Multiple Environments
 
+### Recover from Failed Deployment (Most Important)
+
+If your deployment failed or encountered errors, here are the steps to recover:
+
+<details>
+<summary><b>Recover from Failed Deployment</b></summary>
+
+**If your deployment failed or encountered errors:**
+
+1. **Try a different region:** Create a new environment and select a different Azure region during deployment
+2. **Clean up and retry:** Use `azd down` to remove failed resources, then `azd up` to redeploy
+3. **Check troubleshooting:** Review [Troubleshooting Guide](./TroubleShootingSteps.md) for specific error solutions
+4. **Fresh start:** Create a completely new environment with a different name
+
+**Example Recovery Workflow:**
+```shell
+# Remove failed deployment (optional)
+azd down
+
+# Create new environment (3-16 chars, alphanumeric only)
+azd env new conmigretry
+
+# Deploy with different settings/region
+azd up
+```
+
+</details>
+
 ### Creating a New Environment
 
-If you need to deploy to a different region, test different configurations, or recover from deployment errors, you can create additional environments:
+If you need to deploy to a different region, test different configurations, or create additional environments:
 
 <details>
 <summary><b>Create a New Environment</b></summary>
@@ -373,30 +403,6 @@ azd env select <environment-name>
 **View Current Environment:**
 ```shell
 azd env get-values
-```
-
-</details>
-
-<details>
-<summary><b>Recover from Failed Deployment</b></summary>
-
-**If your deployment failed or encountered errors:**
-
-1. **Try a different region:** Create a new environment and select a different Azure region during deployment
-2. **Clean up and retry:** Use `azd down` to remove failed resources, then `azd up` to redeploy
-3. **Check troubleshooting:** Review [Troubleshooting Guide](./TroubleShootingSteps.md) for specific error solutions
-4. **Fresh start:** Create a completely new environment with a different name
-
-**Example Recovery Workflow:**
-```shell
-# Remove failed deployment (optional)
-azd down
-
-# Create new environment (3-16 chars, alphanumeric only)
-azd env new conmigretry
-
-# Deploy with different settings/region
-azd up
 ```
 
 </details>
