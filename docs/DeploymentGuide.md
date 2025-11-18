@@ -322,7 +322,7 @@ If deployment fails or you need to clean up manually:
 
 ## Managing Multiple Environments
 
-### Recover from Failed Deployment (Most Important)
+### Recover from Failed Deployment
 
 If your deployment failed or encountered errors, here are the steps to recover:
 
