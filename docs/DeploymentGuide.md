@@ -34,7 +34,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
    - **Role Based Access Control Administrator** (or similar RBAC role)
 
 **For App Registration permissions:**
-1. Go to **Azure Active Directory** → **App registrations**
+1. Go to **Microsoft Entra ID** → **Manage** → **App registrations**
 2. Try clicking **New registration** 
 3. If you can access this page, you have the required permissions
 4. Cancel without creating an app registration
