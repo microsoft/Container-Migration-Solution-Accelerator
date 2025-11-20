@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+# This file contains a developer‑focused Azure Developer CLI configuration.  It
+# extends the default template by defining three services (backend API,
+# processor and frontend) and instructs azd to build container images from
+# your local source code.  All three services are packaged as container apps
+# using the Dockerfiles located in their respective project directories.
+# After deployment a post‑deploy hook prints the endpoints of the deployed
+# container apps.
+
+name: container-migration-solution-accelerator
+metadata:
+  template: container-migration-solution-accelerator@1.0
+
+requiredVersions:
+  # Require a recent version of azd that supports the packaging
+  # functionality used here.  Versions less than 1.17.1 had a bug in
+  # remoteBuild.
+  azd: ">=1.18.2"
+
+infra:
+  parameters:
+    backendImageName: ${SERVICE_BACKEND_IMAGE_NAME}
+    processorImageName: ${SERVICE_PROCESSOR_IMAGE_NAME}
+    frontendImageName: ${SERVICE_FRONTEND_IMAGE_NAME}
+
+services:
+  # Backend API service.  This is a Python FastAPI application defined in
+  # src/backend-api.  The azd packaging stage builds a Docker image using
+  # the Dockerfile in that directory.  The image name 'backend-api' is
+  # combined with the automatically created Azure Container Registry login
+  # server to form the final image reference.
+  backend:
+    project: ./src/backend-api
+    language: py
+    host: containerapp
+    docker:
+      image: backend-api
+      remoteBuild: true
+
+  # Processor service.  This service reads messages from storage queues and
+  # orchestrates long‑running migrations.  It is also packaged as a
+  # container and deployed to a container app environment.  The Dockerfile
+  # in the src/processor directory defines how the image is built.
+  processor:
+    project: ./src/processor
+    language: py
+    host: containerapp
+    docker:
+      image: processor
+      remoteBuild: true
+
+  # Frontend service.  The frontend consists of a React single‑page
+  # application and a lightweight Python server that serves the compiled
+  # assets.  azd packages the frontend by building a Docker image using
+  # the Dockerfile in the src/frontend directory and deploys it to a
+  # container app.
+  frontend:
+    project: ./src/frontend
+    language: py
+    host: containerapp
+    docker:
+      image: frontend
+      remoteBuild: true
+
+hooks:
+  # After deployment prints the names and endpoints of the deployed
+  # container apps.  This reproduces the behaviour of the default
+  # configuration so that developers can easily discover their services.
+  postdeploy:
+    posix:
+      shell: sh
+      run: |
+        echo "-----"
+        echo "🧭 Frontend Container App Details:"
+        echo "✅ Name: $CONTAINER_FRONTEND_APP_NAME"
+        echo "🌐 Endpoint: https://$CONTAINER_FRONTEND_APP_FQDN"
+        echo "🔗 Portal URL: https://portal.azure.com/#resource/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$AZURE_RESOURCE_GROUP/providers/Microsoft.App/containerApps/$CONTAINER_FRONTEND_APP_NAME"
+        echo "-----"
+        echo "🧭 Backend API Container App Details:"
+        echo "✅ Name: $CONTAINER_API_APP_NAME"
+        echo "🌐 Endpoint: https://$CONTAINER_API_APP_FQDN"
+        echo "🔗 Portal URL: https://portal.azure.com/#resource/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$AZURE_RESOURCE_GROUP/providers/Microsoft.App/containerApps/$CONTAINER_API_APP_NAME"
+        echo "-----"
+        echo "🧭 Processor Container App Details:"
+        echo "✅ Name: $SERVICE_PROCESSOR_NAME"
+        echo "🔗 Portal URL: https://portal.azure.com/#resource/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$AZURE_RESOURCE_GROUP/providers/Microsoft.App/containerApps/$SERVICE_PROCESSOR_NAME"
+        echo "-----"
+      interactive: true
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "-----"
+        Write-Host "🧭 Frontend Container App Details:"
+        Write-Host "✅ Name: $env:CONTAINER_FRONTEND_APP_NAME"
+        Write-Host "🌐 Endpoint: https://$env:CONTAINER_FRONTEND_APP_FQDN"
+        Write-Host "🔗 Portal URL: https://portal.azure.com/#resource/subscriptions/$env:AZURE_SUBSCRIPTION_ID/resourceGroups/$env:AZURE_RESOURCE_GROUP/providers/Microsoft.App/containerApps/$env:CONTAINER_FRONTEND_APP_NAME" -ForegroundColor Cyan
+        Write-Host "-----"
+        Write-Host "🧭 Backend API Container App Details:"
+        Write-Host "✅ Name: $env:CONTAINER_API_APP_NAME"
+        Write-Host "🌐 Endpoint: https://$env:CONTAINER_API_APP_FQDN"
+        Write-Host "🔗 Portal URL: https://portal.azure.com/#resource/subscriptions/$env:AZURE_SUBSCRIPTION_ID/resourceGroups/$env:AZURE_RESOURCE_GROUP/providers/Microsoft.App/containerApps/$env:CONTAINER_API_APP_NAME" -ForegroundColor Cyan
+        Write-Host "-----"
+        Write-Host "🧭 Processor Container App Details:"
+        Write-Host "✅ Name: $env:SERVICE_PROCESSOR_NAME"
+        Write-Host "🔗 Portal URL: https://portal.azure.com/#resource/subscriptions/$env:AZURE_SUBSCRIPTION_ID/resourceGroups/$env:AZURE_RESOURCE_GROUP/providers/Microsoft.App/containerApps/$env:SERVICE_PROCESSOR_NAME" -ForegroundColor Cyan
+        Write-Host "-----"
+      interactive: true
