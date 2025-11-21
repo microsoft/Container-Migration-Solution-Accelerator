@@ -186,8 +186,9 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       const activeFiles = uploadingFiles.filter(f => f.status !== 'error');
       const errorFiles = uploadingFiles.filter(f => f.status === 'error');
       
-      // If there are error files and we haven't shown network error yet, check if it might be a network issue
-      if (errorFiles.length > 0 && !showNetworkError) {
+      // Only check for network errors if there are actual upload errors and no file rejection errors are being shown
+      // This prevents showing network error when the issue is just wrong file type/extension
+      if (errorFiles.length > 0 && !showNetworkError && !showFileRejectionError) {
         // Check if navigator is offline
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
           console.log('Network error detected in useEffect: navigator.onLine is false');
@@ -206,7 +207,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
     setUploadState(newState);
     onUploadStateChange?.(newState);
-  }, [uploadingFiles, onUploadStateChange, showNetworkError]);
+  }, [uploadingFiles, onUploadStateChange, showNetworkError, showFileRejectionError]);
 
   const simulateFileUploadWithProcessCreation = async (files: File[]) => {
     console.log("Starting process creation for files:", files.map(f => f.name));
@@ -543,6 +544,22 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
   const onDrop = useCallback(
     async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      // Handle file rejections first and return early if only rejected files
+      if (fileRejections.length > 0) {
+        setRejectedFiles(fileRejections);
+        setShowFileRejectionError(true);
+        
+        // Also call the optional external handler if provided
+        if (onFileReject) {
+          onFileReject(fileRejections);
+        }
+        
+        // If no files were accepted (all were rejected), return early to prevent any upload attempts
+        if (acceptedFiles.length === 0) {
+          return;
+        }
+      }
+
       // Check current files count and determine how many more can be added
       const remainingSlots = MAX_FILES - uploadingFiles.length;
 
@@ -581,17 +598,6 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         }
         
         if (onFileUpload) onFileUpload(acceptedFiles);
-      }
-
-      // Handle file rejections internally and show error messages
-      if (fileRejections.length > 0) {
-        setRejectedFiles(fileRejections);
-        setShowFileRejectionError(true);
-        
-        // Also call the optional external handler if provided
-        if (onFileReject) {
-          onFileReject(fileRejections);
-        }
       }
     },
     [onFileUpload, onFileReject, uploadingFiles.length, batchId]
@@ -1134,7 +1140,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
                 size="16px" // Slightly larger for better balance
                 style={{ marginRight: "8px" }}
               />
-              <span>All valid files uploaded successfully!kk</span>
+              <span>All valid files uploaded successfully!</span>
             </div>
           </MessageBar>
         )}
