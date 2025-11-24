@@ -20,6 +20,8 @@ def test_configuration():
     config_values = {
         "app_logging_enable": config.app_logging_enable,
         "app_logging_level": config.app_logging_level,
+        "azure_package_logging_level": config.azure_package_logging_level,
+        "azure_logging_packages": config.azure_logging_packages,
         "cosmos_db_account_url": config.cosmos_db_account_url,
         "cosmos_db_database_name": config.cosmos_db_database_name,
         "cosmos_db_process_container": config.cosmos_db_process_container,
