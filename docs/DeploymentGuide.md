@@ -315,6 +315,7 @@ After successful deployment:
 ```shell
 azd down
 ```
+> **Note:** If you deployed with `enableRedundancy=true` and Log Analytics workspace replication is enabled, you must first disable replication before running `azd down` else resource group delete will fail. Follow the steps in [Handling Log Analytics Workspace Deletion with Replication Enabled](./LogAnalyticsReplicationDisable.md), wait until replication returns `false`, then run `azd down`.
 
 ### Manual Cleanup (if needed)
 If deployment fails or you need to clean up manually:
@@ -430,3 +431,10 @@ azd env get-values
 - 🐛 **Issues:** Check [Troubleshooting Guide](./TroubleShootingSteps.md)
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
+  
+### Deploy Your local changes
+To Deploy your local changes rename the below files.
+
+Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
+Go to `infra` directory
+Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`. Continue with the [deploying steps](#deploying-with-azd).

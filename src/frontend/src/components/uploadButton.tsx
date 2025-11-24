@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useDropzone, FileRejection, DropzoneOptions } from 'react-dropzone';
-import { CircleCheck, X, Lock } from 'lucide-react';
+import { CircleCheck, X, CircleX } from 'lucide-react';
 import {
   Button,
   Toast,
@@ -54,10 +54,124 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const [fileLimitExceeded, setFileLimitExceeded] = useState(false);
   const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
   const [isCreatingProcess, setIsCreatingProcess] = useState(false);
+  const [rejectedFiles, setRejectedFiles] = useState<FileRejection[]>([]);
+  const [showFileRejectionError, setShowFileRejectionError] = useState(false);
+  const [showNetworkError, setShowNetworkError] = useState(false);
+  const [networkErrorMessage, setNetworkErrorMessage] = useState('');
   const navigate = useNavigate();
 
   const MAX_FILES = 20;
   const dispatch = useDispatch<AppDispatch>();
+
+  // Helper function to detect network connectivity issues
+  const isNetworkError = (error: any): boolean => {
+    // Always check navigator.onLine first - most reliable indicator
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      console.log('Network error detected: navigator.onLine is false');
+      return true;
+    }
+    
+    // Check for common network error patterns
+    if (error && typeof error === 'object') {
+      const errorMessage = error.message?.toLowerCase() || '';
+      const errorName = error.name?.toLowerCase() || '';
+      const errorString = error.toString?.()?.toLowerCase() || '';
+      
+      // Log the error for debugging
+      console.log('Checking error for network issues:', {
+        message: errorMessage,
+        name: errorName,
+        status: error.status,
+        code: error.code,
+        type: error.type,
+        fullError: error
+      });
+      
+      // Check various network error indicators
+      const networkKeywords = [
+        'network', 'fetch', 'connection', 'timeout', 'offline', 'unreachable',
+        'cors', 'net::', 'failed to fetch', 'load failed', 'network request failed',
+        'connection refused', 'connection reset', 'no internet', 'dns'
+      ];
+      
+      const hasNetworkKeyword = networkKeywords.some(keyword => 
+        errorMessage.includes(keyword) || 
+        errorName.includes(keyword) || 
+        errorString.includes(keyword)
+      );
+      
+      const isNetworkStatus = (
+        error.status === 0 || // No response from server (common for network issues)
+        error.status === 408 || // Request timeout
+        error.status === 504 || // Gateway timeout
+        error.status === 502 || // Bad gateway
+        error.status === 503    // Service unavailable
+      );
+      
+      const isNetworkCode = (
+        error.code === 'NETWORK_ERROR' ||
+        error.code === 'TIMEOUT' ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ECONNRESET'
+      );
+      
+      if (hasNetworkKeyword || isNetworkStatus || isNetworkCode) {
+        console.log('Network error detected:', { hasNetworkKeyword, isNetworkStatus, isNetworkCode });
+        return true;
+      }
+    }
+    
+    // If error is a simple string, check for network keywords
+    if (typeof error === 'string') {
+      const errorLower = error.toLowerCase();
+      if (errorLower.includes('network') || errorLower.includes('connection') || errorLower.includes('fetch')) {
+        console.log('Network error detected in string:', error);
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  const getNetworkErrorMessage = (): string => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return 'Network connection lost. Please check your internet connection and try again.';
+    }
+    return 'Network error occurred during upload. Please check your connection and retry.';
+  };
+
+  // Helper function to create user-friendly error messages for file rejections
+  const getFileRejectionMessage = (rejections: FileRejection[]): { title: string; details: string } => {
+    if (rejections.length === 0) return { title: '', details: '' };
+
+    // Check the rejection reasons
+    const hasInvalidType = rejections.some(r => r.errors.some(e => e.code === 'file-invalid-type'));
+    const hasLargeFile = rejections.some(r => r.errors.some(e => e.code === 'file-too-large'));
+    
+    let title = '';
+    let details = '';
+
+    if (hasInvalidType && hasLargeFile) {
+      title = 'Invalid files detected. Please check file type and size.';
+    } else if (hasInvalidType) {
+      title = 'Invalid file type. Please upload only .yaml or .yml files.';
+    } else if (hasLargeFile) {
+      title = `File too large. Maximum size is ${Math.floor(maxSize / (1024 * 1024))}MB per file.`;
+    } else {
+      title = 'File upload rejected. Please check your files.';
+    }
+
+    // Create details message
+    if (rejections.length === 1) {
+      details = `File rejected: ${rejections[0].file.name}`;
+    } else {
+      const fileNames = rejections.map(r => r.file.name).slice(0, 3);
+      details = `${rejections.length} files rejected: ${fileNames.join(', ')}${rejections.length > 3 ? '...' : ''}`;
+    }
+
+    return { title, details };
+  };
 
   useEffect(() => {
     if (uploadingFiles.length === 0) {
@@ -70,6 +184,19 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
     if (uploadingFiles.length > 0) {
       const activeFiles = uploadingFiles.filter(f => f.status !== 'error');
+      const errorFiles = uploadingFiles.filter(f => f.status === 'error');
+      
+      // Only check for network errors if there are actual upload errors and no file rejection errors are being shown
+      // This prevents showing network error when the issue is just wrong file type/extension
+      if (errorFiles.length > 0 && !showNetworkError && !showFileRejectionError) {
+        // Check if navigator is offline
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          console.log('Network error detected in useEffect: navigator.onLine is false');
+          setNetworkErrorMessage(getNetworkErrorMessage());
+          setShowNetworkError(true);
+        }
+      }
+      
       if (activeFiles.length > 0 && activeFiles.every(f => f.status === 'completed')) {
         newState = 'COMPLETED';
         setAllUploadsComplete(true);
@@ -80,7 +207,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
     setUploadState(newState);
     onUploadStateChange?.(newState);
-  }, [uploadingFiles, onUploadStateChange]);
+  }, [uploadingFiles, onUploadStateChange, showNetworkError, showFileRejectionError]);
 
   const simulateFileUploadWithProcessCreation = async (files: File[]) => {
     console.log("Starting process creation for files:", files.map(f => f.name));
@@ -211,11 +338,42 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           )
         );
         
+        // Clear any file rejection errors when files are successfully uploaded
+        if (showFileRejectionError) {
+          setShowFileRejectionError(false);
+          setRejectedFiles([]);
+        }
+        
         // Files uploaded successfully - user can now click "Start processing" button
         console.log("Files uploaded successfully. User can now click 'Start processing' to begin processing.");
       } catch (uploadError) {
         // Clear upload interval immediately on upload error
         clearInterval(uploadIntervalId);
+        
+        // Add comprehensive error logging
+        console.error('Upload error details:', {
+          error: uploadError,
+          message: uploadError?.message,
+          name: uploadError?.name,
+          status: uploadError?.status,
+          code: uploadError?.code,
+          navigatorOnline: navigator?.onLine
+        });
+        
+        // Check if this is a network error and show network error message
+        const isNetworkIssue = isNetworkError(uploadError);
+        console.log('Is network error?', isNetworkIssue);
+        
+        if (isNetworkIssue) {
+          setNetworkErrorMessage(getNetworkErrorMessage());
+          setShowNetworkError(true);
+          console.log('Network error detected - showing MessageBar');
+        } else {
+          // For now, treat ALL upload errors as potential network issues
+          console.log('Treating upload error as potential network issue');
+          setNetworkErrorMessage('Upload failed. This might be due to network connectivity issues. Please try again.');
+          setShowNetworkError(true);
+        }
         
         // Mark files as error
         setUploadingFiles(prev =>
@@ -232,6 +390,12 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       // Clear any running intervals when error occurs
       if (createIntervalId) clearInterval(createIntervalId);
       if (uploadIntervalId) clearInterval(uploadIntervalId);
+      
+      // Check if this is a network error
+      if (isNetworkError(error)) {
+        setNetworkErrorMessage(getNetworkErrorMessage());
+        setShowNetworkError(true);
+      }
       
       // Mark all files as error
       setUploadingFiles(prev =>
@@ -313,9 +477,40 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
               : f
           )
         );
+        
+        // Clear any file rejection errors when files are successfully uploaded
+        if (showFileRejectionError) {
+          setShowFileRejectionError(false);
+          setRejectedFiles([]);
+        }
       } catch (uploadError) {
         // Clear interval immediately on upload error
         clearInterval(uploadIntervalId);
+        
+        // Add comprehensive error logging
+        console.error('Additional files upload error details:', {
+          error: uploadError,
+          message: (uploadError as any)?.message,
+          name: (uploadError as any)?.name,
+          status: (uploadError as any)?.status,
+          code: (uploadError as any)?.code,
+          navigatorOnline: navigator?.onLine
+        });
+        
+        // Check if this is a network error and show network error message
+        const isNetworkIssue = isNetworkError(uploadError);
+        console.log('Is network error for additional files?', isNetworkIssue);
+        
+        if (isNetworkIssue) {
+          setNetworkErrorMessage(getNetworkErrorMessage());
+          setShowNetworkError(true);
+          console.log('Network error detected for additional files - showing MessageBar');
+        } else {
+          // For now, treat ALL upload errors as potential network issues
+          console.log('Treating additional files upload error as potential network issue');
+          setNetworkErrorMessage('Upload failed. This might be due to network connectivity issues. Please try again.');
+          setShowNetworkError(true);
+        }
         
         // Mark files as error
         setUploadingFiles(prev =>
@@ -331,6 +526,13 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       console.error("Failed to upload additional files:", error);
       // Clear interval immediately when error occurs
       if (uploadIntervalId) clearInterval(uploadIntervalId);
+      
+      // Check if this is a network error
+      if (isNetworkError(error)) {
+        setNetworkErrorMessage(getNetworkErrorMessage());
+        setShowNetworkError(true);
+      }
+      
       // Mark all new files as error with current progress
       setUploadingFiles(prev =>
         prev.map(f =>
@@ -342,6 +544,22 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
   const onDrop = useCallback(
     async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      // Handle file rejections first and return early if only rejected files
+      if (fileRejections.length > 0) {
+        setRejectedFiles(fileRejections);
+        setShowFileRejectionError(true);
+        
+        // Also call the optional external handler if provided
+        if (onFileReject) {
+          onFileReject(fileRejections);
+        }
+        
+        // If no files were accepted (all were rejected), return early to prevent any upload attempts
+        if (acceptedFiles.length === 0) {
+          return;
+        }
+      }
+
       // Check current files count and determine how many more can be added
       const remainingSlots = MAX_FILES - uploadingFiles.length;
 
@@ -380,10 +598,6 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         }
         
         if (onFileUpload) onFileUpload(acceptedFiles);
-      }
-
-      if (onFileReject && fileRejections.length > 0) {
-        onFileReject(fileRejections);
       }
     },
     [onFileUpload, onFileReject, uploadingFiles.length, batchId]
@@ -498,6 +712,44 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     }
   }, [uploadingFiles.length]);
 
+  // Add network connectivity listeners
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Network came back online');
+      // Optionally clear network error when connection is restored
+      if (showNetworkError) {
+        setShowNetworkError(false);
+        setNetworkErrorMessage('');
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('Network went offline');
+      // Show network error immediately when network goes offline during uploads
+      if (uploadingFiles.some(f => f.status === 'uploading')) {
+        setNetworkErrorMessage('Network connection lost during upload. Please check your internet connection and retry.');
+        setShowNetworkError(true);
+        
+        // Mark all uploading files as error
+        setUploadingFiles(prev =>
+          prev.map(f =>
+            f.status === 'uploading' ? { ...f, status: 'error' } : f
+          )
+        );
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, [uploadingFiles, showNetworkError]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const originalStartTranslating = (window as any).startTranslating;
@@ -557,6 +809,19 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       return () => clearTimeout(timer);
     }
   }, [fileLimitExceeded]);
+
+  // Auto-hide file rejection error after 8 seconds
+  useEffect(() => {
+    if (showFileRejectionError) {
+      const timer = setTimeout(() => {
+        setShowFileRejectionError(false);
+        setRejectedFiles([]);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showFileRejectionError]);
+
 
   const handleStartProcessing = () => {
     if (uploadState === 'COMPLETED' && onStartTranslating) {
@@ -858,7 +1123,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '13px', width: '100%', paddingBottom: 10, borderRadius: '4px', }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '13px', width: '100%', maxWidth: '900px', paddingBottom: 10, borderRadius: '4px', margin: '0 auto' }}>
         {allUploadsComplete && (
           <MessageBar
             messageBarType={MessageBarType.success}
@@ -898,6 +1163,77 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             />
             Maximum of {MAX_FILES} files allowed. Some files were not uploaded.
           </MessageBar>
+        )}
+
+        {showFileRejectionError && rejectedFiles.length > 0 && (() => {
+          const errorMessages = getFileRejectionMessage(rejectedFiles);
+          return (
+            <div style={{ width: '100%', display: 'flex' }}>
+              <MessageBar
+                messageBarType={MessageBarType.error}
+                isMultiline={false}
+                onDismiss={() => {
+                  setShowFileRejectionError(false);
+                  setRejectedFiles([]);
+                }}
+                dismissButtonAriaLabel="Close"
+                styles={{
+                  root: { display: "flex", alignItems: "flex-start", width: "100% !important" },
+                  icon: { display: "none" },
+                }}
+                style={{ flex: 1, width: "100% !important" }}
+              >
+                <div>
+                <CircleX
+                strokeWidth="2.5px"
+                color="#f80808ff"
+                size="16px" // Slightly larger for better balance
+                style={{ marginRight: "8px" }}
+              />
+              <span>{errorMessages.title} {errorMessages.details}</span>
+              </div>
+                {/* <div>
+                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                    {errorMessages.title} {errorMessages.details}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {errorMessages.details}
+                  </div>
+                </div> */}
+              </MessageBar>
+            </div>
+          );
+        })()}
+
+        {showNetworkError && (
+          <div style={{ width: '100%', display: 'flex' }}>
+            <MessageBar
+              messageBarType={MessageBarType.error}
+              isMultiline={false}
+              onDismiss={() => {
+                setShowNetworkError(false);
+                setNetworkErrorMessage('');
+              }}
+              dismissButtonAriaLabel="Close"
+              styles={{
+                root: { display: "flex", alignItems: "flex-start", width: "100% !important" },
+                icon: { display: "none" },
+              }}
+              style={{ flex: 1, width: "100% !important" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <CircleX
+                    strokeWidth="2.5px"
+                    color="#f80808ff"
+                    size="16px"
+                    style={{ marginRight: "8px" }}
+                  />
+                  <span>{networkErrorMessage}</span>
+                </div>
+              </div>
+            </MessageBar>
+          </div>
         )}
       </div>
 
