@@ -87,6 +87,7 @@ Select one of the following options to deploy the Container Migration Solution A
 |------------|--------------|-------------------|----------------|
 | **GitHub Codespaces** | Quick deployment, no local setup required | GitHub account | ~3-5 minutes |
 | **VS Code Dev Containers** | Fast deployment with local tools | Docker Desktop, VS Code | ~5-10 minutes |
+| **VS Code Web** | Quick deployment, no local setup required | Azure account | ~2-4 minutes |
 | **Local Environment** | Enterprise environments, full control | All tools individually | ~15-30 minutes |
 
 **💡 Recommendation:** For fastest deployment, start with **GitHub Codespaces** - no local installation required.
