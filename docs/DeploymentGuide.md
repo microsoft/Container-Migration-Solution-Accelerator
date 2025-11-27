@@ -184,34 +184,12 @@ Review the configuration options below. You can customize any settings that meet
 
 Copy the contents from the production configuration file to your main parameters file:
 
-<details>
-<summary><b>Option 1: Manual Copy (Recommended for beginners)</b></summary>
-
 1. Navigate to the `infra` folder in your project
 2. Open `main.waf.parameters.json` in a text editor (like Notepad, VS Code, etc.)
 3. Select all content (Ctrl+A) and copy it (Ctrl+C)
 4. Open `main.parameters.json` in the same text editor
 5. Select all existing content (Ctrl+A) and paste the copied content (Ctrl+V)
 6. Save the file (Ctrl+S)
-
-</details>
-
-<details>
-<summary><b>Option 2: Using Command Line</b></summary>
-
-**For Linux/macOS/Git Bash:**
-```bash
-# Copy contents from production file to main parameters file
-cat infra/main.waf.parameters.json > infra/main.parameters.json
-```
-
-**For Windows PowerShell:**
-```powershell
-# Copy contents from production file to main parameters file
-Get-Content infra/main.waf.parameters.json | Set-Content infra/main.parameters.json
-```
-
-</details>
 
 ### 3.2 Set VM Credentials (Optional - Production Deployment Only)
 
@@ -229,16 +207,9 @@ azd env set AZURE_ENV_VM_ADMIN_PASSWORD <your-password>
 <details>
 <summary><b>Configurable Parameters</b></summary>
 
-Customize these settings by following [Parameter Customization Guide](../docs/CustomizingAzdParameters.md):
+You can customize various deployment settings before running `azd up`, including Azure regions, AI model configurations (deployment type, version, capacity), container registry settings, and resource names.
 
-| **Setting** | **Description** | **Default** |
-|-------------|-----------------|-------------|
-| **Azure Region** | Primary deployment region | Resource Group location |
-| **Secondary Location** | Fallback region for Cosmos DB | - |
-| **Deployment Type** | Infrastructure configuration | GlobalStandard |
-| **o3 Model** | AI model selection | o3 |
-| **o3 Model Version** | Model version | 2025-04-16 |
-| **o3 Model Capacity** | Token capacity | 200k |
+📖 **Complete Guide:** See [Parameter Customization Guide](../docs/CustomizingAzdParameters.md) for the full list of available parameters and their usage.
 
 </details>
 
@@ -295,9 +266,11 @@ azd up
 **During deployment, you'll be prompted for:**
 1. **Environment name** (e.g., "conmig") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
-3. **Region** selection (choose one with adequate quota)
+3. **Azure AI Foundry deployment region** (choose one with adequate o3 model quota)
+4. **Primary location** (resource group region for your deployment)
+5. **Resource group** selection (create new or use existing)
 
-**Expected Duration:** 4-6 minutes
+**Expected Duration:** 4-6 minutes for default configuration
 
 > **Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
 
