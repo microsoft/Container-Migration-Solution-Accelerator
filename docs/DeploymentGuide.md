@@ -296,8 +296,22 @@ After successful deployment:
 ### 5.2 Verify Deployment
 
 1. Access your application using the URL from Step 4.3
-2. Upload sample YAML files from the [`/data`](../data/) folder
-3. Test the migration functionality
+2. Confirm the application loads successfully
+3. Verify you can sign in with your authenticated account
+
+### 5.3 Test the Application
+
+Follow the detailed workflow to test the migration functionality:
+
+**Quick Test Steps:**
+1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples)
+2. Upload the files to the application
+3. Click **Start Processing** to begin the migration
+4. Monitor the batch processing status (typically takes 20-30 minutes)
+5. Review the translated files and generated reports
+6. Download the results using the **Download all as .zip** button
+
+📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleWorkflow.md) guide for step-by-step testing procedures.
 
 ## Step 6: Clean Up (Optional)
 
@@ -409,22 +423,46 @@ azd env get-values
 
 ## Next Steps
 
-🚀 **Get Started:** Follow the [Sample Workflow](./SampleWorkflow.md) to explore the application features.
+Now that your deployment is complete and tested, explore these resources to enhance your experience:
 
 📚 **Learn More:**
-- [Technical Architecture](./TechnicalArchitecture.md)
-- [Troubleshooting Guide](./TroubleShootingSteps.md)
-- [Local Development Setup](./LocalDevelopmentSetup.md)
+- [Technical Architecture](./TechnicalArchitecture.md) - Understand the system design and components
+- [Customize Expert Agents](./CustomizeExpertAgents.md) - Tailor AI agents to your specific needs
+- [Extend Platform Support](./ExtendPlatformSupport.md) - Add support for additional container platforms
+- [Configure MCP Servers](./ConfigureMCPServers.md) - Set up Model Context Protocol servers
+- [Local Development Setup](./LocalDevelopmentSetup.md) - Set up your local development environment
 
 ## Need Help?
 
 - 🐛 **Issues:** Check [Troubleshooting Guide](./TroubleShootingSteps.md)
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
-  
-### Deploy Your local changes
-To Deploy your local changes rename the below files.
 
-Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
-Go to `infra` directory
-Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`. Continue with the [deploying steps](#deploying-with-azd).
+---
+
+## Advanced: Deploy Local Changes
+
+If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files:
+
+> **Note:** To set up and run the application locally for development, see the [Local Development Setup Guide](./LocalDevelopmentSetup.md).
+
+### Step 1: Rename Azure Configuration Files
+
+**In the root directory:**
+1. Rename `azure.yaml` to `azure_custom2.yaml`
+2. Rename `azure_custom.yaml` to `azure.yaml`
+
+### Step 2: Rename Infrastructure Files
+
+**In the `infra` directory:**
+1. Rename `main.bicep` to `main_custom2.bicep`
+2. Rename `main_custom.bicep` to `main.bicep`
+
+### Step 3: Deploy Changes
+
+Run the deployment command:
+```shell
+azd up
+```
+
+> **Note:** These custom files are configured to deploy your local code changes instead of pulling from the GitHub repository.
