@@ -21,9 +21,6 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 
 **🔍 How to Check Your Permissions:**
 
-<details>
-<summary><b>Azure Portal</b></summary>
-
 1. Go to [Azure Portal](https://portal.azure.com/)
 2. Navigate to **Subscriptions** (search for "subscriptions" in the top search bar)
 3. Click on your target subscription
@@ -38,9 +35,6 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 2. Try clicking **New registration** 
 3. If you can access this page, you have the required permissions
 4. Cancel without creating an app registration
-
-</details>
-
 
 📖 **Detailed Setup:** Follow [Azure Account Set Up](./AzureAccountSetup.md) for complete configuration.
 
@@ -266,13 +260,13 @@ azd up
 **During deployment, you'll be prompted for:**
 1. **Environment name** (e.g., "conmig") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
-3. **Azure AI Foundry deployment region** (choose one with adequate o3 model quota)
-4. **Primary location** (resource group region for your deployment)
+3. **Azure AI Foundry deployment region** - Select a region with available o3 model quota for AI operations
+4. **Primary location** - Select the region where your infrastructure resources will be deployed
 5. **Resource group** selection (create new or use existing)
 
 **Expected Duration:** 4-6 minutes for default configuration
 
-> **Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
+**⚠️ Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
 
 ### 4.3 Get Application URL
 
