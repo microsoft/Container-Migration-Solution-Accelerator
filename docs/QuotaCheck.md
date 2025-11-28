@@ -100,7 +100,7 @@ The final table lists regions with available quota. You can select any of these 
 3. Navigate to the `scripts` folder where the script files are located and make the script as executable:
    ```sh
     cd scripts
-    chmod +x quota_check.sh
+    chmod +x quota_check_params.sh
    ```
 4. Run the appropriate script based on your requirement:
 
