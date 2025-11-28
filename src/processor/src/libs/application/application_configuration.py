@@ -29,6 +29,10 @@ class Configuration(_configuration_base):
     # api_key: str
     app_logging_enable: bool = Field(default=False, alias="APP_LOGGING_ENABLE")
     app_logging_level: str = Field(default="INFO", alias="APP_LOGGING_LEVEL")
+
+    # Azure logging configuration
+    azure_package_logging_level: str = Field(default="WARNING", alias="AZURE_PACKAGE_LOGGING_LEVEL")
+    azure_logging_packages: str | None = Field(default=None, alias="AZURE_LOGGING_PACKAGES")
     cosmos_db_account_url: str = Field(
         default="http://<cosmos url>", alias="COSMOS_DB_ACCOUNT_URL"
     )

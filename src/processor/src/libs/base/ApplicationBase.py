@@ -77,6 +77,12 @@ class ApplicationBase(ABC):
             # Ensure non-debug mode suppresses all debug messages
             logging.basicConfig(level=logging.WARNING)
 
+        # Configure Azure package logging levels only if packages are specified
+        if self.app_context.configuration.azure_logging_packages:
+            azure_level = getattr(logging, self.app_context.configuration.azure_package_logging_level.upper(), logging.WARNING)
+            for logger_name in filter(None, (pkg.strip() for pkg in self.app_context.configuration.azure_logging_packages.split(','))):
+                logging.getLogger(logger_name).setLevel(azure_level)
+
         # Always suppress semantic kernel debug messages unless explicitly in debug mode
         if not self.debug_mode:
             logging.getLogger("semantic_kernel").setLevel(logging.WARNING)
