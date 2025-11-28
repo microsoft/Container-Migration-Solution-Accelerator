@@ -59,7 +59,7 @@ class Application_Base(ABC):
                 logging, self.application_context.configuration.app_logging_level
             )
             logging.basicConfig(level=logging_level)
-            
+
             # Configure Azure package logging levels only if packages are specified
             if self.application_context.configuration.azure_logging_packages:
                 azure_level = getattr(logging, self.application_context.configuration.azure_package_logging_level.upper(), logging.WARNING)
