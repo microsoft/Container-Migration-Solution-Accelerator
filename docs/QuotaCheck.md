@@ -19,7 +19,7 @@ o3:500
 ### 📌 Default Regions:
 
 ```
-eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southcentralus, canadacentral
+eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southcentralus, canadacentral, australiaeast, japaneast
 ```
 
 ### Usage Scenarios:
@@ -37,37 +37,37 @@ eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southc
 ✔️ Run without parameters to check default models & regions without verbose logging:
 
 ```
-./quota_check.sh
+./quota_check_params.sh
 ```
 
 ✔️ Enable verbose logging:
 
 ```
-./quota_check.sh --verbose
+./quota_check_params.sh --verbose
 ```
 
 ✔️ Check specific model(s) in default regions:
 
 ```
-./quota_check.sh --models o3:500
+./quota_check_params.sh --models o3:500
 ```
 
 ✔️ Check default models in specific region(s):
 
 ```
-./quota_check.sh --regions eastus,westus
+./quota_check_params.sh --regions eastus,westus
 ```
 
 ✔️ Passing Both models and regions:
 
 ```
-./quota_check.sh --models o3:500 --regions eastus,westus2
+./quota_check_params.sh --models o3:500 --regions eastus,westus2
 ```
 
 ✔️ All parameters combined:
 
 ```
-./quota_check.sh --models o3:500 --regions eastus,westus --verbose
+./quota_check_params.sh --models o3:500 --regions eastus,westus --verbose
 ```
 
 ### **Sample Output**
@@ -85,9 +85,9 @@ The final table lists regions with available quota. You can select any of these 
    **To check quota for the deployment**
 
    ```sh
-   curl -L -o quota_check.sh "https://raw.githubusercontent.com/microsoft/Container-Migration-Solution-Accelerator/main/scripts/quota_check.sh"
-   chmod +x quota_check.sh
-   ./quota_check.sh
+   curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Container-Migration-Solution-Accelerator/main/scripts/quota_check_params.sh"
+   chmod +x quota_check_params.sh
+   ./quota_check_params.sh
    ```
 
    - Refer to [Input Formats](#input-formats) for detailed commands.
@@ -107,7 +107,7 @@ The final table lists regions with available quota. You can select any of these 
    **To check quota for the deployment**
 
    ```sh
-   ./quota_check.sh
+   ./quota_check_params.sh
    ```
 
    - Refer to [Input Formats](#input-formats) for detailed commands.
