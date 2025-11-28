@@ -21,9 +21,6 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 
 **🔍 How to Check Your Permissions:**
 
-<details>
-<summary><b>Azure Portal</b></summary>
-
 1. Go to [Azure Portal](https://portal.azure.com/)
 2. Navigate to **Subscriptions** (search for "subscriptions" in the top search bar)
 3. Click on your target subscription
@@ -38,9 +35,6 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 2. Try clicking **New registration** 
 3. If you can access this page, you have the required permissions
 4. Cancel without creating an app registration
-
-</details>
-
 
 📖 **Detailed Setup:** Follow [Azure Account Set Up](./AzureAccountSetup.md) for complete configuration.
 
@@ -184,34 +178,12 @@ Review the configuration options below. You can customize any settings that meet
 
 Copy the contents from the production configuration file to your main parameters file:
 
-<details>
-<summary><b>Option 1: Manual Copy (Recommended for beginners)</b></summary>
-
 1. Navigate to the `infra` folder in your project
 2. Open `main.waf.parameters.json` in a text editor (like Notepad, VS Code, etc.)
 3. Select all content (Ctrl+A) and copy it (Ctrl+C)
 4. Open `main.parameters.json` in the same text editor
 5. Select all existing content (Ctrl+A) and paste the copied content (Ctrl+V)
 6. Save the file (Ctrl+S)
-
-</details>
-
-<details>
-<summary><b>Option 2: Using Command Line</b></summary>
-
-**For Linux/macOS/Git Bash:**
-```bash
-# Copy contents from production file to main parameters file
-cat infra/main.waf.parameters.json > infra/main.parameters.json
-```
-
-**For Windows PowerShell:**
-```powershell
-# Copy contents from production file to main parameters file
-Get-Content infra/main.waf.parameters.json | Set-Content infra/main.parameters.json
-```
-
-</details>
 
 ### 3.2 Set VM Credentials (Optional - Production Deployment Only)
 
@@ -229,16 +201,9 @@ azd env set AZURE_ENV_VM_ADMIN_PASSWORD <your-password>
 <details>
 <summary><b>Configurable Parameters</b></summary>
 
-Customize these settings by following [Parameter Customization Guide](../docs/CustomizingAzdParameters.md):
+You can customize various deployment settings before running `azd up`, including Azure regions, AI model configurations (deployment type, version, capacity), container registry settings, and resource names.
 
-| **Setting** | **Description** | **Default** |
-|-------------|-----------------|-------------|
-| **Azure Region** | Primary deployment region | Resource Group location |
-| **Secondary Location** | Fallback region for Cosmos DB | - |
-| **Deployment Type** | Infrastructure configuration | GlobalStandard |
-| **o3 Model** | AI model selection | o3 |
-| **o3 Model Version** | Model version | 2025-04-16 |
-| **o3 Model Capacity** | Token capacity | 200k |
+📖 **Complete Guide:** See [Parameter Customization Guide](../docs/CustomizingAzdParameters.md) for the full list of available parameters and their usage.
 
 </details>
 
@@ -295,11 +260,13 @@ azd up
 **During deployment, you'll be prompted for:**
 1. **Environment name** (e.g., "conmig") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
-3. **Region** selection (choose one with adequate quota)
+3. **Azure AI Foundry deployment region** - Select a region with available o3 model quota for AI operations
+4. **Primary location** - Select the region where your infrastructure resources will be deployed
+5. **Resource group** selection (create new or use existing)
 
-**Expected Duration:** 4-6 minutes
+**Expected Duration:** 4-6 minutes for default configuration
 
-> **Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
+**⚠️ Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
 
 ### 4.3 Get Application URL
 
@@ -323,8 +290,22 @@ After successful deployment:
 ### 5.2 Verify Deployment
 
 1. Access your application using the URL from Step 4.3
-2. Upload sample YAML files from the [`/data`](../data/) folder
-3. Test the migration functionality
+2. Confirm the application loads successfully
+3. Verify you can sign in with your authenticated account
+
+### 5.3 Test the Application
+
+Follow the detailed workflow to test the migration functionality:
+
+**Quick Test Steps:**
+1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples)
+2. Upload the files to the application
+3. Click **Start Processing** to begin the migration
+4. Monitor the batch processing status (typically takes 20-30 minutes)
+5. Review the translated files and generated reports
+6. Download the results using the **Download all as .zip** button
+
+📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleWorkflow.md) guide for step-by-step testing procedures.
 
 ## Step 6: Clean Up (Optional)
 
@@ -436,22 +417,46 @@ azd env get-values
 
 ## Next Steps
 
-🚀 **Get Started:** Follow the [Sample Workflow](./SampleWorkflow.md) to explore the application features.
+Now that your deployment is complete and tested, explore these resources to enhance your experience:
 
 📚 **Learn More:**
-- [Technical Architecture](./TechnicalArchitecture.md)
-- [Troubleshooting Guide](./TroubleShootingSteps.md)
-- [Local Development Setup](./LocalDevelopmentSetup.md)
+- [Technical Architecture](./TechnicalArchitecture.md) - Understand the system design and components
+- [Customize Expert Agents](./CustomizeExpertAgents.md) - Tailor AI agents to your specific needs
+- [Extend Platform Support](./ExtendPlatformSupport.md) - Add support for additional container platforms
+- [Configure MCP Servers](./ConfigureMCPServers.md) - Set up Model Context Protocol servers
+- [Local Development Setup](./LocalDevelopmentSetup.md) - Set up your local development environment
 
 ## Need Help?
 
 - 🐛 **Issues:** Check [Troubleshooting Guide](./TroubleShootingSteps.md)
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
-  
-### Deploy Your local changes
-To Deploy your local changes rename the below files.
 
-Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
-Go to `infra` directory
-Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`. Continue with the [deploying steps](#deploying-with-azd).
+---
+
+## Advanced: Deploy Local Changes
+
+If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files:
+
+> **Note:** To set up and run the application locally for development, see the [Local Development Setup Guide](./LocalDevelopmentSetup.md).
+
+### Step 1: Rename Azure Configuration Files
+
+**In the root directory:**
+1. Rename `azure.yaml` to `azure_custom2.yaml`
+2. Rename `azure_custom.yaml` to `azure.yaml`
+
+### Step 2: Rename Infrastructure Files
+
+**In the `infra` directory:**
+1. Rename `main.bicep` to `main_custom2.bicep`
+2. Rename `main_custom.bicep` to `main.bicep`
+
+### Step 3: Deploy Changes
+
+Run the deployment command:
+```shell
+azd up
+```
+
+> **Note:** These custom files are configured to deploy your local code changes instead of pulling from the GitHub repository.
