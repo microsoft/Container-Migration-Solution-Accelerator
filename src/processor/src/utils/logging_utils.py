@@ -18,7 +18,7 @@ from azure.core.exceptions import HttpResponseError
 from semantic_kernel.exceptions import ServiceException
 
 
-def configure_application_logging(debug_mode: bool = False):
+def configure_application_logging(debug_mode: bool = False, config=None):
     """
     Comprehensive logging configuration with third-party suppression.
 
@@ -26,13 +26,18 @@ def configure_application_logging(debug_mode: bool = False):
 
     Args:
         debug_mode: If True, allows some debug logging. If False, suppresses all debug output.
+        config: Configuration object with logging settings. If None, uses default settings.
     """
     # Set root logger level
     if debug_mode:
         logging.basicConfig(level=logging.DEBUG)
         print("🐛 Debug logging enabled")
     else:
-        logging.basicConfig(level=logging.INFO)
+        # Use configuration if available, otherwise default to INFO
+        basic_level = logging.INFO
+        if config and hasattr(config, 'app_logging_level'):
+            basic_level = getattr(logging, config.app_logging_level.upper(), logging.INFO)
+        logging.basicConfig(level=basic_level)
 
     # Comprehensive list of verbose loggers to suppress
     verbose_loggers = [
@@ -83,33 +88,43 @@ def configure_application_logging(debug_mode: bool = False):
         "charset_normalizer",
     ]
 
-    # Set levels for all verbose loggers
-    for logger_name in verbose_loggers:
-        logger = logging.getLogger(logger_name)
-        if debug_mode:
-            # In debug mode, still reduce verbosity to INFO for most, WARNING for HTTP
-            if any(
-                http_term in logger_name.lower()
-                for http_term in ["http", "client", "connection", "pipeline"]
-            ):
-                logger.setLevel(logging.WARNING)
+    # Configure Azure package logging levels from configuration only if packages are specified
+    if config and hasattr(config, 'azure_logging_packages') and hasattr(config, 'azure_package_logging_level') and config.azure_logging_packages:
+        # Use configuration-based approach
+        azure_level = getattr(logging, config.azure_package_logging_level.upper(), logging.WARNING)
+        package_list = [pkg.strip() for pkg in config.azure_logging_packages.split(',')]
+        for logger_name in package_list:
+            if logger_name:  # Skip empty strings
+                logging.getLogger(logger_name).setLevel(azure_level)
+    else:
+        # Fallback to existing logic for backward compatibility
+        # Set levels for all verbose loggers
+        for logger_name in verbose_loggers:
+            logger = logging.getLogger(logger_name)
+            if debug_mode:
+                # In debug mode, still reduce verbosity to INFO for most, WARNING for HTTP
+                if any(
+                    http_term in logger_name.lower()
+                    for http_term in ["http", "client", "connection", "pipeline"]
+                ):
+                    logger.setLevel(logging.WARNING)
+                else:
+                    logger.setLevel(logging.INFO)
             else:
-                logger.setLevel(logging.INFO)
-        else:
-            # In production, suppress to WARNING for all
-            logger.setLevel(logging.WARNING)
+                # In production, suppress to WARNING for all
+                logger.setLevel(logging.WARNING)
 
-    # Special cases: These are ALWAYS set to WARNING due to extreme verbosity
-    always_warning_loggers = [
-        "azure.core.pipeline.policies.http_logging_policy",
-        "httpx",
-        "httpcore",
-        "openai._client",
-        "urllib3.connectionpool",
-    ]
+        # Special cases: These are ALWAYS set to WARNING due to extreme verbosity
+        always_warning_loggers = [
+            "azure.core.pipeline.policies.http_logging_policy",
+            "httpx",
+            "httpcore",
+            "openai._client",
+            "urllib3.connectionpool",
+        ]
 
-    for logger_name in always_warning_loggers:
-        logging.getLogger(logger_name).setLevel(logging.WARNING)
+        for logger_name in always_warning_loggers:
+            logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     # Set environment variables to suppress verbose output at the source
     os.environ.setdefault("HTTPX_LOG_LEVEL", "WARNING")

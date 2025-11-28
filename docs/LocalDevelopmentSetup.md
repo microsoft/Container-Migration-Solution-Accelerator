@@ -62,7 +62,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
 
 # Clone and setup
-git clone https://github.com/microsoft/Container-Migration-Solution-Acceleratorr.git
+git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
 cd container-migration-solution-accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate

@@ -857,6 +857,14 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         value: 'INFO'
       }
       {
+        name: 'AZURE_PACKAGE_LOGGING_LEVEL'
+        value: 'INFO'
+      }
+      {
+        name: 'AZURE_LOGGING_PACKAGES'
+        value: ''
+      }
+      {
         name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
         value: ''
       }
