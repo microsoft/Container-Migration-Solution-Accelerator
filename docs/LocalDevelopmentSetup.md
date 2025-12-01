@@ -112,7 +112,98 @@ cp .env.example .env
 nano .env  # Edit with your configuration
 ```
 
-## Step 2: Environment Configuration
+## Step 2: UI (Web App) Setup & Run Instructions
+
+The UI is located under:
+
+```
+container-migration-solution-accelerator/src/ui
+```
+
+Follow these steps to run the UI locally.
+
+### 1. Install Node.js (v18+ Recommended)
+
+#### Windows (winget)
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+#### macOS (Homebrew)
+
+```bash
+brew install node
+```
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+sudo apt install nodejs npm
+```
+
+### 2. Install UI Dependencies
+
+```bash
+cd container-migration-solution-accelerator/src/ui
+npm install
+```
+
+### 3. Configure UI Environment Variables
+
+Create a `.env` file in the `src/ui` directory:
+
+```bash
+# Copy the example file
+cp .env.example .env  # Linux/macOS
+# or
+Copy-Item .env.example .env  # Windows PowerShell
+```
+
+Edit the `.env` file with your Azure AD configuration:
+
+```bash
+# Required: Your Azure AD app registration client ID
+VITE_APP_WEB_CLIENT_ID=your-client-id-here
+
+# Required: Your Azure AD tenant authority
+VITE_APP_WEB_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
+
+# Optional: Redirect URLs (defaults to current origin)
+VITE_APP_REDIRECT_URL=http://localhost:5173
+VITE_APP_POST_REDIRECT_URL=http://localhost:5173
+
+# Required: Scopes for login and token acquisition
+VITE_APP_WEB_SCOPE=api://your-api-id/access_as_user
+VITE_APP_API_SCOPE=api://your-backend-api-id/User.Read
+
+# API URL (for when backend is available)
+VITE_API_URL=http://localhost:8000/api
+```
+
+**Note**: You'll need to configure Azure AD App Registration to get these values. See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for details.
+
+### 4. Build the UI
+
+```bash
+npm run build
+```
+
+### 5. Start Development Server
+
+```bash
+npm run dev
+```
+
+The app will start at:
+
+```
+http://localhost:5173
+```
+
+(or whichever port Vite assigns)
+
+## Step 3: Environment Configuration
 
 ### Azure Authentication Setup
 
@@ -168,7 +259,7 @@ export APP_CONFIGURATION_URL="https://[Your app configuration service name].azco
 source .env  # if you want to load manually
 ```
 
-## Step 3: Development Tools Setup
+## Step 4: Development Tools Setup
 
 ### Visual Studio Code (Recommended)
 
@@ -275,7 +366,7 @@ Get-ChildItem Env:AZURE*  # Windows PowerShell
 cat .env | grep -v '^#' | grep '='  # Should show key=value pairs
 ```
 
-## Step 4: Next Steps
+## Step 5: Next Steps
 
 1. **Configure Your Environment**: Follow the platform-specific setup instructions
 2. **Explore the Codebase**: Start with `src/main_service.py` and examine the agent architecture
