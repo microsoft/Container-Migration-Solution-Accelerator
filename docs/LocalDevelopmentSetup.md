@@ -2,7 +2,7 @@
 
 This guide provides comprehensive instructions for setting up the Container Migration Solution Accelerator for local development across Windows, Linux, and macOS platforms.
 
-## Quick Start by Platform
+## Step 1: Quick Start by Platform
 
 ### Windows Development
 
@@ -14,8 +14,8 @@ winget install Python.Python.3.12
 winget install Git.Git
 
 # Clone and setup
-git clone https://github.com/microsoft/container-migration-solution-accelerator.git
-cd container-migration-solution-accelerator/src/processor
+git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
+cd Container-Migration-Solution-Accelerator/src/processor
 
 # Install uv and setup environment
 pip install uv
@@ -43,7 +43,7 @@ source ~/.bashrc
 
 # Setup project (same as Linux)
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd container-migration-solution-accelerator/src/processor
+cd Container-Migration-Solution-Accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -62,8 +62,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
 
 # Clone and setup
-git clone https://github.com/microsoft/Container-Migration-Solution-Acceleratorr.git
-cd container-migration-solution-accelerator/src/processor
+git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
+cd Container-Migration-Solution-Accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -85,7 +85,7 @@ source ~/.bashrc
 
 # Setup (same as above)
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd container-migration-solution-accelerator/src/processor
+cd Container-Migration-Solution-Accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -102,7 +102,7 @@ brew install python@3.12 uv git
 
 # Clone and setup
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd container-migration-solution-accelerator/src/processor
+cd Container-Migration-Solution-Accelerator/src/processor
 uv venv .venv
 source .venv/bin/activate
 uv sync --python 3.12
@@ -112,7 +112,23 @@ cp .env.example .env
 nano .env  # Edit with your configuration
 ```
 
-## Environment Configuration
+## Step 2: Environment Configuration
+
+### Azure Authentication Setup
+
+Before configuring environment variables, authenticate with Azure:
+
+```bash
+# Login to Azure CLI
+az login
+
+# Set your subscription
+az account set --subscription "your-subscription-id"
+
+# Verify authentication
+az account show
+```
+
 ### Required Environment Variables
 
 Create a `.env` file in the project root with the following variables:
@@ -152,7 +168,7 @@ export APP_CONFIGURATION_URL="https://[Your app configuration service name].azco
 source .env  # if you want to load manually
 ```
 
-## Development Tools Setup
+## Step 3: Development Tools Setup
 
 ### Visual Studio Code (Recommended)
 
@@ -248,19 +264,6 @@ New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name
 pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org uv
 ```
 
-### Azure Authentication Issues
-
-```bash
-# Login to Azure CLI
-az login
-
-# Set subscription
-az account set --subscription "your-subscription-id"
-
-# Test authentication
-az account show
-```
-
 ### Environment Variable Issues
 
 ```bash
@@ -271,7 +274,8 @@ Get-ChildItem Env:AZURE*  # Windows PowerShell
 # Validate .env file format
 cat .env | grep -v '^#' | grep '='  # Should show key=value pairs
 ```
-## Next Steps
+
+## Step 4: Next Steps
 
 1. **Configure Your Environment**: Follow the platform-specific setup instructions
 2. **Explore the Codebase**: Start with `src/main_service.py` and examine the agent architecture
