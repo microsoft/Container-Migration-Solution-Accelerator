@@ -228,7 +228,7 @@ Create a `.env` file in the project root with the following variables:
 APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
 ```
 For getting above APP_CONFIGURATION_URL navigate to your resourse group and select resource with prefic `appcs-` and refer below image.
-![local_developement_setup_1](./images/local_developement_setup_1.png)
+![local_developement_setup_1](./images/local_development_setup_1.png)
 
 ### Platform-Specific Configuration
 
