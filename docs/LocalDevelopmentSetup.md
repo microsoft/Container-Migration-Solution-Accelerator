@@ -1,6 +1,6 @@
 # Local Development Setup Guide
 
-This guide provides comprehensive instructions for setting up the Container Migration Solution Accelerator for local development across Windows, Linux, and macOS platforms.
+This guide provides comprehensive instructions for setting up the Container Migration Solution Accelerator for local development across Windows and Linux platforms.
 
 **Note**: This project uses separate `.env` files in the backend (`src/backeend-api/src/app`) and frontend (`src/frontend`) directories, each with different configuration requirements. When copying `.env` samples, always navigate to the particular folder first before copying the values.
 
@@ -93,27 +93,6 @@ source .venv/bin/activate
 uv sync --python 3.12
 ```
 
-### macOS Development
-
-```bash
-# Install Homebrew (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install prerequisites
-brew install python@3.12 uv git
-
-# Clone and setup
-git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd Container-Migration-Solution-Accelerator/src/processor
-uv venv .venv
-source .venv/bin/activate
-uv sync --python 3.12
-
-# Configure
-cp .env.example .env
-nano .env  # Edit with your configuration
-```
-
 ## Step 2: UI (Web App) Setup & Run Instructions
 
 The UI is located under:
@@ -124,18 +103,12 @@ container-migration-solution-accelerator/src/frontend
 
 Follow these steps to run the UI locally.
 
-### 1. Install Node.js (v18+ Recommended)
+### 2.1. Install Node.js (v18+ Recommended)
 
 #### Windows (winget)
 
 ```powershell
 winget install OpenJS.NodeJS.LTS
-```
-
-#### macOS (Homebrew)
-
-```bash
-brew install node
 ```
 
 #### Linux (Ubuntu/Debian)
@@ -144,20 +117,20 @@ brew install node
 sudo apt install nodejs npm
 ```
 
-### 2. Install UI Dependencies
+### 2.2. Install UI Dependencies
 
 ```bash
 cd container-migration-solution-accelerator/src/ui
 npm install
 ```
 
-### 3. Configure UI Environment Variables
+### 2.3. Configure UI Environment Variables
 
 Create a `.env` file in the `src/frontend` directory:
 
 ```bash
 # Copy the example file
-cp .env.example .env  # Linux/macOS
+cp .env.example .env  # Linux
 # or
 Copy-Item .env.example .env  # Windows PowerShell
 ```
@@ -185,13 +158,13 @@ VITE_API_URL=http://localhost:8000/api
 
 **Note**: You'll need to configure Azure AD App Registration to get these values. See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for details.
 
-### 4. Build the UI
+### 2.4. Build the UI
 
 ```bash
 npm run build
 ```
 
-### 5. Start Development Server
+### 2.5. Start Development Server
 
 ```bash
 npm run dev
@@ -254,7 +227,7 @@ rem Activate virtual environment
 .venv\Scripts\activate.bat
 ```
 
-#### Linux/macOS Bash/Zsh
+#### Linux Bash/Zsh
 ```bash
 # Add to ~/.bashrc or ~/.zshrc for persistence
 export APP_CONFIGURATION_URL="https://[Your app configuration service name].azconfig.io"
@@ -318,7 +291,6 @@ python3.12 --version
 
 # If python3.12 not found, install it:
 # Ubuntu: sudo apt install python3.12
-# macOS: brew install python@3.12
 # Windows: winget install Python.Python.3.12
 ```
 
@@ -326,17 +298,17 @@ python3.12 --version
 
 ```bash
 # Recreate virtual environment
-rm -rf .venv  # Linux/macOS
+rm -rf .venv  # Linux
 # or Remove-Item -Recurse .venv  # Windows PowerShell
 
 uv venv .venv
 # Activate and reinstall
-source .venv/bin/activate  # Linux/macOS
+source .venv/bin/activate  # Linux
 # or .\.venv\Scripts\Activate.ps1  # Windows
 uv sync --python 3.12
 ```
 
-#### Permission Issues (Linux/macOS)
+#### Permission Issues (Linux)
 
 ```bash
 # Fix ownership of files
@@ -363,7 +335,7 @@ pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-hos
 
 ```bash
 # Check environment variables are loaded
-env | grep AZURE  # Linux/macOS
+env | grep AZURE  # Linux
 Get-ChildItem Env:AZURE*  # Windows PowerShell
 
 # Validate .env file format
