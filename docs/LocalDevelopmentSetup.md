@@ -117,7 +117,7 @@ nano .env  # Edit with your configuration
 The UI is located under:
 
 ```
-container-migration-solution-accelerator/src/ui
+container-migration-solution-accelerator/src/frontend
 ```
 
 Follow these steps to run the UI locally.
@@ -151,7 +151,7 @@ npm install
 
 ### 3. Configure UI Environment Variables
 
-Create a `.env` file in the `src/ui` directory:
+Create a `.env` file in the `src/frontend` directory:
 
 ```bash
 # Copy the example file
@@ -227,6 +227,8 @@ Create a `.env` file in the project root with the following variables:
 ```bash
 APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
 ```
+For getting above APP_CONFIGURATION_URL navigate to your resourse group and select resource with prefic `appcs-` and refer below image.
+![local_developement_setup_1](local_developement_setup_1.png)
 
 ### Platform-Specific Configuration
 
