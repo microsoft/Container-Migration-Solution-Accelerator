@@ -2,6 +2,8 @@
 
 This guide provides comprehensive instructions for setting up the Container Migration Solution Accelerator for local development across Windows, Linux, and macOS platforms.
 
+**Note**: This project uses separate `.env` files in the backend (`src/backeend-api/src/app`) and frontend (`src/frontend`) directories, each with different configuration requirements. When copying `.env` samples, always navigate to the particular folder first before copying the values.
+
 ## Step 1: Quick Start by Platform
 
 ### Windows Development
