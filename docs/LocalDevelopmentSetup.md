@@ -2,32 +2,24 @@
 
 This guide provides comprehensive instructions for setting up the Container Migration Solution Accelerator for local development across Windows and Linux platforms.
 
-**Note**: This project uses separate `.env` files in the backend (`src/backeend-api/src/app`) and frontend (`src/frontend`) directories, each with different configuration requirements. When copying `.env` samples, always navigate to the particular folder first before copying the values.
+**Note**: This project uses separate `.env` files in the processor (`src/processor`), backend API (`src/backend-api/src/app`), and frontend (`src/frontend`) directories, each with different configuration requirements. When copying `.env` samples, always navigate to the particular folder first before copying the values.
 
-## Step 1: Quick Start by Platform
+## Step 1: Prerequisites - Install Required Tools
 
 ### Windows Development
 
 #### Option 1: Native Windows (PowerShell)
 
 ```powershell
-# Prerequisites: Install Python 3.12+ and Git
+# Install Python 3.12+ and Git
 winget install Python.Python.3.12
 winget install Git.Git
 
-# Clone and setup
-git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd Container-Migration-Solution-Accelerator/src/processor
+# Install Node.js for frontend
+winget install OpenJS.NodeJS.LTS
 
-# Install uv and setup environment
+# Install uv package manager
 pip install uv
-uv venv .venv
-.\.venv\Scripts\Activate.ps1
-uv sync --python 3.12 --link-mode=copy
-
-# Configure environment
-Copy-Item .env.example .env
-# Edit .env with your Azure configuration
 ```
 
 #### Option 2: Windows with WSL2 (Recommended)
@@ -37,18 +29,11 @@ Copy-Item .env.example .env
 # wsl --install -d Ubuntu
 
 # Then in WSL2 Ubuntu terminal:
-sudo apt update && sudo apt install python3.12 python3.12-venv git curl -y
+sudo apt update && sudo apt install python3.12 python3.12-venv git curl nodejs npm -y
 
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
-
-# Setup project (same as Linux)
-git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd Container-Migration-Solution-Accelerator/src/processor
-uv venv .venv
-source .venv/bin/activate
-uv sync --python 3.12
 ```
 
 ### Linux Development
@@ -57,186 +42,32 @@ uv sync --python 3.12
 
 ```bash
 # Install prerequisites
-sudo apt update && sudo apt install python3.12 python3.12-venv git curl -y
+sudo apt update && sudo apt install python3.12 python3.12-venv git curl nodejs npm -y
 
 # Install uv package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
-
-# Clone and setup
-git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd Container-Migration-Solution-Accelerator/src/processor
-uv venv .venv
-source .venv/bin/activate
-uv sync --python 3.12
-
-# Configure
-cp .env.example .env
-nano .env  # Edit with your configuration
 ```
 
 #### RHEL/CentOS/Fedora
 
 ```bash
 # Install prerequisites
-sudo dnf install python3.12 python3.12-devel git curl gcc -y
+sudo dnf install python3.12 python3.12-devel git curl gcc nodejs npm -y
 
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
+```
 
-# Setup (same as above)
+### Clone the Repository
+
+```bash
 git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
-cd Container-Migration-Solution-Accelerator/src/processor
-uv venv .venv
-source .venv/bin/activate
-uv sync --python 3.12
+cd Container-Migration-Solution-Accelerator
 ```
 
-## Step 2: UI (Web App) Setup & Run Instructions
-
-The UI is located under:
-
-```
-container-migration-solution-accelerator/src/frontend
-```
-
-Follow these steps to run the UI locally.
-
-### 2.1. Install Node.js (v18+ Recommended)
-
-#### Windows (winget)
-
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
-
-#### Linux (Ubuntu/Debian)
-
-```bash
-sudo apt install nodejs npm
-```
-
-### 2.2. Install UI Dependencies
-
-```bash
-cd container-migration-solution-accelerator/src/ui
-npm install
-```
-
-### 2.3. Configure UI Environment Variables
-
-Create a `.env` file in the `src/frontend` directory:
-
-```bash
-# Copy the example file
-cp .env.example .env  # Linux
-# or
-Copy-Item .env.example .env  # Windows PowerShell
-```
-
-Edit the `.env` file with your Azure AD configuration:
-
-```bash
-# Required: Your Azure AD app registration client ID
-VITE_APP_WEB_CLIENT_ID=your-client-id-here
-
-# Required: Your Azure AD tenant authority
-VITE_APP_WEB_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
-
-# Optional: Redirect URLs (defaults to current origin)
-VITE_APP_REDIRECT_URL=http://localhost:5173
-VITE_APP_POST_REDIRECT_URL=http://localhost:5173
-
-# Required: Scopes for login and token acquisition
-VITE_APP_WEB_SCOPE=api://your-api-id/access_as_user
-VITE_APP_API_SCOPE=api://your-backend-api-id/User.Read
-
-# API URL (for when backend is available)
-VITE_API_URL=http://localhost:8000/api
-```
-
-**Note**: You'll need to configure Azure AD App Registration to get these values. See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for details.
-
-### 2.4. Build the UI
-
-```bash
-npm run build
-```
-
-### 2.5. Start Development Server
-
-```bash
-npm run dev
-```
-
-The app will start at:
-
-```
-http://localhost:5173
-```
-
-(or whichever port Vite assigns)
-
-## Step 3: Environment Configuration
-
-### Azure Authentication Setup
-
-Before configuring environment variables, authenticate with Azure:
-
-```bash
-# Login to Azure CLI
-az login
-
-# Set your subscription
-az account set --subscription "your-subscription-id"
-
-# Verify authentication
-az account show
-```
-
-### Required Environment Variables
-
-Create a `.env` file in the project root with the following variables:
-
-```bash
-APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
-```
-For getting above APP_CONFIGURATION_URL navigate to your resourse group and select resource with prefic `appcs-` and refer below image.
-![local_developement_setup_1](./images/local_development_setup_1.png)
-
-### Platform-Specific Configuration
-
-#### Windows PowerShell
-
-```powershell
-# Set execution policy if needed
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# Environment variables (alternative to .env file)
-$env:APP_CONFIGURATION_URL = "https://[Your app configuration service name].azconfig.io"
-```
-
-#### Windows Command Prompt
-
-```cmd
-rem Set environment variables
-set APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
-
-rem Activate virtual environment
-.venv\Scripts\activate.bat
-```
-
-#### Linux Bash/Zsh
-```bash
-# Add to ~/.bashrc or ~/.zshrc for persistence
-export APP_CONFIGURATION_URL="https://[Your app configuration service name].azconfig.io"
-
-# Or use .env file (recommended)
-source .env  # if you want to load manually
-```
-
-## Step 4: Development Tools Setup
+## Step 2: Development Tools Setup
 
 ### Visual Studio Code (Recommended)
 
@@ -277,6 +108,225 @@ Create `.vscode/settings.json`:
     }
 }
 ```
+
+## Step 3: Azure Authentication Setup
+
+Before configuring services, authenticate with Azure:
+
+```bash
+# Login to Azure CLI
+az login
+
+# Set your subscription
+az account set --subscription "your-subscription-id"
+
+# Verify authentication
+az account show
+```
+
+### Get Azure App Configuration URL
+
+Navigate to your resource group and select the resource with prefix `appcs-` to get the configuration URL:
+
+```bash
+APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
+```
+
+For reference, see the image below:
+![local_developement_setup_1](./images/local_development_setup_1.png)
+
+## Step 4: Processor Setup & Run Instructions
+
+The Processor handles the actual migration logic and can run in two modes:
+- **Queue-based mode** (`main_service.py`): Processes migration requests from Azure Storage Queue (production)
+- **Direct execution mode** (`main.py`): Runs migrations directly without queue (development/testing)
+
+### 4.1. Navigate to Processor Directory
+
+```bash
+cd src/processor
+```
+
+### 4.2. Configure Processor Environment Variables
+
+Set the Azure App Configuration URL in your environment or create a `.env` file at the processor root:
+
+```bash
+APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
+```
+
+### 4.3. Install Processor Dependencies
+
+```bash
+# Create and activate virtual environment
+uv venv .venv
+
+# Activate virtual environment
+source .venv/bin/activate  # Linux/WSL2
+# or
+.\.venv\Scripts\Activate.ps1  # Windows PowerShell
+
+# Install dependencies
+uv sync --python 3.12
+```
+
+### 4.4. Run the Processor
+
+#### Option A: Direct Execution Mode (Development/Testing)
+
+Run migrations directly without queue infrastructure:
+
+```bash
+cd src
+python main.py
+```
+
+This mode is useful for:
+- Local development and testing
+- Running single migrations
+- Debugging migration logic
+
+#### Option B: Queue-Based Mode (Production)
+
+Process migration requests from Azure Storage Queue:
+
+```bash
+cd src
+python main_service.py
+```
+
+This mode provides:
+- Concurrent processing with multiple workers
+- Automatic retry logic with exponential backoff
+- Horizontal scalability
+- Production-ready error handling
+
+## Step 5: Backend API Setup & Run Instructions
+
+The Backend API provides REST endpoints for the frontend and handles API requests.
+
+### 5.1. Navigate to Backend API Directory
+
+```bash
+cd ../../backend-api
+```
+
+### 5.2. Configure Backend API Environment Variables
+
+Create a `.env` file in the `src/backend-api/src/app` directory:
+
+```bash
+cd src/app
+
+# Copy the example file
+cp .env.example .env  # Linux
+# or
+Copy-Item .env.example .env  # Windows PowerShell
+```
+
+Edit the `.env` file with your Azure configuration values.
+
+### 5.3. Install Backend API Dependencies
+
+```bash
+# Navigate back to backend-api root
+cd ../..
+
+# Create and activate virtual environment
+uv venv .venv
+
+# Activate virtual environment
+source .venv/bin/activate  # Linux/WSL2
+# or
+.\.venv\Scripts\Activate.ps1  # Windows PowerShell
+
+# Install dependencies
+uv sync --python 3.12
+```
+
+### 5.4. Run the Backend API
+
+```bash
+# Make sure you're in the backend-api/src/app directory
+cd src/app
+
+# Run with uvicorn
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The Backend API will start at:
+- API: `http://localhost:8000`
+- API Documentation: `http://localhost:8000/docs`
+
+## Step 6: Frontend (UI) Setup & Run Instructions
+
+The UI is located under `src/frontend`.
+
+### 6.1. Navigate to Frontend Directory
+
+```bash
+cd ../../frontend
+```
+
+### 6.2. Install UI Dependencies
+
+```bash
+npm install
+```
+
+### 6.3. Configure UI Environment Variables
+
+Create a `.env` file in the `src/frontend` directory:
+
+```bash
+# Copy the example file
+cp .env.example .env  # Linux
+# or
+Copy-Item .env.example .env  # Windows PowerShell
+```
+
+Edit the `.env` file with your Azure AD configuration:
+
+```bash
+# Required: Your Azure AD app registration client ID
+VITE_APP_WEB_CLIENT_ID=your-client-id-here
+
+# Required: Your Azure AD tenant authority
+VITE_APP_WEB_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
+
+# Optional: Redirect URLs (defaults to current origin)
+VITE_APP_REDIRECT_URL=http://localhost:5173
+VITE_APP_POST_REDIRECT_URL=http://localhost:5173
+
+# Required: Scopes for login and token acquisition
+VITE_APP_WEB_SCOPE=api://your-api-id/access_as_user
+VITE_APP_API_SCOPE=api://your-backend-api-id/User.Read
+
+# API URL (for when backend is available)
+VITE_API_URL=http://localhost:8000/api
+```
+
+**Note**: You'll need to configure Azure AD App Registration to get these values. See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for details.
+
+### 6.4. Build the UI
+
+```bash
+npm run build
+```
+
+### 6.5. Start Development Server
+
+```bash
+npm run dev
+```
+
+The app will start at:
+
+```
+http://localhost:5173
+```
+
+(or whichever port Vite assigns)
 
 ## Troubleshooting
 
@@ -342,10 +392,10 @@ Get-ChildItem Env:AZURE*  # Windows PowerShell
 cat .env | grep -v '^#' | grep '='  # Should show key=value pairs
 ```
 
-## Step 5: Next Steps
+## Step 7: Next Steps
 
-1. **Configure Your Environment**: Follow the platform-specific setup instructions
-2. **Explore the Codebase**: Start with `src/main_service.py` and examine the agent architecture
+1. **Start all services**: Processor → Backend API → Frontend
+2. **Explore the Codebase**: Start with `src/processor/src/main_service.py` and examine the agent architecture
 3. **Customize Agents**: Follow [CustomizeExpertAgents.md](CustomizeExpertAgents.md)
 4. **Extend Platform Support**: Follow [ExtendPlatformSupport.md](ExtendPlatformSupport.md)
 
