@@ -126,9 +126,18 @@ Select one of the following options to deploy the Container Migration Solution A
 2. Sign in with your Azure account when prompted
 3. Select the subscription where you want to deploy the solution
 4. Wait for the environment to initialize (includes all deployment tools)
-5. When prompted in the VS Code Web terminal, choose one of the available options shown below:
+5. Once the solution opens, the **AI Foundry terminal** will automatically start running the following command to install the required dependencies:
 
-   ![VS Code Initial Prompt](./images/vscodeweb_intialize.png)
+    ```shell
+    sh install.sh
+    ```
+    During this process, you’ll be prompted with the message:
+    ```
+    What would you like to do with these files?
+    - Overwrite with versions from template
+    - Keep my existing files unchanged
+    ```
+    Choose “**Overwrite with versions from template**” and provide a unique environment name when prompted.
 6. Proceed to [Step 3: Configure Deployment Settings](#step-3-configure-deployment-settings)
 
 </details>
