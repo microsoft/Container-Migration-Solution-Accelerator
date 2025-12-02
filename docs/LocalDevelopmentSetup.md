@@ -398,10 +398,13 @@ cat .env | grep -v '^#' | grep '='  # Should show key=value pairs
 
 ## Step 7: Next Steps
 
-1. **Start all services**: Processor → Backend API → Frontend
-2. **Explore the Codebase**: Start with `src/processor/src/main_service.py` and examine the agent architecture
-3. **Customize Agents**: Follow [CustomizeExpertAgents.md](CustomizeExpertAgents.md)
-4. **Extend Platform Support**: Follow [ExtendPlatformSupport.md](ExtendPlatformSupport.md)
+Once all services are running (as configured in Steps 4-6), you can:
+
+1. **Access the Application**: Open `http://localhost:5173` in your browser to explore the frontend UI
+2. **Try a Sample Workflow**: Follow [SampleWorkflow.md](SampleWorkflow.md) for a guided walkthrough of the migration process
+3. **Explore the Codebase**: Start with `src/processor/src/main_service.py` to understand the agent architecture
+4. **Customize Agents**: Follow [CustomizeExpertAgents.md](CustomizeExpertAgents.md) to modify agent behavior
+5. **Extend Platform Support**: Follow [ExtendPlatformSupport.md](ExtendPlatformSupport.md) to add new cloud platforms
 
 ## Related Documentation
 
