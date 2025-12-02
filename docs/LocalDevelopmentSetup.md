@@ -73,6 +73,8 @@ cd Container-Migration-Solution-Accelerator
 
 #### Required Extensions
 
+Create `.vscode/extensions.json` in the workspace root:
+
 ```json
 {
     "recommendations": [
@@ -88,6 +90,8 @@ cd Container-Migration-Solution-Accelerator
     ]
 }
 ```
+
+VS Code will prompt you to install these recommended extensions when you open the workspace.
 
 #### Settings Configuration
 
