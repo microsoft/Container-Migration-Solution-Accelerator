@@ -19,8 +19,10 @@ winget install Git.Git
 winget install OpenJS.NodeJS.LTS
 
 # Install uv package manager
-pip install uv
+py -3.12 -m pip install uv
 ```
+
+**Note**: On Windows, use `py -3.12 -m uv` instead of `uv` for all commands to ensure you're using Python 3.12.
 
 #### Option 2: Windows with WSL2 (Recommended)
 
@@ -139,6 +141,41 @@ APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
 For reference, see the image below:
 ![local_developement_setup_1](./images/local_development_setup_1.png)
 
+### Required Azure RBAC Permissions
+
+To run the application locally, your Azure account needs the following role assignments on the deployed resources:
+
+#### App Configuration Access
+```bash
+# Get your principal ID
+PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
+
+# Assign App Configuration Data Reader role
+az role assignment create \
+  --assignee $PRINCIPAL_ID \
+  --role "App Configuration Data Reader" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.AppConfiguration/configurationStores/<appconfig-name>"
+```
+
+#### Cosmos DB Access
+```bash
+# Assign Cosmos DB Built-in Data Contributor role
+az cosmosdb sql role assignment create \
+  --account-name <cosmos-account-name> \
+  --resource-group <resource-group> \
+  --role-definition-name "Cosmos DB Built-in Data Contributor" \
+  --principal-id $PRINCIPAL_ID \
+  --scope "/"
+```
+
+#### Other Required Roles
+Depending on the features you use, you may also need:
+- **Storage Blob Data Contributor** - For Azure Storage operations
+- **Storage Queue Data Contributor** - For queue-based processing
+- **Azure OpenAI User** - For AI model access
+
+**Note**: RBAC permission changes can take 5-10 minutes to propagate. If you encounter "Forbidden" errors after assigning roles, wait a few minutes and try again.
+
 ## Step 4: Processor Setup & Run Instructions
 
 The Processor handles the actual migration logic and can run in two modes:
@@ -174,6 +211,18 @@ source .venv/bin/activate  # Linux/WSL2
 uv sync --python 3.12
 ```
 
+**Windows users**: If you encounter issues with the `uv` command not being found, use the Python Launcher instead:
+
+```powershell
+# Create virtual environment
+py -3.12 -m uv venv .venv
+
+# Install dependencies
+py -3.12 -m uv sync
+```
+
+> **⚠️ Important**: Always run `uv sync` (or `py -3.12 -m uv sync` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
+
 ### 4.4. Run the Processor
 
 #### Option A: Direct Execution Mode (Development/Testing)
@@ -194,6 +243,24 @@ This mode is useful for:
 
 Process migration requests from Azure Storage Queue:
 
+**Important**: This mode requires the **Storage Queue Data Contributor** role on the Azure Storage Account. Assign it using:
+
+```bash
+# Get your principal ID and subscription ID
+PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+# Assign Storage Queue Data Contributor role
+az role assignment create \
+  --role "Storage Queue Data Contributor" \
+  --assignee $PRINCIPAL_ID \
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>"
+
+# Note: Permission changes take 5-10 minutes to propagate
+```
+
+Run the queue service:
+
 ```bash
 cd src
 python main_service.py
@@ -204,6 +271,7 @@ This mode provides:
 - Automatic retry logic with exponential backoff
 - Horizontal scalability
 - Production-ready error handling
+- Message polling with "No messages in main queue" logs
 
 ## Step 5: Backend API Setup & Run Instructions
 
