@@ -2,7 +2,71 @@
 
 This guide provides comprehensive instructions for setting up the Container Migration Solution Accelerator for local development across Windows and Linux platforms.
 
-**Note**: This project uses separate `.env` files in the processor (`src/processor`), backend API (`src/backend-api/src/app`), and frontend (`src/frontend`) directories, each with different configuration requirements. When copying `.env` samples, always navigate to the particular folder first before copying the values.
+## Important Setup Notes
+
+### Multi-Service Architecture
+
+This application consists of **three separate services** that run independently:
+
+1. **Processor** - Handles migration logic (Queue Mode or Direct Mode)
+2. **Backend API** - REST API server for the frontend
+3. **Frontend** - React-based user interface
+
+> **⚠️ Critical: Each service must run in its own terminal/console window**
+>
+> - **Do NOT close terminals** while services are running
+> - Open **3 separate terminal windows** for local development
+> - Each service will occupy its terminal and show live logs
+>
+> **Terminal Organization:**
+> - **Terminal 1**: Processor (Queue Mode) - Runs continuously, polls for messages
+> - **Terminal 2**: Backend API - HTTP server on port 8000
+> - **Terminal 3**: Frontend - Development server on port 5173
+
+### Path Conventions
+
+**All paths in this guide are relative to the repository root directory:**
+
+```bash
+Container-Migration-Solution-Accelerator/    ← Repository root (start here)
+├── src/
+│   ├── processor/                           ← cd src/processor
+│   │   ├── .venv/                          ← Virtual environment
+│   │   └── src/                            ← cd src/processor/src
+│   │       ├── main.py                     ← Direct Mode entry point
+│   │       ├── main_service.py             ← Queue Mode entry point
+│   │       └── .env                        ← Processor config file
+│   ├── backend-api/                         ← cd src/backend-api
+│   │   ├── .venv/                          ← Virtual environment
+│   │   └── src/app/                        ← cd src/backend-api/src/app
+│   │       ├── main.py                     ← API entry point
+│   │       └── .env                        ← Backend API config file
+│   └── frontend/                            ← cd src/frontend
+│       ├── node_modules/                    ← npm dependencies
+│       └── .env                             ← Frontend config file
+└── docs/                                    ← Documentation (you are here)
+```
+
+**Before starting any step, ensure you are in the repository root directory:**
+
+```bash
+# Verify you're in the correct location
+pwd  # Linux/macOS - should show: .../Container-Migration-Solution-Accelerator
+Get-Location  # Windows PowerShell - should show: ...\Container-Migration-Solution-Accelerator
+
+# If not, navigate to repository root
+cd path/to/Container-Migration-Solution-Accelerator
+```
+
+### Configuration Files
+
+This project uses separate `.env` files in each service directory with different configuration requirements:
+
+- **Processor**: `src/processor/src/.env` - Azure App Configuration URL
+- **Backend API**: `src/backend-api/src/app/.env` - Azure App Configuration URL  
+- **Frontend**: `src/frontend/.env` - Azure AD authentication settings
+
+When copying `.env` samples, always navigate to the specific service directory first.
 
 ## Step 1: Prerequisites - Install Required Tools
 
@@ -178,6 +242,8 @@ Depending on the features you use, you may also need:
 
 ## Step 4: Processor Setup & Run Instructions
 
+> **📋 Terminal Reminder**: Open a **dedicated terminal window (Terminal 1)** for the Processor service. All commands in this section assume you start from the **repository root directory**.
+
 The Processor handles the actual migration logic and can run in two modes:
 - **Queue-based mode** (`main_service.py`): Processes migration requests from Azure Storage Queue (production)
 - **Direct execution mode** (`main.py`): Runs migrations directly without queue (development/testing)
@@ -237,7 +303,7 @@ py -3.12 -m uv sync
 
 ### 4.4. Run the Processor
 
-#### Option A: Direct Execution Mode (Development/Testing)
+#### Option A: Direct Execution Mode (Production)
 
 Run migrations directly without queue infrastructure:
 
@@ -246,12 +312,8 @@ cd src
 python main.py
 ```
 
-This mode is useful for:
-- Local development and testing
-- Running single migrations
-- Debugging migration logic
 
-#### Option B: Queue-Based Mode (Production)
+#### Option B: Queue-Based Mode (Development/Testing) [Preferred for local set up]
 
 Process migration requests from Azure Storage Queue:
 
@@ -279,20 +341,24 @@ python main_service.py
 ```
 
 This mode provides:
-- Concurrent processing with multiple workers
 - Automatic retry logic with exponential backoff
-- Horizontal scalability
 - Production-ready error handling
+- Local development and testing
+- Running single migrations
+- Debugging migration logic
 - Message polling with "No messages in main queue" logs
 
 ## Step 5: Backend API Setup & Run Instructions
+
+> **📋 Terminal Reminder**: Open a **second dedicated terminal window (Terminal 2)** for the Backend API. Keep Terminal 1 (Processor) running. All commands assume you start from the **repository root directory**.
 
 The Backend API provides REST endpoints for the frontend and handles API requests.
 
 ### 5.1. Navigate to Backend API Directory
 
 ```bash
-cd ../../backend-api
+# From repository root
+cd src/backend-api
 ```
 
 ### 5.2. Configure Backend API Environment Variables
@@ -344,12 +410,15 @@ The Backend API will start at:
 
 ## Step 6: Frontend (UI) Setup & Run Instructions
 
+> **📋 Terminal Reminder**: Open a **third dedicated terminal window (Terminal 3)** for the Frontend. Keep Terminals 1 (Processor) and 2 (Backend API) running. All commands assume you start from the **repository root directory**.
+
 The UI is located under `src/frontend`.
 
 ### 6.1. Navigate to Frontend Directory
 
 ```bash
-cd ../../frontend
+# From repository root
+cd src/frontend
 ```
 
 ### 6.2. Install UI Dependencies
@@ -506,9 +575,53 @@ Get-ChildItem Env:AZURE*  # Windows PowerShell
 cat .env | grep -v '^#' | grep '='  # Should show key=value pairs
 ```
 
-## Step 7: Next Steps
+## Step 7: Verify All Services Are Running
 
-Once all services are running (as configured in Steps 4-6), you can:
+Before using the application, confirm all three services are running in separate terminals:
+
+### Terminal Status Checklist
+
+| Terminal | Service | Command | Expected Output | URL |
+|----------|---------|---------|-----------------|-----|
+| **Terminal 1** | Processor (Queue Mode) | `python -m main_service` | `INFO: No messages in main queue` (repeating every 5s) | N/A |
+| **Terminal 2** | Backend API | `python -m uvicorn main:app --reload` | `INFO: Application startup complete` | http://localhost:8000 |
+| **Terminal 3** | Frontend | `npm run dev` | `Local: http://localhost:5173/` | http://localhost:5173 |
+
+### Quick Verification
+
+**1. Check Backend API:**
+```bash
+# In a new terminal (Terminal 4)
+curl http://localhost:8000/health
+# Expected: {"status":"healthy"} or similar
+```
+
+**2. Check Frontend:**
+- Open browser to http://localhost:5173
+- Should see the Container Migration UI
+- If authentication is configured, you'll be redirected to Azure AD login
+
+**3. Check Processor:**
+- Look at Terminal 1 output
+- Should see regular polling messages: `INFO: No messages in main queue`
+- No error messages
+
+### Common Issues
+
+**Service not starting?**
+- Ensure you're in the correct directory
+- Verify virtual environment is activated (Python services)
+- Check that port is not already in use (8000 for API, 5173 for frontend)
+- Review error messages in the terminal
+
+**Can't access services?**
+- Verify firewall isn't blocking ports 8000 or 5173
+- Try `http://localhost:port` instead of `http://127.0.0.1:port`
+- Ensure services show "startup complete" messages
+
+## Step 8: Next Steps
+
+Once all services are running (as confirmed in Step 7), you can:
 
 1. **Access the Application**: Open `http://localhost:5173` in your browser to explore the frontend UI
 2. **Try a Sample Workflow**: Follow [SampleWorkflow.md](SampleWorkflow.md) for a guided walkthrough of the migration process
