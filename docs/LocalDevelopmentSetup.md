@@ -30,21 +30,21 @@ This application consists of **three separate services** that run independently:
 ```bash
 Container-Migration-Solution-Accelerator/    ← Repository root (start here)
 ├── src/
-│   ├── processor/                           ← cd src/processor
-│   │   ├── .venv/                          ← Virtual environment
-│   │   └── src/                            ← cd src/processor/src
+│   ├── processor/                           
+│   │   ├── .venv/                          
+│   │   └── src/                            
 │   │       ├── main.py                     ← Direct Mode entry point
 │   │       ├── main_service.py             ← Queue Mode entry point
 │   │       └── .env                        ← Processor config file
-│   ├── backend-api/                         ← cd src/backend-api
+│   ├── backend-api/                         
 │   │   ├── .venv/                          ← Virtual environment
-│   │   └── src/app/                        ← cd src/backend-api/src/app
+│   │   └── src/app/                        
 │   │       ├── main.py                     ← API entry point
 │   │       └── .env                        ← Backend API config file
-│   └── frontend/                            ← cd src/frontend
-│       ├── node_modules/                    ← npm dependencies
-│       └── .env                             ← Frontend config file
-└── docs/                                    ← Documentation (you are here)
+│   └── frontend/                           
+│       ├── node_modules/                    
+│       └── .env                            ← Frontend config file
+└── docs/                                   ← Documentation (you are here)
 ```
 
 **Before starting any step, ensure you are in the repository root directory:**
