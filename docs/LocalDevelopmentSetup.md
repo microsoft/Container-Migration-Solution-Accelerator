@@ -190,11 +190,23 @@ cd src/processor
 
 ### 4.2. Configure Processor Environment Variables
 
-Set the Azure App Configuration URL in your environment or create a `.env` file at the processor root:
+Create a `.env` file in the `src/processor/src` directory (NOT in `src/processor` root):
+
+```bash
+cd src
+# Create .env file
+touch .env  # Linux
+# or
+New-Item .env  # Windows PowerShell
+```
+
+Add the following to the `.env` file:
 
 ```bash
 APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
 ```
+
+> **⚠️ Important**: The `.env` file must be located in `src/processor/src/` directory, not in `src/processor/` root. The application looks for the `.env` file in the same directory as `main.py` and `main_service.py`.
 
 ### 4.3. Install Processor Dependencies
 
