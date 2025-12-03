@@ -371,14 +371,44 @@ VITE_APP_REDIRECT_URL=http://localhost:5173
 VITE_APP_POST_REDIRECT_URL=http://localhost:5173
 
 # Required: Scopes for login and token acquisition
-VITE_APP_WEB_SCOPE=api://your-api-id/access_as_user
-VITE_APP_API_SCOPE=api://your-backend-api-id/User.Read
+# For local development, use User.Read scope
+VITE_APP_WEB_SCOPE=User.Read
+VITE_APP_API_SCOPE=User.Read
 
 # API URL (for when backend is available)
 VITE_API_URL=http://localhost:8000/api
 ```
 
-**Note**: You'll need to configure Azure AD App Registration to get these values. See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for details.
+> **⚠️ Important Authentication Setup Notes:**
+>
+> 1. **Scope Configuration for Local Development:**
+>    - Use `User.Read` for both `VITE_APP_WEB_SCOPE` and `VITE_APP_API_SCOPE`
+>    - This is a standard Microsoft Graph scope that works for basic authentication testing
+>    - For production, you'll need custom API scopes like `api://your-api-id/access_as_user`
+>
+> 2. **Azure AD App Registration Required:**
+>    - You must have an Azure AD app registration with a **Client ID** and **Tenant ID**
+>    - See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for detailed setup instructions
+>
+> 3. **App Registration Configuration in Azure Portal:**
+>    - Go to **Azure Portal → Azure Active Directory → App registrations → Your App**
+>    - Under **Authentication**, add a platform:
+>      - Select **Single-page application (SPA)**
+>      - Add redirect URI: `http://localhost:5173`
+>    - Enable **Implicit grant and hybrid flows**:
+>      - ✅ Check **Access tokens**
+>      - ✅ Check **ID tokens**
+>    - Click **Save**
+>
+> 4. **Common Error: AADSTS900561**
+>    - If you see "The endpoint only accepts POST requests. Received a GET request"
+>    - This means your app registration platform type is incorrect
+>    - Ensure it's configured as **Single-page application (SPA)**, not "Web"
+>    - Clear browser cache or use incognito mode after fixing
+>
+> 5. **Restart Required:**
+>    - After updating `.env`, **stop and restart** the frontend dev server (`npm run dev`)
+>    - Vite caches environment variables at startup and won't pick up changes until restarted
 
 ### 6.4. Build the UI
 
