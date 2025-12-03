@@ -139,7 +139,7 @@ cd Container-Migration-Solution-Accelerator
 
 #### Required Extensions
 
-Create `.vscode/extensions.json` in the workspace root:
+Create `.vscode/extensions.json` in the workspace root and copy the following JSON:
 
 ```json
 {
@@ -161,7 +161,7 @@ VS Code will prompt you to install these recommended extensions when you open th
 
 #### Settings Configuration
 
-Create `.vscode/settings.json`:
+Create `.vscode/settings.json` and copy the following JSON:
 
 ```json
 {
