@@ -315,6 +315,8 @@ azd down
 ```
 > **Note:** If you deployed with `enableRedundancy=true` and Log Analytics workspace replication is enabled, you must first disable replication before running `azd down` else resource group delete will fail. Follow the steps in [Handling Log Analytics Workspace Deletion with Replication Enabled](./LogAnalyticsReplicationDisable.md), wait until replication returns `false`, then run `azd down`.
 
+> **Note:** To purge resources and clean up after deployment, use `azd down` command or follow the [Delete Resource Group Guide](./DeleteResourceGroup.md) for manual cleanup through Azure Portal.
+
 ### Manual Cleanup (if needed)
 If deployment fails or you need to clean up manually:
 - Follow [Delete Resource Group Guide](./DeleteResourceGroup.md)
@@ -431,38 +433,6 @@ Now that your deployment is complete and tested, explore these resources to enha
 - 🐛 **Issues:** Check [Troubleshooting Guide](./TroubleShootingSteps.md)
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
-
-## Cleaning Up Resources
-
-If you need to remove the deployed resources or clean up after a failed deployment:
-
-**Using Azure Developer CLI (azd):**
-```bash
-azd down
-```
-
-This command will:
-- Delete the resource group and all associated Azure resources
-- Remove the deployment environment from azd
-- Clean up local deployment state
-
-**Manual cleanup via Azure Portal:**
-
-For detailed step-by-step instructions on manually deleting resources through the Azure Portal, including:
-- Deleting the entire resource group
-- Removing individual resources selectively
-- Handling failed deployments
-
-See [Deleting Resources Guide](./DeleteResourceGroup.md).
-
-> ⚠️ **Warning**: Deleting a resource group will permanently remove all resources within it, including:
-> - Storage accounts with uploaded migration files
-> - App Configuration settings
-> - Azure AI Foundry projects and deployments
-> - Container Apps and Container Registry images
-> - All telemetry and log data
->
-> **This action cannot be undone.** Ensure you have exported any important data before proceeding.
 
 ---
 

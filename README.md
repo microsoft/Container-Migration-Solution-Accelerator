@@ -136,21 +136,6 @@ Use the [Azure pricing calculator](https://azure.microsoft.com/pricing/calculato
 - **Registration Requirements**: Some models may require registration for access
 - **Quota Management**: Ensure sufficient TPM (tokens per minute) quota for batch processing
 
-### Cleaning up resources
-
-If you need to remove the deployed resources or clean up after a failed deployment, you can delete the Azure resource group and all associated resources:
-
-**Using Azure Developer CLI (azd):**
-```bash
-azd down
-```
-
-**Manual cleanup via Azure Portal:**
-
-For detailed step-by-step instructions on manually deleting resources through the Azure Portal, including individual resource deletion options, see [Deleting Resources Guide](docs/DeleteResourceGroup.md).
-
-> ⚠️ **Warning**: Deleting a resource group will permanently remove all resources within it, including storage accounts, configuration data, and any uploaded migration files. This action cannot be undone.
-
 ## Guidance
 
 ## <img src="docs/images/readme/business_scenario.png" width="48">[Migration Scenario](#migration-scenario)

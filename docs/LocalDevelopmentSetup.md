@@ -629,36 +629,6 @@ Once all services are running (as confirmed in Step 7), you can:
 4. **Customize Agents**: Follow [CustomizeExpertAgents.md](CustomizeExpertAgents.md) to modify agent behavior
 5. **Extend Platform Support**: Follow [ExtendPlatformSupport.md](ExtendPlatformSupport.md) to add new cloud platforms
 
-## Cleaning Up Resources
-
-While local development doesn't create Azure resources by default, you may have deployed Azure resources for testing. To clean up:
-
-**If you deployed Azure resources using azd:**
-```bash
-azd down
-```
-
-**Local development cleanup:**
-```bash
-# Remove Python virtual environments (if needed)
-Remove-Item -Recurse -Force src/processor/.venv
-Remove-Item -Recurse -Force src/backend-api/.venv
-
-# Remove Node.js dependencies (if needed)
-Remove-Item -Recurse -Force src/frontend/node_modules
-
-# Remove generated files
-Remove-Item -Recurse -Force src/frontend/dist
-```
-
-**Manual cleanup via Azure Portal:**
-
-If you need to delete Azure resources used during local development testing, see [Deleting Resources Guide](./DeleteResourceGroup.md) for detailed instructions.
-
-> 💡 **Tip**: Local development uses your Azure credentials to connect to Azure services (App Configuration, Cosmos DB, Storage). If you want to completely disconnect from Azure resources, you can:
-> - Remove the `.env` files from each service directory
-> - Sign out of Azure CLI: `az logout`
-
 ## Related Documentation
 
 - [Deployment Guide](DeploymentGuide.md) - Production deployment instructions
