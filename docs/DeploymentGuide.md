@@ -432,6 +432,38 @@ Now that your deployment is complete and tested, explore these resources to enha
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
 
+## Cleaning Up Resources
+
+If you need to remove the deployed resources or clean up after a failed deployment:
+
+**Using Azure Developer CLI (azd):**
+```bash
+azd down
+```
+
+This command will:
+- Delete the resource group and all associated Azure resources
+- Remove the deployment environment from azd
+- Clean up local deployment state
+
+**Manual cleanup via Azure Portal:**
+
+For detailed step-by-step instructions on manually deleting resources through the Azure Portal, including:
+- Deleting the entire resource group
+- Removing individual resources selectively
+- Handling failed deployments
+
+See [Deleting Resources Guide](./DeleteResourceGroup.md).
+
+> ⚠️ **Warning**: Deleting a resource group will permanently remove all resources within it, including:
+> - Storage accounts with uploaded migration files
+> - App Configuration settings
+> - Azure AI Foundry projects and deployments
+> - Container Apps and Container Registry images
+> - All telemetry and log data
+>
+> **This action cannot be undone.** Ensure you have exported any important data before proceeding.
+
 ---
 
 ## Advanced: Deploy Local Changes
