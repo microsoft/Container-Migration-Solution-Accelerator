@@ -99,13 +99,28 @@ param cosmosLocation string = 'eastus2'
 @description('Optional. Existing Log Analytics Workspace Resource ID')
 param existingLogAnalyticsWorkspaceId string = ''
 
-@description('Tag, Created by user name')
-param createdBy string = deployer().objectId
+@description('Optional. Override for the CreatedBy tag. If not provided, will auto-detect from deployment context.')
+param createdBy string = ''
 
 // Get the current deployer's information for local debugging permissions
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 var deployingUserType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
+
+// Extract human-readable identity name for CreatedBy tag
+var deployerIdentityName = !empty(createdBy) 
+  ? createdBy 
+  : deployerInfo.?userPrincipalName != null
+    ? split(deployerInfo.userPrincipalName, '@')[0]
+    : 'Identity-${deployerInfo.objectId}'
+
+// Output for pre-deployment validation - shows what CreatedBy will be
+output previewCreatedByTag string = deployerIdentityName
+output previewDeployerInfo object = {
+  identityName: deployerIdentityName
+  objectId: deployingUserPrincipalId
+  type: deployingUserType
+}
 
 @description('Optional. Resource ID of an existing Foundry project')
 param existingFoundryProjectResourceId string = ''
@@ -164,7 +179,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
       ...tags
       TemplateName: 'Container Migration'
       Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
+      CreatedBy: deployerIdentityName
     }
   }
 }
