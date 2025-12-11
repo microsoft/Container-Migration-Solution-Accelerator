@@ -316,9 +316,11 @@ Follow the detailed workflow to test the migration functionality:
 
 📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleWorkflow.md) guide for step-by-step testing procedures.
 
-### 5.4 Known Issues
+## Known Issues
 
-**Unable to update/add environment variables in Azure Container App**
+**Below are currently identified issues with workarounds. Please review before reaching out for support.**
+
+### Unable to update/add environment variables in Azure Container App
 
 You may encounter issues when attempting to modify environment variables or container configuration in Azure Container Apps:
 
@@ -356,6 +358,8 @@ az containerapp update \
 - [Manage revisions](https://learn.microsoft.com/en-us/azure/container-apps/revisions-manage?tabs=bash)
 
 > **Note:** This is a temporary workaround. The documentation will be updated once the Azure Portal issue is resolved.
+
+---
 
 ## Step 6: Clean Up (Optional)
 
