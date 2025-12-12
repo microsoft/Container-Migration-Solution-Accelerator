@@ -346,7 +346,7 @@ az containerapp update \
 ```
 
 **For Container Image Updates:**
-```bash
+```shell
 # Update container image
 az containerapp update \
   --name <container-app-name> \
