@@ -3,13 +3,47 @@ name: Build and Push Docker Images
 on:
   push:
     branches: [main, dev, demo, hotfix]
+    paths:
+      - 'src/backend-api/**'
+      - 'src/processor/**'
+      - 'src/frontend/**'
+      - '.github/workflows/docker-build-and-push.yml'
   pull_request:
     branches: [main, dev, demo, hotfix]
     types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - 'src/backend-api/**'
+      - 'src/processor/**'
+      - 'src/frontend/**'
+      - '.github/workflows/docker-build-and-push.yml'
   workflow_dispatch:
   
 jobs:
+  # Detect which services have changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-api: ${{ steps.filter.outputs.backend-api }}
+      processor: ${{ steps.filter.outputs.processor }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check for file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend-api:
+              - 'src/backend-api/**'
+            processor:
+              - 'src/processor/**'
+            frontend:
+              - 'src/frontend/**'
+
   build-and-push:
+    needs: detect-changes
     runs-on: ubuntu-latest
     env:
       ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
@@ -75,6 +109,7 @@ jobs:
           echo "Base tag: $BASE_TAG, Date tag: $DATE_TAG"
 
       - name: Build and Push ContentProcessorAPI Docker image
+        if: needs.detect-changes.outputs.backend-api == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v6
         with:
           context: ./src/backend-api
@@ -85,6 +120,7 @@ jobs:
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
 
       - name: Build and Push ContentProcessor Docker image
+        if: needs.detect-changes.outputs.processor == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v6
         with:
           context: ./src/processor
@@ -95,6 +131,7 @@ jobs:
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
             
       - name: Build and Push ContentProcessorWeb Docker image
+        if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v6
         with:
           context: ./src/frontend

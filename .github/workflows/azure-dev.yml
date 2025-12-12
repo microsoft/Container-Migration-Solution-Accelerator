@@ -1,5 +1,11 @@
 name: AZD Template Validation
 on:
+  pull_request:
+    paths:
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
+      - 'infra/**'
+      - '.github/workflows/azure-dev.yml'
   workflow_dispatch:
 
 permissions:
