@@ -329,7 +329,7 @@ You may encounter issues when attempting to modify environment variables or cont
 - **Container Configuration:** When trying to edit ACR name, image, or tag information for Container Apps
 
 **Root Cause:**
-This is an ongoing issue in Azure that affects the Azure Portal's ability to update Container Apps configurations.
+A known issue in the Azure Portal prevents updating Container Apps configurations. This affects both environment variables and container settings.
 
 **Workaround - Use Azure CLI:**
 
