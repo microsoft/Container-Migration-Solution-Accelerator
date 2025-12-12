@@ -325,7 +325,8 @@ Follow the detailed workflow to test the migration functionality:
 You may encounter issues when attempting to modify environment variables or container configuration in Azure Container Apps:
 
 **Affected Scenarios:**
-- **App Authentication Setup:** When adding authentication-related environment variables (CRUD operations on env variables)
+- **App Authentication Setup:** When adding authentication-related environment variables
+- **Environment Variable Management:** Updating or deleting existing environment variables
 - **Container Configuration:** When trying to edit ACR name, image, or tag information for Container Apps
 
 **Root Cause:**
