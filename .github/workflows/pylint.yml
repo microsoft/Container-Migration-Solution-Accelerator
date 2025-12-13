@@ -1,6 +1,22 @@
 name: PyLint
 
-on: [push]
+on:
+  push:
+    paths:
+      - '**.py'
+      - 'src/backend-api/pyproject.toml'
+      - 'src/processor/pyproject.toml'
+      - 'src/frontend/requirements.txt'
+      - '.flake8'
+      - '.github/workflows/pylint.yml'
+  pull_request:
+    paths:
+      - '**.py'
+      - 'src/backend-api/pyproject.toml'
+      - 'src/processor/pyproject.toml'
+      - 'src/frontend/requirements.txt'
+      - '.flake8'
+      - '.github/workflows/pylint.yml'
 
 jobs:
   build:
