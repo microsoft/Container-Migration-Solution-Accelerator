@@ -7,7 +7,11 @@ Before deploying the accelerator, **ensure sufficient quota availability** for t
 ### Login if you have not done so already
 
 ```
-azd auth login
+az login
+```
+If using VS Code Web:
+```
+az login --use-device-code
 ```
 
 ### 📌 Default Models & Capacities:
@@ -19,7 +23,7 @@ o3:500
 ### 📌 Default Regions:
 
 ```
-eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southcentralus, canadacentral
+eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southcentralus, canadacentral, australiaeast, japaneast
 ```
 
 ### Usage Scenarios:
@@ -37,37 +41,37 @@ eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southc
 ✔️ Run without parameters to check default models & regions without verbose logging:
 
 ```
-./quota_check.sh
+./quota_check_params.sh
 ```
 
 ✔️ Enable verbose logging:
 
 ```
-./quota_check.sh --verbose
+./quota_check_params.sh --verbose
 ```
 
 ✔️ Check specific model(s) in default regions:
 
 ```
-./quota_check.sh --models o3:500
+./quota_check_params.sh --models o3:500
 ```
 
 ✔️ Check default models in specific region(s):
 
 ```
-./quota_check.sh --regions eastus,westus
+./quota_check_params.sh --regions eastus,westus
 ```
 
 ✔️ Passing Both models and regions:
 
 ```
-./quota_check.sh --models o3:500 --regions eastus,westus2
+./quota_check_params.sh --models o3:500 --regions eastus,westus2
 ```
 
 ✔️ All parameters combined:
 
 ```
-./quota_check.sh --models o3:500 --regions eastus,westus --verbose
+./quota_check_params.sh --models o3:500 --regions eastus,westus --verbose
 ```
 
 ### **Sample Output**
@@ -85,9 +89,9 @@ The final table lists regions with available quota. You can select any of these 
    **To check quota for the deployment**
 
    ```sh
-   curl -L -o quota_check.sh "https://raw.githubusercontent.com/microsoft/Container-Migration-Solution-Accelerator/main/scripts/quota_check.sh"
-   chmod +x quota_check.sh
-   ./quota_check.sh
+   curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Container-Migration-Solution-Accelerator/main/scripts/quota_check_params.sh"
+   chmod +x quota_check_params.sh
+   ./quota_check_params.sh
    ```
 
    - Refer to [Input Formats](#input-formats) for detailed commands.
@@ -95,19 +99,19 @@ The final table lists regions with available quota. You can select any of these 
 ### **If using VS Code or Codespaces**
 
 1. Open the terminal in VS Code or Codespaces.
-2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash`.
+2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash` / `bash`.
    ![git_bash](images/readme/terminal_git_bash.png)
 3. Navigate to the `scripts` folder where the script files are located and make the script as executable:
    ```sh
     cd scripts
-    chmod +x quota_check.sh
+    chmod +x quota_check_params.sh
    ```
 4. Run the appropriate script based on your requirement:
 
    **To check quota for the deployment**
 
    ```sh
-   ./quota_check.sh
+   ./quota_check_params.sh
    ```
 
    - Refer to [Input Formats](#input-formats) for detailed commands.
@@ -118,5 +122,6 @@ The final table lists regions with available quota. You can select any of these 
    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
    az login
    ```
+   > Note: Use `az login --use-device-code` in VS Code Web.
 
 6. Rerun the script after installing Azure CLI.
