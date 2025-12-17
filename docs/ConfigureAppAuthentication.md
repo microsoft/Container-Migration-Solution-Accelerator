@@ -69,15 +69,15 @@ We will add Microsoft Entra ID as an authentication provider to API and Web Appl
 3. Grab Scope Name for Impersonation
 
    - Select **Expose an API** in the left menu. Copy the Scope name, then paste it in some temporary place.
-     The copied text will be used for Web Application Environment variable - **APP_WEB_SCOPE**.
+     The copied text will be used for Web Application Environment variable - **REACT_APP_WEB_SCOPE**.
      ![configure_app_registration_web_9](./images/configure_app_registration_web_9.png)
 
 4. Grab Client Id for Web App
 
    - Select **Overview** in the left menu. Copy the Client Id, then paste it in some temporary place.
-     The copied text will be used for Web Application Environment variable - **APP_WEB_CLIENT_ID**.
+     The copied text will be used for Web Application Environment variable - **REACT_APP_MSAL_AUTH_CLIENTID**.
    - Also copy the Tenant Id, then paste it in some temporary place.
-     The copied text will be used for Web Application Environment variable - **APP_MSAL_AUTH_AUTHORITY**.
+     The copied text will be used for Web Application Environment variable - **REACT_APP_MSAL_AUTH_AUTHORITY**.
      ![configure_app_registration_web_10](./images/configure_app_registration_web_10.png)
 
 ## Step 3: Configure Application Registration - API Application
@@ -88,7 +88,7 @@ We will add Microsoft Entra ID as an authentication provider to API and Web Appl
      ![configure_app_registration_api_1](./images/configure_app_registration_api_1.png)
 
    - Select **Expose an API** in the left menu. Copy the Scope name, then paste it in some temporary place.
-     The copied text will be used for Web Application Environment variable - **APP_API_SCOPE**.
+     The copied text will be used for Web Application Environment variable - **REACT_APP_API_SCOPE**.
      ![configure_app_registration_api_2](./images/configure_app_registration_api_2.png)
 
 ## Step 4: Add Web Application's Client Id to Allowed Client Applications List in API Application Registration
@@ -117,7 +117,7 @@ Now, we will edit and deploy the Web Application Container with updated Environm
 | REACT_APP_MSAL_AUTH_CLIENTID     | In Step 2, Client Id for Web                 |
 | REACT_APP_WEB_SCOPE              | In Step 2, Scope Name                        |
 | REACT_APP_API_SCOPE              | In Step 3, Scope Name                        |
-| REACT_APP_MSAL_AUTH_AUTHORITY    | https://login.microsoftonline.com/'TenantId' <br/>*Note: Replace 'TenantId' with the Tenant Id copied in Step 2, point 4* |
+| REACT_APP_MSAL_AUTH_AUTHORITY    | https://login.microsoftonline.com/<TenantId> <br/>*Note: Add the whole URL above, replacing <TenantId> with the Tenant Id copied in Step 2, point 4. Do not use just the Tenant Id; the full URL is required.* |
 | REACT_APP_MSAL_POST_REDIRECT_URL | /                                            |
 | REACT_APP_MSAL_REDIRECT_URL      | /                                            |
 | ENABLE_AUTH                      | true                                         |
