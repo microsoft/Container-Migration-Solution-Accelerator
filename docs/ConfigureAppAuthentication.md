@@ -117,7 +117,7 @@ Now, we will edit and deploy the Web Application Container with updated Environm
 | REACT_APP_MSAL_AUTH_CLIENTID     | In Step 2, Client Id for Web                 |
 | REACT_APP_WEB_SCOPE              | In Step 2, Scope Name                        |
 | REACT_APP_API_SCOPE              | In Step 3, Scope Name                        |
-| REACT_APP_MSAL_AUTH_AUTHORITY    | https://login.microsoftonline.com/<TenantId> <br/>*Note: Add the whole URL above, replacing <TenantId> with the Tenant Id copied in Step 2, point 4. Do not use just the Tenant Id; the full URL is required.* |
+| REACT_APP_MSAL_AUTH_AUTHORITY    | https://login.microsoftonline.com/'TenantId' <br/>*Note: Add the whole URL above, replacing <TenantId> with the Tenant Id copied in Step 2, point 4. Do not use just the Tenant Id; the full URL is required.* |
 | REACT_APP_MSAL_POST_REDIRECT_URL | /                                            |
 | REACT_APP_MSAL_REDIRECT_URL      | /                                            |
 | ENABLE_AUTH                      | true                                         |
