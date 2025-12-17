@@ -78,8 +78,9 @@ We will add Microsoft Entra ID as an authentication provider to API and Web Appl
      The copied text will be used for Web Application Environment variable - **REACT_APP_MSAL_AUTH_CLIENTID**.
    - Also copy the Tenant Id, then paste it in some temporary place.
     The copied text will be used for Web Application Environment variable - **REACT_APP_MSAL_AUTH_AUTHORITY**.
-   - **Note:** For the value of **REACT_APP_MSAL_AUTH_AUTHORITY**, you need to use the full URL: `https://login.microsoftonline.com/<TenantId>`, replacing `<TenantId>` with the value you just copied.
-     ![configure_app_registration_web_10](./images/configure_app_registration_web_10.png)
+      > **Note:** For the value of **REACT_APP_MSAL_AUTH_AUTHORITY**, you need to use the full URL: `https://login.microsoftonline.com/<TenantId>`, replacing `<TenantId>` with the value you just copied.
+
+   ![configure_app_registration_web_10](./images/configure_app_registration_web_10.png)
 
 ## Step 3: Configure Application Registration - API Application
 
