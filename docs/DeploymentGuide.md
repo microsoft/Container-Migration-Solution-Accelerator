@@ -326,6 +326,8 @@ azd down
 ```
 > **Note:** If you deployed with `enableRedundancy=true` and Log Analytics workspace replication is enabled, you must first disable replication before running `azd down` else resource group delete will fail. Follow the steps in [Handling Log Analytics Workspace Deletion with Replication Enabled](./LogAnalyticsReplicationDisable.md), wait until replication returns `false`, then run `azd down`.
 
+> **Note:** To purge resources and clean up after deployment, use `azd down` command or follow the [Delete Resource Group Guide](./DeleteResourceGroup.md) for manual cleanup through Azure Portal.
+
 ### Manual Cleanup (if needed)
 If deployment fails or you need to clean up manually:
 - Follow [Delete Resource Group Guide](./DeleteResourceGroup.md)
