@@ -40,17 +40,15 @@ const Main = () => {
             ENABLE_AUTH: true, // Enable auth for testing
             REACT_APP_WEB_CLIENT_ID: import.meta.env.VITE_APP_WEB_CLIENT_ID || 'your-client-id-here',
             REACT_APP_WEB_AUTHORITY: import.meta.env.VITE_APP_WEB_AUTHORITY || 'https://login.microsoftonline.com/common',
-            REACT_APP_MSAL_AUTH_CLIENTID: import.meta.env.VITE_APP_WEB_CLIENT_ID || 'your-client-id-here',
-            REACT_APP_MSAL_AUTH_AUTHORITY: import.meta.env.VITE_APP_WEB_AUTHORITY || 'https://login.microsoftonline.com/common',
             REACT_APP_REDIRECT_URL: import.meta.env.VITE_APP_REDIRECT_URL || window.location.origin,
             REACT_APP_POST_REDIRECT_URL: import.meta.env.VITE_APP_POST_REDIRECT_URL || window.location.origin,
-            REACT_APP_MSAL_REDIRECT_URL: import.meta.env.VITE_APP_REDIRECT_URL || window.location.origin,
-            REACT_APP_MSAL_POST_REDIRECT_URL: import.meta.env.VITE_APP_POST_REDIRECT_URL || window.location.origin,
             REACT_APP_WEB_SCOPE: import.meta.env.VITE_APP_WEB_SCOPE || 'User.Read',
             REACT_APP_API_SCOPE: import.meta.env.VITE_APP_API_SCOPE || 'User.Read',
             API_URL: 'http://localhost:8000/api' // Fallback API URL
           };
-        }        window.appConfig = config;
+        }
+
+        window.appConfig = config;
         setEnvData(config);
         setApiUrl(config.API_URL);
         setConfig(config);
@@ -78,12 +76,8 @@ const Main = () => {
           ENABLE_AUTH: true, // Enable auth for testing
           REACT_APP_WEB_CLIENT_ID: import.meta.env.VITE_APP_WEB_CLIENT_ID || 'your-client-id-here',
           REACT_APP_WEB_AUTHORITY: import.meta.env.VITE_APP_WEB_AUTHORITY || 'https://login.microsoftonline.com/common',
-          REACT_APP_MSAL_AUTH_CLIENTID: import.meta.env.VITE_APP_WEB_CLIENT_ID || 'your-client-id-here',
-          REACT_APP_MSAL_AUTH_AUTHORITY: import.meta.env.VITE_APP_WEB_AUTHORITY || 'https://login.microsoftonline.com/common',
           REACT_APP_REDIRECT_URL: import.meta.env.VITE_APP_REDIRECT_URL || window.location.origin,
           REACT_APP_POST_REDIRECT_URL: import.meta.env.VITE_APP_POST_REDIRECT_URL || window.location.origin,
-          REACT_APP_MSAL_REDIRECT_URL: import.meta.env.VITE_APP_REDIRECT_URL || window.location.origin,
-          REACT_APP_MSAL_POST_REDIRECT_URL: import.meta.env.VITE_APP_POST_REDIRECT_URL || window.location.origin,
           REACT_APP_WEB_SCOPE: import.meta.env.VITE_APP_WEB_SCOPE || 'User.Read',
           REACT_APP_API_SCOPE: import.meta.env.VITE_APP_API_SCOPE || 'User.Read',
           API_URL: 'http://localhost:8000/api'
