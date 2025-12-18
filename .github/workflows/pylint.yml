@@ -8,13 +8,6 @@ on:
       - '**/requirements.txt'
       - '.flake8'
       - '.github/workflows/pylint.yml'
-  pull_request:
-    paths:
-      - '**.py'
-      - '**/pyproject.toml'
-      - '**/requirements.txt'
-      - '.flake8'
-      - '.github/workflows/pylint.yml'
 
 jobs:
   build:
