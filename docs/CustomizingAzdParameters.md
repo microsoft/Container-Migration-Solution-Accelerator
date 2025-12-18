@@ -19,6 +19,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_AI_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available `o` capacity). |
 | `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                   |
 | `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                   |
+| `AZURE_ENV_IMAGETAG`            | string  | `latest`                | Specifies the container image tag to use for deployment.                              |
 
 ## How to Set a Parameter
 
