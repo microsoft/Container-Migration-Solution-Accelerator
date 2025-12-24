@@ -5,9 +5,23 @@ on:
       - main
       - dev
       - demo
+    paths:
+      - 'infra/**'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
+      - 'scripts/checkquota.sh'
+      - 'scripts/quota_check_params.sh'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - dev
+    paths:
+      - 'infra/**'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
+      - 'scripts/checkquota.sh'
+      - 'scripts/quota_check_params.sh'
+      - '.github/workflows/ci.yml'
   schedule:
     - cron: '0 9,21 * * *'  # Runs at 9:00 AM and 9:00 PM GMT
   workflow_dispatch:  # Allow manual triggering
