@@ -3,9 +3,19 @@ name: Build and Push Docker Images
 on:
   push:
     branches: [main, dev, demo, hotfix]
+    paths:
+      - 'src/backend-api/**'
+      - 'src/processor/**'
+      - 'src/frontend/**'
+      - '.github/workflows/docker-build-and-push.yml'
   pull_request:
     branches: [main, dev, demo, hotfix]
     types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - 'src/backend-api/**'
+      - 'src/processor/**'
+      - 'src/frontend/**'
+      - '.github/workflows/docker-build-and-push.yml'
   workflow_dispatch:
   
 jobs:
