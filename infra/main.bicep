@@ -73,7 +73,7 @@ param aiModelName string = 'o3'
 param aiModelVersion string = '2025-04-16'
 
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
-param aiModelCapacity int = 1
+param aiModelCapacity int = 500
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
