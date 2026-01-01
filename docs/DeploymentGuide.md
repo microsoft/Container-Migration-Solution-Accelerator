@@ -262,6 +262,9 @@ azd auth login --tenant-id <tenant-id>
 
 ### 4.2 Start Deployment
 
+> ⚠️ **Critical: Redeployment Warning**  
+> If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
+
 ```shell
 azd up
 ```
@@ -466,6 +469,9 @@ If you've made local modifications to the code and want to deploy them to Azure,
 2. Rename `main_custom.bicep` to `main.bicep`
 
 ### Step 3: Deploy Changes
+
+> ⚠️ **Critical: Redeployment Warning**  
+> If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
 
 Run the deployment command:
 ```shell
