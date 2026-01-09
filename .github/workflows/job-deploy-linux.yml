@@ -1,5 +1,9 @@
 name: Deploy Steps - Linux
 
+permissions:
+  contents: read
+  actions: read
+
 on:
   workflow_call:
     inputs:
