@@ -1,4 +1,9 @@
 name: Deploy-Test-Cleanup (v2) Linux
+
+permissions:
+  contents: read
+  actions: read
+
 on:
   push:
     branches:
