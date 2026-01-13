@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Control API server (aiohttp).
 
 This server exposes endpoints for managing processes in a replica-agnostic way.

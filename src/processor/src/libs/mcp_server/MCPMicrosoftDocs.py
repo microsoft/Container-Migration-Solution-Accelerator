@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Microsoft Learn MCP Tool.
 
 This module provides access to Microsoft Learn documentation through the Model Context Protocol (MCP).

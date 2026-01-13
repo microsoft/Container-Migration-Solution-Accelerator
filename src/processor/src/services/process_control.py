@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Process control plane.
 
 This module provides a shared, replica-agnostic control mechanism for managing

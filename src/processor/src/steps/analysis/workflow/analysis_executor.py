@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from agent_framework import Executor, WorkflowContext, handler
 from art import text2art
 

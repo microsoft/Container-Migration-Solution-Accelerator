@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 import logging
 from enum import Enum
 from typing import TYPE_CHECKING, Any, overload

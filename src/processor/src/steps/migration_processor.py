@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 import json
 import time
 from datetime import datetime
@@ -42,6 +45,9 @@ class WorkflowExecutorFailedException(Exception):
     def _details_to_dict(details: Any) -> dict[str, Any]:
         if details is None:
             return {"details": None}
+
+        if isinstance(details, dict):
+            return details
 
         # Pydantic v2
         model_dump = getattr(details, "model_dump", None)

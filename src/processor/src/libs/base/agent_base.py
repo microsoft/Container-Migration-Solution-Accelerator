@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from abc import ABC
 
 from libs.agent_framework.agent_framework_helper import AgentFrameworkHelper

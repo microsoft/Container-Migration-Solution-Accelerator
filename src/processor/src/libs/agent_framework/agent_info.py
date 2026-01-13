@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from typing import Any, Callable, MutableMapping, Sequence
 from agent_framework import ToolProtocol
 from jinja2 import Template

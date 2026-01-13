@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Mermaid validation/fix MCP Tool.
 
 This module provides Mermaid diagram validation and best-effort auto-fixing through MCP.

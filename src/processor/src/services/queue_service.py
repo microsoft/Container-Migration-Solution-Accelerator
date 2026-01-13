@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Queue-based Migration Service.
 
 This worker consumes migration requests from a single Azure Storage Queue and

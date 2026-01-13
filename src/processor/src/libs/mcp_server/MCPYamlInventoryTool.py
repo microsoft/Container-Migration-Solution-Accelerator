@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Kubernetes YAML Inventory MCP Tool.
 
 This MCP tool generates a deterministic inventory for converted Kubernetes YAML manifests.

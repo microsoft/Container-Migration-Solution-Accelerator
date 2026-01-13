@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # load text as a template then render with jinja2
 # it should support async resource management.
 from jinja2 import Template

@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 class ServiceConfig:
     """Configuration for a single LLM service"""
 

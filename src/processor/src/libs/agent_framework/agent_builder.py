@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from collections.abc import Callable, MutableMapping, Sequence
 from typing import Any, Literal
 

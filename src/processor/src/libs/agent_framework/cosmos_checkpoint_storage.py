@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from agent_framework import WorkflowCheckpoint, CheckpointStorage
 from sas.cosmosdb.sql import RootEntityBase, RepositoryBase
 from typing import Any

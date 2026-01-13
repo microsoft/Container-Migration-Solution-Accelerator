@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Datetime MCP Tool.
 
 This module provides a local datetime service through the Model Context Protocol (MCP).
@@ -103,13 +106,26 @@ def get_datetime_mcp() -> MCPStdioTool:
         The MCP server process is automatically started when the tool is entered
         and stopped when the tool is exited, ensuring clean resource management.
     """
+
+    # The MCP datetime server is implemented as a small Python module under
+    # `libs/mcp_server/datetime`. We set `uv --directory` to that folder so that
+    # running `mcp_datetime.py` resolves local imports and dependencies correctly.
+    #
+    # We also allow pre-release dependency resolution (some dependencies in this
+    # repo are versioned as betas) to keep behavior consistent with `uv sync
+    # --prerelease=allow`.
+    datetime_dir = Path(os.path.dirname(__file__)).joinpath("datetime")
+
     return MCPStdioTool(
         name="datetime_service",
         description="MCP tool for datetime operations",
         command="uv",
         args=[
-            f"--directory={str(Path(os.path.dirname(__file__)).joinpath('datetime'))}",
+            # Run the MCP server from its own folder.
+            f"--directory={str(datetime_dir)}",
             "run",
+            "--prerelease=allow",
+            # Entry point for the local MCP datetime server.
             "mcp_datetime.py",
         ],
     )

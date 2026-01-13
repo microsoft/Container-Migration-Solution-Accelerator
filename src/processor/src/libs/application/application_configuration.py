@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

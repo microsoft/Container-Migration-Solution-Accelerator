@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [

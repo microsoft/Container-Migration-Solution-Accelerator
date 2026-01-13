@@ -25,7 +25,7 @@ RUN tdnf update -y && tdnf install -y \
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using UV
-RUN uv sync --frozen --python 3.12
+RUN uv sync --frozen --python 3.12 --prerelease=allow
 
 # Copy the entire source code
 COPY src/ ./src/
@@ -47,4 +47,4 @@ ENV APP_CONFIGURATION_URL=""
 EXPOSE 8080
 
 # Simple command - let Docker handle restarts
-CMD ["uv", "run", "python", "src/main_service.py", "--prerelease=allow"]
+CMD ["uv", "run", "--prerelease=allow", "python", "src/main_service.py"]

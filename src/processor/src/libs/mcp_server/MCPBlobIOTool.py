@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """Azure Blob Storage MCP Tool.
 
 This module provides Azure Blob Storage operations through the Model Context Protocol (MCP).

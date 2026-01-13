@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """
 Queue-Based Migration Service - Main entry point for the queue processing service.
 

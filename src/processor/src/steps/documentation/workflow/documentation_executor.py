@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 from typing_extensions import Never
 
 from agent_framework import Executor, WorkflowContext, handler
