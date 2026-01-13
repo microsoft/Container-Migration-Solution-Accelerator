@@ -14,9 +14,9 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_CONTAINER_REGISTRY_HOST` | string  | `myregistry.azurecr.io` | Specifies the container registry from which to pull app container images.             |
 | `AZURE_AI_DEPLOYMENT_LOCATION`  | string  | `eastus2`               | Specifies alternative location for AI model resources.                                |
 | `AZURE_AI_DEPLOYMENT_TYPE`      | string  | `GlobalStandard`        | Defines the model deployment type (allowed values: `Standard`, `GlobalStandard`).     |
-| `AZURE_AI_MODEL_NAME`           | string  | `o3`                    | Specifies the `o` model name.                                                         |
-| `AZURE_AI_MODEL_VERSION`        | string  | `2025-04-16`            | Specifies the `o` model version.                                                      |
-| `AZURE_AI_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available `o` capacity). |
+| `AZURE_AI_MODEL_NAME`           | string  | `gpt-5.1`               | Specifies the Azure OpenAI model name to deploy.                                      |
+| `AZURE_AI_MODEL_VERSION`        | string  | `your-model-version`    | Specifies the model version (use a version available in your region/subscription).   |
+| `AZURE_AI_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available quota).       |
 | `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                   |
 | `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                   |
 | `AZURE_ENV_IMAGETAG`            | string  | `latest`                | Specifies the container image tag to use for deployment.                              |

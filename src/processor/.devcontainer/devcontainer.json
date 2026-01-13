@@ -38,7 +38,7 @@
         "UV_PROJECT_ENVIRONMENT": ".venv",
         "VIRTUAL_ENV": "/workspaces/processor/.venv"
     },
-    "postCreateCommand": "uv sync --python 3.12 --link-mode=copy --frozen",
+    "postCreateCommand": "uv sync --python 3.12 --prelease=allow --link-mode=copy --frozen",
     "postStartCommand": "uv tool install pre-commit --with pre-commit-uv --force-reinstall",
     "remoteUser": "vscode"
 }

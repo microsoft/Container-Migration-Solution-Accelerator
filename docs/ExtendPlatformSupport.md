@@ -74,31 +74,18 @@ To illustrate the complete process, let's walk through adding Red Hat OpenShift 
 #### Example Agent Creation (Step 2)
 
 ```bash
-# Create OpenShift expert directory
-mkdir src/agents/openshift_expert
+# Add an OpenShift expert prompt for the analysis step
+touch src/processor/src/steps/analysis/agents/prompt_openshift.txt
 
-# Create agent files
-touch src/agents/openshift_expert/agent_info.py
-touch src/agents/openshift_expert/prompt-analysis.txt
-touch src/agents/openshift_expert/prompt-design.txt
-touch src/agents/openshift_expert/prompt-yaml.txt
-touch src/agents/openshift_expert/prompt-documentation.txt
+# Register it so it can be selected during analysis
+edit src/processor/src/steps/analysis/orchestration/platform_registry.json
 ```
 
-```python
-# src/agents/openshift_expert/agent_info.py
-from agents.agent_info_util import MigrationPhase, load_prompt_text
-from utils.agent_builder import AgentType, agent_info
+For other phases, add corresponding prompt files under:
 
-def get_agent_info(phase: MigrationPhase | str | None = None) -> agent_info:
-    """Get OpenShift Expert agent info with optional phase-specific prompt."""
-    return agent_info(
-        agent_name="OpenShift_Expert",
-        agent_type=AgentType.ChatCompletionAgent,
-        agent_description="Red Hat OpenShift expert specializing in container platform migration to Azure Kubernetes Service with deep knowledge of Routes, DeploymentConfigs, ImageStreams, and OpenShift operators.",
-        agent_instruction=load_prompt_text(phase=phase),
-    )
-```
+- `src/processor/src/steps/design/agents/`
+- `src/processor/src/steps/convert/agents/`
+- `src/processor/src/steps/documentation/agents/`
 
 #### How Platform Detection Really Works
 
@@ -131,15 +118,14 @@ confidence_score: str = Field(description="Confidence score for platform detecti
 To add OpenShift support, you would register the new expert in the analysis orchestration:
 
 ```python
-# In analysis_orchestration.py, add import:
-from agents.openshift_expert.agent_info import get_agent_info as openshift_expert
-
-# In _create_analysis_agents method, add OpenShift expert:
-openshift_config = openshift_expert(phase=MigrationPhase.ANALYSIS).render(
-    **self.process_context
-)
-agent_openshift = await mcp_context.create_agent(openshift_config)
-agents.append(agent_openshift)
+# Add an OpenShift expert prompt file under:
+#   src/processor/src/steps/analysis/agents/
+#
+# Then add a registry entry under:
+#   src/processor/src/steps/analysis/orchestration/platform_registry.json
+#
+# The analysis orchestrator loads experts from the registry and constructs AgentInfo
+# participants with MCP tools, then runs the group chat orchestration.
 
 # The multi-agent conversation will then include:
 # - Technical Architect (orchestrates analysis)
@@ -187,45 +173,14 @@ Before adding support, analyze the target platform:
 Create a specialized expert agent for the new platform:
 
 ```bash
-# Create agent directory
-mkdir src/agents/platform_name_expert
+# Add a new prompt file for your platform expert (analysis step)
+touch src/processor/src/steps/analysis/agents/prompt_<platform>_expert.txt
 
-# Create required files
-touch src/agents/platform_name_expert/agent_info.py
-touch src/agents/platform_name_expert/prompt-analysis.txt
-touch src/agents/platform_name_expert/prompt-design.txt
-touch src/agents/platform_name_expert/prompt-yaml.txt
-touch src/agents/platform_name_expert/prompt-documentation.txt
+# Register the expert for analysis selection
+edit src/processor/src/steps/analysis/orchestration/platform_registry.json
 ```
 
-Example agent structure based on existing codebase:
-
-```python
-# src/agents/new_platform_expert/agent_info.py
-
-from agents.agent_info_util import MigrationPhase, load_prompt_text
-from utils.agent_builder import AgentType, agent_info
-
-def get_agent_info(phase: MigrationPhase | str | None = None) -> agent_info:
-    """Get New Platform Expert agent info with optional phase-specific prompt.
-
-    Args:
-        phase (MigrationPhase | str | None): Migration phase ('analysis', 'design', 'yaml', 'documentation').
-                              If provided, loads phase-specific prompt.
-    """
-    return agent_info(
-        agent_name="NewPlatform_Expert",
-        agent_type=AgentType.ChatCompletionAgent,
-        agent_description="Platform expert specializing in [Platform Name] with expertise in Kubernetes migration initiatives.",
-        agent_instruction=load_prompt_text(phase=phase),
-    )
-
-# Note: Create prompt files in the same directory:
-# - prompt-analysis.txt
-# - prompt-design.txt
-# - prompt-yaml.txt
-# - prompt-documentation.txt
-```
+Create or customize the prompt file content to cover detection signals, key resources, migration challenges, and Azure mapping guidance.
 
 ### Step 3: Integrate with Existing Orchestration
 
@@ -233,78 +188,46 @@ Add your new platform expert to the existing orchestration logic:
 
 ```python
 # Integration with existing analysis orchestration
-# Reference: src/libs/steps/orchestration/analysis_orchestration.py
-
-# When adding platform detection, integrate with the existing
-# analysis orchestration structure that includes:
-# - Technical Architect (chief architect)
-# - EKS Expert
-# - GKE Expert
-# - Your new platform expert
-
-# Follow the existing pattern of phase-specific agent loading
-# that uses MigrationPhase enum values
+# Reference: src/processor/src/steps/analysis/orchestration/analysis_orchestrator.py
+# Platform experts for analysis are configured via:
+#   src/processor/src/steps/analysis/orchestration/platform_registry.json
 ```
 
-**Note:** The current codebase uses a sophisticated orchestration system with `GroupChatOrchestration` and phase-specific prompts. Platform detection logic should be integrated with the existing analysis orchestration rather than creating new standalone classes.
+**Note:** Platform detection should be integrated into the existing analysis step orchestration rather than creating a new standalone pipeline.
 
 
 ### Step 4: Update Agent Registration
 
 When adding new platform support, ensure proper agent registration in the orchestration system:
 
-```python
-# Follow the existing pattern in analysis_orchestration.py
-# which imports agents like:
-from agents.eks_expert.agent_info import get_agent_info as eks_expert
-from agents.gke_expert.agent_info import get_agent_info as gke_expert
-from agents.technical_architect.agent_info import get_agent_info as architect_agent
+For the analysis phase, register your new platform expert by:
 
-# Add your new platform expert:
-from agents.your_platform_expert.agent_info import get_agent_info as your_platform_expert
-```
+1. Adding a new prompt file under `src/processor/src/steps/analysis/agents/`
+2. Adding an entry to `src/processor/src/steps/analysis/orchestration/platform_registry.json`
 
-**Note:** The current codebase follows the Semantic Kernel Process Framework with specialized orchestration for each migration phase. Platform-specific logic should integrate with the existing `StepGroupChatOrchestrator` and `GroupChatOrchestration` patterns.
+For other phases, update the relevant step orchestrator’s `prepare_agent_infos()` to include a new `AgentInfo`.
+
+**Note:** The current codebase uses an Agent Framework workflow with step-level group-chat orchestration. Platform-specific logic should integrate with the existing step orchestrators (analysis/design/yaml/documentation) and their group-chat patterns, rather than introducing a new end-to-end pipeline.
 
 ### Step 5: Update the Analysis Orchestration
 
 Integrate your new platform expert into the actual analysis orchestration:
 
 ```python
-# In src/libs/steps/orchestration/analysis_orchestration.py
-# Add import for your new expert:
-from agents.openshift_expert.agent_info import get_agent_info as openshift_expert
-
-# In the _create_analysis_agents method, add your expert to the agent team:
-async def _create_analysis_agents(self, mcp_context, process_context, agent_response_callback=None, telemetry=None):
-    agents = []
-    
-    # Technical Architect (orchestrates the analysis)
-    architect_config = architect_agent(phase=MigrationPhase.ANALYSIS).render(**self.process_context)
-    agent_architect = await mcp_context.create_agent(architect_config)
-    agents.append(agent_architect)
-
-    # Platform experts for source detection
-    eks_config = eks_expert(phase=MigrationPhase.ANALYSIS).render(**self.process_context)
-    agent_eks = await mcp_context.create_agent(eks_config)
-    agents.append(agent_eks)
-
-    gke_config = gke_expert(phase=MigrationPhase.ANALYSIS).render(**self.process_context)
-    agent_gke = await mcp_context.create_agent(gke_config)
-    agents.append(agent_gke)
-    
-    # Add your new platform expert
-    openshift_config = openshift_expert(phase=MigrationPhase.ANALYSIS).render(**self.process_context)
-    agent_openshift = await mcp_context.create_agent(openshift_config)
-    agents.append(agent_openshift)
-
-    return GroupChatOrchestration(members=agents, manager=AnalysisStepGroupChatManager(...))
+# In src/processor/src/steps/analysis/orchestration/analysis_orchestrator.py
+# Platform experts are loaded from platform_registry.json.
+# Add a new registry entry pointing to your prompt file, e.g.:
+# {
+#   "agent_name": "OpenShift Expert",
+#   "prompt_file": "prompt-openshift-expert.txt"
+# }
 ```
 
 **Key Points:**
-- Each expert gets phase-specific prompts through `MigrationPhase.ANALYSIS`
-- Agents are created with the MCP context for tool access
-- The `render(**self.process_context)` provides runtime context to agents
+
+- Analysis experts are loaded from `platform_registry.json` (config-driven)
+- Each agent gets MCP tool access via the step orchestrator’s `self.mcp_tools`
+- Prompts are rendered from files under the step’s `agents/` directory
 
 ### Step 6: Implement Platform-Specific Prompts
 
@@ -390,46 +313,28 @@ Transform OpenShift workloads to Azure-native architectures following Azure Well
 Test your new platform expert using the existing testing patterns:
 
 ```python
-# tests/unit/test_openshift_expert.py
+# src/processor/src/tests/unit/test_platform_registry.py
 
-import pytest
-from agents.openshift_expert.agent_info import get_agent_info
-from agents.agent_info_util import MigrationPhase
+import json
+from pathlib import Path
 
-class TestOpenShiftExpert:
-    """Test OpenShift expert agent following existing patterns"""
 
-    def test_agent_info_structure(self):
-        """Test that agent info follows the standard structure"""
-        agent_info = get_agent_info()
-        
-        # Verify required attributes exist
-        assert hasattr(agent_info, 'agent_name')
-        assert hasattr(agent_info, 'agent_type') 
-        assert hasattr(agent_info, 'agent_description')
-        assert hasattr(agent_info, 'agent_instruction')
-        
-        # Verify agent name matches expected pattern
-        assert agent_info.agent_name == "OpenShift_Expert"
-        
-    def test_phase_specific_prompts(self):
-        """Test that phase-specific prompts are loaded correctly"""
-        # Test each migration phase
-        for phase in MigrationPhase:
-            agent_info = get_agent_info(phase=phase)
-            assert agent_info.agent_instruction is not None
-            assert len(agent_info.agent_instruction) > 0
-            
-    def test_analysis_phase_prompt(self):
-        """Test analysis phase specific functionality"""
-        agent_info = get_agent_info(phase=MigrationPhase.ANALYSIS)
-        
-        # Verify the prompt contains OpenShift-specific content
-        prompt = agent_info.agent_instruction.lower()
-        assert "openshift" in prompt or "route" in prompt
-        
+def test_platform_registry_entry_exists():
+    registry_path = Path("src/processor/src/steps/analysis/orchestration/platform_registry.json")
+    data = json.loads(registry_path.read_text(encoding="utf-8"))
+
+    # Example: ensure an OpenShift expert is registered
+    assert any("openshift" in (item.get("agent_name", "").lower()) for item in data)
+
+
+def test_platform_prompt_file_exists():
+    prompt_path = Path("src/processor/src/steps/analysis/agents/prompt_openshift.txt")
+    assert prompt_path.exists()
+    assert "openshift" in prompt_path.read_text(encoding="utf-8").lower()
+
+
 # Run tests using existing test framework:
-# uv run python -m pytest tests/unit/test_openshift_expert.py -v
+# uv run python -m pytest src/processor/src/tests/unit -v
 ```
 
 ## Troubleshooting Platform Extensions

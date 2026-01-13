@@ -26,12 +26,10 @@ Each migration phase uses specialized prompts:
 
 Each expert agent has its own prompt files:
 
-```
-src/agents/{agent_name}/
-├── prompt-analysis.txt      # Analysis phase prompt
-├── prompt-design.txt        # Design phase prompt
-├── prompt-yaml.txt         # YAML conversion prompt
-└── prompt-documentation.txt # Documentation prompt
+```text
+src/processor/src/steps/<step>/agents/
+├── prompt_*.txt             # Step-specific expert prompts
+└── ...
 ```
 
 ## Customizing Existing Prompts
@@ -42,12 +40,12 @@ Locate the prompt files you want to customize:
 
 ```bash
 # List all prompt files
-find src/agents -name "prompt-*.txt"
+find src/processor/src/steps -path "*/agents/*" -name "prompt*.txt"
 
 # Example output:
-# src/agents/azure_expert/prompt-analysis.txt
-# src/agents/eks_expert/prompt-design.txt
-# src/agents/yaml_expert/prompt-yaml.txt
+# src/processor/src/steps/analysis/agents/prompt_architect.txt
+# src/processor/src/steps/convert/agents/prompt_yaml_expert.txt
+# src/processor/src/steps/documentation/agents/prompt_technical_writer.txt
 ```
 
 ### Step 2: Backup Original Prompts
@@ -56,10 +54,10 @@ Create backups before customization:
 
 ```bash
 # Create backup directory
-mkdir src/agents/backups
+mkdir src/processor/src/steps/backups
 
 # Backup specific prompts
-cp src/agents/azure_expert/prompt-analysis.txt src/agents/backups/
+cp src/processor/src/steps/analysis/agents/prompt_architect.txt src/processor/src/steps/backups/
 ```
 
 ### Step 3: Customize Prompt Content
@@ -67,9 +65,9 @@ cp src/agents/azure_expert/prompt-analysis.txt src/agents/backups/
 Edit the prompt files to include your customizations:
 
 ```text
-# Example: Customizing Azure Expert Analysis Prompt
+# Example: Customizing Azure Architect / AKS Expert Analysis Prompt
 
-# Azure Expert - Analysis Phase (CUSTOMIZED FOR ORGANIZATION)
+# Azure Architect / AKS Expert - Analysis Phase (CUSTOMIZED FOR ORGANIZATION)
 
 You are an Azure solution architect with expertise in enterprise migrations and deep knowledge of Azure Well-Architected Framework principles.
 
@@ -203,6 +201,7 @@ Include your organization's specific requirements:
 - Application deployment automation
 - Configuration drift detection and remediation
 ```
+
 ## Best Practices for Prompt Customization
 
 ### 1. Maintain Consistency
@@ -241,6 +240,7 @@ Include your organization's specific requirements:
 
 **Problem**: Prompt exceeds token limits
 **Solution**:
+
 - Break down complex prompts into sections
 - Use prompt templates with dynamic insertion
 - Prioritize most important requirements
@@ -249,6 +249,7 @@ Include your organization's specific requirements:
 
 **Problem**: Agent responses vary significantly
 **Solution**:
+
 - Add more specific constraints and examples
 - Use structured output formats
 - Implement response validation
@@ -257,6 +258,7 @@ Include your organization's specific requirements:
 
 **Problem**: Agent lacks sufficient context for decisions
 **Solution**:
+
 - Enhance prompts with more background information
 - Add examples of expected inputs and outputs
 - Include decision criteria and constraints
@@ -319,6 +321,7 @@ Include your organization's specific requirements:
 5. **Monitor and Iterate**: Continuously monitor and improve prompt performance
 
 For additional information, refer to:
+
 - [Adding Custom Expert Agents](CustomizeExpertAgents.md)
 - [Multi-Agent Orchestration Approach](MultiAgentOrchestration.md)
 - [Technical Architecture](TechnicalArchitecture.md)

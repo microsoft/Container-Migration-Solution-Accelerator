@@ -1,0 +1,77 @@
+flowchart LR
+    %% Top-level orchestration + telemetry
+    TELEM[Agent and Process Status\nReal-time telemetry]
+    COSMOS[(Cosmos DB\ntelemetry/state)]
+    PROC[Process Orchestration\nAgent Framework WorkflowBuilder]
+
+    TELEM --> COSMOS
+    PROC --- TELEM
+
+    %% Step lanes (match the README image layout)
+    subgraph STEP1["Step 1: Analysis"]
+        direction TB
+        S1EXEC[Analysis Executor]
+        S1ORCH[Analysis Chat Orchestrator\nGroupChatOrchestrator]
+        S1AGENTS["Analysis Agents\nChief Architect\nAKS Expert\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
+        S1EXEC --> S1ORCH --> S1AGENTS
+    end
+
+    subgraph STEP2["Step 2: Design"]
+        direction TB
+        S2EXEC[Design Executor]
+        S2ORCH[Design Chat Orchestrator\nGroupChatOrchestrator]
+        S2AGENTS["Design Agents\nChief Architect\nAzure Architect\nAKS Expert\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
+        S2EXEC --> S2ORCH --> S2AGENTS
+    end
+
+    subgraph STEP3["Step 3: YAML Conversion"]
+        direction TB
+        S3EXEC[Convert Executor]
+        S3ORCH[YAML Chat Orchestrator\nGroupChatOrchestrator]
+        S3AGENTS["YAML Converting Agents\nYAML Expert\nAzure Architect\nAKS Expert\nQA Engineer\nChief Architect\nCoordinator"]
+        S3EXEC --> S3ORCH --> S3AGENTS
+    end
+
+    subgraph STEP4["Step 4: Documentation"]
+        direction TB
+        S4EXEC[Documentation Executor]
+        S4ORCH[Documentation Chat Orchestrator\nGroupChatOrchestrator]
+        S4AGENTS["Documentation Agents\nTechnical Writer\nAzure Architect\nAKS Expert\nChief Architect\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
+        S4EXEC --> S4ORCH --> S4AGENTS
+    end
+
+    %% Step sequencing
+    PROC --> STEP1
+    STEP1 -->|Analysis Result| STEP2
+    STEP2 -->|Design Result| STEP3
+    STEP3 -->|YAML Converting Result| STEP4
+
+    %% MCP tools
+    subgraph MCPTOOLS["MCP Server Tools"]
+        direction LR
+        BLOB[Azure Blob IO Operation]
+        DT[Datetime Utility]
+        DOCS[Microsoft Learn MCP]
+        FETCH[Fetch MCP Tool]
+        MERMAID[Mermaid Validation]
+        YINV[YAML Inventory]
+    end
+
+    STEP1 --- MCPTOOLS
+    STEP2 --- MCPTOOLS
+    STEP3 --- MCPTOOLS
+    STEP4 --- MCPTOOLS
+
+    %% External systems
+    STORAGE[(Azure Blob Storage)]
+    LEARN[(Microsoft Learn\nMCP Server)]
+
+    BLOB --> STORAGE
+    DOCS --> LEARN
+
+    %% Style
+    style PROC fill:#111827,color:#ffffff,stroke:#111827
+    style MCPTOOLS fill:#f8fafc,stroke:#94a3b8
+    style STORAGE fill:#e0f2fe,stroke:#0284c7
+    style COSMOS fill:#e0f2fe,stroke:#0284c7
+    style LEARN fill:#ffffff,stroke:#94a3b8

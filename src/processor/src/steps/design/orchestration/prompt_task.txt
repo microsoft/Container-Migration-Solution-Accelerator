@@ -1,0 +1,203 @@
+**DESIGN STEP OBJECTIVE**:
+- Produce an AKS-target migration architecture design aligned to the Azure Well-Architected Framework.
+- Consume `analysis_result.md` as the authoritative source platform analysis.
+- Must Save the primary human-readable artifact as `design_result.md` in {{output_file_folder}}.
+- Ensure any Mermaid diagrams are valid (validate/fix before finalizing).
+
+**SCOPE**:
+- Source folder: {{source_file_folder}}
+- Output folder: {{output_file_folder}}
+- Container: {{container_name}}
+
+**INPUT VERIFICATION (CRITICAL FIRST STEP)**:
+Before starting design work, verify that `analysis_result.md` exists and is readable:
+1. Try listing blobs with BOTH `{{output_file_folder}}` and `{{output_file_folder}}/` as folder_path
+2. If listing shows only a 0-byte folder marker or appears empty, list the process root (the segment before `/output`) and filter for `<process_id>/output/`
+3. Look for `analysis_result.md` in the listing results
+4. Read `analysis_result.md` using `read_blob_content()` with the exact path found
+5. If `analysis_result.md` cannot be found or read, this is a BLOCKING condition - report it immediately and do not proceed with design
+
+**ANTI-HALLUCINATION RULE**:
+- Do not reference `analysis_result.md` content unless verified via `list_blobs_in_container()` and successfully read via `read_blob_content()`
+- If the required file is missing, report it as a blocker and request upstream step completion
+- Do not invent or assume analysis content
+
+**AKS-ONLY TARGET RULE (NON-NEGOTIABLE)**:
+- Target Kubernetes runtime is Azure Kubernetes Service (AKS).
+- You may recommend supporting Azure services (ACR, Key Vault, Log Analytics, App Gateway, etc.), but do not change the target cluster platform (no ARO/Arc as the target).
+
+**MANDATORY DUAL OUTPUT**:
+1) Create `design_result.md` in {{output_file_folder}}
+
+**TERMINATION JSON RULE (prevents premature step completion)**:
+- Participants must NOT return the `Design_ExtendedBooleanResult` JSON during normal turns.
+- The Design step should iterate (Coordinator routing + expert review) until the design is ready.
+- The final `Design_ExtendedBooleanResult` JSON is produced only at the very end by the Result Generator / termination logic.
+
+**REQUIRED MARKDOWN REPORT STRUCTURE** (`design_result.md`):
+# AKS Migration Design Report
+
+## Executive Summary
+- Process Id : [grab this value from 'Source folder' path **Process Id**/source]
+- Source platform: [EKS/GKE/OpenShift/Rancher/Tanzu/On-prem K8s] (from `analysis_result.md`)
+- Target platform: AKS
+- Migration strategy: [Rehost/Replatform/Refactor mix]
+- Major risks and mitigations: [bullets]
+
+## Current State (From Analysis)
+- Workload inventory summary
+- Key constraints and blockers
+- Networking, security, storage, compute highlights
+
+## Target Architecture (AKS)
+- Cluster topology (node pools, zones/regions, autoscaling)
+- Networking (CNI choice, ingress, egress, private cluster decision)
+- Identity and access (Entra ID/RBAC, workload identity)
+- Secrets/config (Key Vault CSI, ConfigMaps/Secrets strategy)
+- Observability (Azure Monitor Container Insights, logs/metrics/traces)
+- Image supply chain (ACR, signing/scanning)
+- Data and storage (Azure Disks/Files, CSI drivers, backup)
+
+## Azure Service Mapping
+Provide a table mapping source components to AKS/Azure services with these columns:
+
+| Source Component / Concept | Current (Source Platform) | Target (AKS/Azure) | Migration Complexity (1-5) | Notes |
+
+Where:
+- Migration Complexity: 1=trivial, 2=low, 3=medium, 4=high, 5=very high
+- Include: ingress/LB, DNS, certs, storage classes, IAM/RBAC, logging, compute scheduling
+
+## Architecture Decisions (with trade-offs)
+For each decision, provide:
+- **Decision title** (Priority: P0/P1/P2/P3, Risk Score: 1-5)
+  - Rationale: [why this decision]
+  - Trade-offs: [alternatives considered and why rejected]
+  - Implementation notes: [key considerations]
+
+Where:
+- Priority: P0=pre-requisite, P1=critical, P2=important, P3=optional
+- Risk Score: 1=low risk, 5=high risk if decision is wrong
+
+## Migration Plan
+- Phases (pilot → migration waves → cutover)
+- Testing/validation plan
+- Rollback strategy
+
+## Azure Well-Architected Alignment
+- Reliability
+- Security
+- Cost Optimization
+- Operational Excellence
+- Performance Efficiency
+
+## Diagrams
+- Include Mermaid diagrams only inside fenced code blocks (```mermaid).
+- Before saving, validate all Mermaid blocks; if invalid, fix and re-validate.
+
+## Expert Insights
+Provide a consensus narrative (not just bullet points) that:
+- Summarizes how the team reached consensus on the target AKS architecture
+- Documents key design discussions, alternatives considered, and decisions made
+- Highlights where experts agreed immediately vs. where integration/reconciliation was needed
+- Notes specific contributions from Chief Architect, source platform expert, and AKS Expert
+- Describes any significant pivot points or design evolution during the review process
+
+## Assumptions
+Document any assumptions made during design where concrete information was unavailable:
+
+| Assumption | Rationale | Impact if incorrect | What to confirm |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+If no assumptions were made beyond those in Open Questions, state "None - all design decisions based on confirmed analysis and documented requirements."
+
+## Open Questions
+Provide BOTH:
+1) Remaining questions that require stakeholder confirmation
+2) A best-practice **suggested answer** for each question (clearly labeled as an assumption until confirmed)
+
+Use this table format:
+
+| Question | Suggested best-practice answer (assumption) | Why / decision drivers | What to confirm |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+## Sign-off
+Each reviewer must provide sign-off in this exact format:
+
+**[Role]:** SIGN-OFF: PASS
+[Optional notes on separate lines]
+
+OR
+
+**[Role]:** SIGN-OFF: FAIL
+[Required: specific blockers with evidence and acceptance criteria]
+
+Required sign-offs:
+- **AKS Expert:** SIGN-OFF: PASS/FAIL
+- **Source Platform Expert** (matching the detected platform): SIGN-OFF: PASS/FAIL
+- **Chief Architect:** SIGN-OFF: PASS/FAIL
+  - Chief Architect must state "INTEGRATED: YES" after receiving all reviews and before final sign-off
+
+**REPORT MUST INCLUDE CONSISTENT FOOTER WITH TIMESTAMP**:
+When saving the final `design_result.md`, replace `[CURRENT_TIMESTAMP]` with the actual current date and time in this format: "January 7, 2026 10:30 UTC".
+
+```
+---
+*Generated by AI AKS migration agent team*
+*Report generated on: [CURRENT_TIMESTAMP]*
+```
+
+##final_response
+NOTE: This `##final_response` section is for the Result Generator / termination decision only.
+Participants should NOT output this JSON in their normal turns.
+
+When the design is complete, the Result Generator will return JSON that matches the `Design_ExtendedBooleanResult` schema.
+
+SUCCESS (terminate):
+{
+  "result": true,
+  "reason": "Design complete: AKS target architecture and migration plan finalized; design_result.md generated and validated.",
+  "is_hard_terminated": false,
+  "termination_output": {
+    "result": "Success",
+    "summary": "<concise but comprehensive AKS migration design summary>",
+    "azure_services": ["AKS", "..."],
+    "architecture_decisions": ["<decision + rationale>", "..."],
+    "outputs": [
+      {"file": "converted/design_result.md", "description": "AKS migration design report with validated Mermaid diagrams"}
+    ],
+    "incomplete_reason": null,
+    "missing_information": []
+  },
+  "termination_type": "soft_completion",
+  "blocking_issues": []
+}
+
+CONTINUE (not done yet):
+{
+  "result": false,
+  "reason": "Design in progress: missing one or more required sections, or no verified design_result.md generation yet.",
+  "is_hard_terminated": false,
+  "termination_output": null,
+  "termination_type": "soft_completion",
+  "blocking_issues": []
+}
+
+HARD BLOCKED (terminate due to blockers):
+{
+  "result": true,
+  "reason": "Design blocked: missing required analysis inputs or unresolved blocking issues.",
+  "is_hard_terminated": true,
+  "termination_output": {
+    "result": "Fail",
+    "summary": "<what is blocked and why>",
+    "azure_services": [],
+    "architecture_decisions": [],
+    "outputs": [],
+    "incomplete_reason": "<specific reason>",
+    "missing_information": ["<missing item>"]
+  },
+  "termination_type": "hard_blocked",
+  "blocking_issues": ["<blocking issue>"]
+}

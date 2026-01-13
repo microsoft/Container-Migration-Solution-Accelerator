@@ -5,67 +5,83 @@ Based on your actual implementation, here's the comprehensive agentic architectu
 ## Architecture Overview
 
 ```mermaid
-graph TB
-    subgraph "Entry Layer"
-        WEB[Web App/Queue]
-        SERVICE[Migration Service]
+flowchart LR
+    %% Top-level orchestration + telemetry
+    TELEM[Agent and Process Status\nReal-time telemetry]
+    COSMOS[(Cosmos DB\ntelemetry/state)]
+    PROC[Process Orchestration\nAgent Framework WorkflowBuilder]
+
+    TELEM --> COSMOS
+    PROC --- TELEM
+
+    %% Step lanes (match the README image layout)
+    subgraph STEP1["Step 1: Analysis"]
+        direction TB
+        S1EXEC[Analysis Executor]
+        S1ORCH[Analysis Chat Orchestrator\nGroupChatOrchestrator]
+        S1AGENTS["Analysis Agents\nChief Architect\nAKS Expert\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
+        S1EXEC --> S1ORCH --> S1AGENTS
     end
 
-    subgraph "Process Engine"
-        PROC[Process Orchestrator<br/>Semantic Kernel]
+    subgraph STEP2["Step 2: Design"]
+        direction TB
+        S2EXEC[Design Executor]
+        S2ORCH[Design Chat Orchestrator\nGroupChatOrchestrator]
+        S2AGENTS["Design Agents\nChief Architect\nAzure Architect\nAKS Expert\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
+        S2EXEC --> S2ORCH --> S2AGENTS
     end
 
-    subgraph "Migration Steps"
-        ANALYSIS[Analysis Step<br/>Platform Discovery]
-        DESIGN[Design Step<br/>Azure Architecture]
-        YAML[YAML Step<br/>Configuration Transform]
-        DOCS[Documentation Step<br/>Report Generation]
+    subgraph STEP3["Step 3: YAML Conversion"]
+        direction TB
+        S3EXEC[Convert Executor]
+        S3ORCH[YAML Chat Orchestrator\nGroupChatOrchestrator]
+        S3AGENTS["YAML Converting Agents\nYAML Expert\nAzure Architect\nAKS Expert\nQA Engineer\nChief Architect\nCoordinator"]
+        S3EXEC --> S3ORCH --> S3AGENTS
     end
 
-    subgraph "AI Agents (7 Specialists)"
-        AGENTS[Multi-Agent System<br/>• Technical Architect<br/>• Azure Expert<br/>• EKS/GKE Experts<br/>• QA Engineer<br/>• Technical Writer<br/>• YAML Expert]
+    subgraph STEP4["Step 4: Documentation"]
+        direction TB
+        S4EXEC[Documentation Executor]
+        S4ORCH[Documentation Chat Orchestrator\nGroupChatOrchestrator]
+        S4AGENTS["Documentation Agents\nTechnical Writer\nAzure Architect\nAKS Expert\nChief Architect\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
+        S4EXEC --> S4ORCH --> S4AGENTS
     end
 
-    subgraph "Tool Layer"
-        MCP[MCP Servers<br/>• Blob Storage<br/>• Microsoft Docs<br/>• DateTime Utils]
+    %% Step sequencing
+    PROC --> STEP1
+    STEP1 -->|Analysis Result| STEP2
+    STEP2 -->|Design Result| STEP3
+    STEP3 -->|YAML Converting Result| STEP4
+
+    %% MCP tools
+    subgraph MCPTOOLS["MCP Server Tools"]
+        direction LR
+        BLOB[Azure Blob IO Operation]
+        DT[Datetime Utility]
+        DOCS[Microsoft Learn MCP]
+        FETCH[Fetch MCP Tool]
+        MERMAID[Mermaid Validation]
+        YINV[YAML Inventory]
     end
 
-    subgraph "Storage Layer"
-        STORAGE[Azure Services<br/>• Blob Storage<br/>• Cosmos DB<br/>• OpenAI GPT o3]
-    end
+    STEP1 --- MCPTOOLS
+    STEP2 --- MCPTOOLS
+    STEP3 --- MCPTOOLS
+    STEP4 --- MCPTOOLS
 
-    %% Main Flow
-    WEB --> SERVICE
-    SERVICE --> PROC
-    PROC --> ANALYSIS
-    ANALYSIS --> DESIGN
-    DESIGN --> YAML
-    YAML --> DOCS
+    %% External systems
+    STORAGE[(Azure Blob Storage)]
+    LEARN[(Microsoft Learn\nMCP Server)]
 
-    %% AI Integration
-    ANALYSIS -.-> AGENTS
-    DESIGN -.-> AGENTS
-    YAML -.-> AGENTS
-    DOCS -.-> AGENTS
+    BLOB --> STORAGE
+    DOCS --> LEARN
 
-    %% Tool Access
-    AGENTS -.-> MCP
-    MCP -.-> STORAGE
-
-    %% Styling for better readability
-    classDef entryLayer fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
-    classDef processLayer fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000
-    classDef stepLayer fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
-    classDef agentLayer fill:#e8f5e8,stroke:#388e3c,stroke-width:3px,color:#000
-    classDef toolLayer fill:#fce4ec,stroke:#c2185b,stroke-width:3px,color:#000
-    classDef storageLayer fill:#e1f5fe,stroke:#0288d1,stroke-width:3px,color:#000
-
-    class WEB,SERVICE entryLayer
-    class PROC processLayer
-    class ANALYSIS,DESIGN,YAML,DOCS stepLayer
-    class AGENTS agentLayer
-    class MCP toolLayer
-    class STORAGE storageLayer
+    %% Style (keep minimal; Mermaid defaults render consistently)
+    style PROC fill:#111827,color:#ffffff,stroke:#111827
+    style MCPTOOLS fill:#f8fafc,stroke:#94a3b8
+    style STORAGE fill:#e0f2fe,stroke:#0284c7
+    style COSMOS fill:#e0f2fe,stroke:#0284c7
+    style LEARN fill:#ffffff,stroke:#94a3b8
 ```
 
 ## Agent Specialization by Phase
@@ -79,21 +95,24 @@ graph TB
 ### Design Phase Agents
 
 - **Technical Architect**: Defines migration architecture patterns
-- **Azure Expert**: Designs Azure service mappings and optimizations
+- **Azure Architect**: Designs Azure service mappings and optimizations
+- **AKS Expert**: Ensures AKS-specific conventions and constraints are applied
 - **EKS Expert**: Provides source platform context for AWS workloads
 - **GKE Expert**: Provides source platform context for GCP workloads
 
 ### YAML Conversion Phase Agents
 
 - **YAML Expert**: Performs configuration transformations and syntax optimization
-- **Azure Expert**: Ensures Azure service integration and compliance
+- **Azure Architect**: Ensures Azure service integration and compliance
+- **AKS Expert**: Ensures converted manifests align with AKS expectations
 - **QA Engineer**: Validates converted configurations and tests
 - **Technical Writer**: Documents conversion decisions and generates reports
 
 ### Documentation Phase Agents
 
 - **Technical Architect**: Provides architectural documentation and migration summary
-- **Azure Expert**: Documents Azure-specific configurations and optimizations
+- **Azure Architect**: Documents Azure-specific configurations and optimizations
+- **AKS Expert**: Documents AKS-focused implementation guidance and caveats
 - **EKS/GKE Experts**: Document source platform analysis and transformation logic
 - **QA Engineer**: Provides validation reports and testing documentation
 - **Technical Writer**: Creates comprehensive migration documentation
@@ -102,9 +121,9 @@ graph TB
 
 ### Input Processing
 
-1. **Queue Service** receives migration requests from web app or direct API
-2. **Migration Service** processes queue messages and initiates migration process
-3. **Process Orchestrator** manages step-by-step execution with event routing
+1. **Web app** creates a migration request
+2. **Queue worker service** receives the migration request from **Azure Storage Queue**
+3. **Migration Processor** runs the end-to-end workflow (analysis → design → yaml → documentation)
 
 ### Step Execution Pattern
 
@@ -121,11 +140,13 @@ Each step follows this pattern:
 
 ### MCP Server Integration
 
-All agents have access to Model Context Protocol (MCP) servers via Semantic Kernel plugin:
+All agents have access to Model Context Protocol (MCP) servers via Microsoft Agent Framework tool abstractions:
 
 - **Blob Operations**: File reading/writing to Azure Blob Storage
 - **Microsoft Docs**: Azure documentation lookup and best practices
 - **DateTime Utilities**: Timestamp generation and time-based operations
+- **Fetch**: URL fetching for validation (e.g., verifying references)
+- **YAML Inventory**: Enumerate converted YAML objects for runbooks
 
 ## Key Architectural Principles
 
@@ -140,21 +161,26 @@ Each step has a focused objective:
 
 ### Event-Driven Orchestration
 
-Steps communicate through Semantic Kernel events:
-
-- `StartMigration` → Analysis Step
-- `AnalysisCompleted` → Design Step
-- `DesignCompleted` → YAML Step
-- `YamlCompleted` → Documentation Step
+Steps are executed as a directed workflow (with start node and edges) using the Agent Framework workflow engine.
+The processor emits workflow/executor events for observability and telemetry.
 
 ### Multi-Agent Collaboration
 
-Within each step, specialized agents collaborate through GroupChat orchestration:
+Within each step, specialized agents collaborate through group chat orchestration:
 
 - Structured conversation patterns
 - Domain expertise contribution
 - Consensus building on decisions
 - Quality validation and review
+
+### Evaluation and Quality Checks
+
+The processor uses multiple quality signals to reduce regressions and increase reliability:
+
+- **Typed step outputs**: workflow executors and orchestrators exchange typed models per step (analysis → design → yaml → documentation).
+- **QA sign-offs**: the QA agent focuses on validation steps and flags missing/unsafe transformations.
+- **Tool-backed validation**: steps can call validation tools via MCP (e.g., Mermaid validation, YAML inventory grounding, docs lookups).
+- **Unit tests**: processor unit tests live under `src/processor/src/tests/unit/`.
 
 ### Tool-Enabled Intelligence
 
@@ -176,41 +202,27 @@ Comprehensive tracking throughout the process:
 ## File Location Mapping
 
 ```text
-src/
-├── main_service.py                    # Queue Service Entry Point
-├── services/migration_service.py      # Migration Orchestration
-├── libs/processes/
-│   └── aks_migration_process.py       # Process Framework Definition
-├── libs/steps/
-│   ├── analysis_step.py               # Analysis Step Implementation
-│   ├── design_step.py                 # Design Step Implementation
-│   ├── yaml_step.py                   # YAML Step Implementation
-│   └── documentation_step.py          # Documentation Step Implementation
-├── libs/steps/orchestration/
-│   ├── analysis_orchestration.py      # Analysis Agent Orchestration
-│   ├── design_orchestration.py        # Design Agent Orchestration
-│   ├── yaml_orchestration.py          # YAML Agent Orchestration
-│   └── documentation_orchestration.py # Documentation Agent Orchestration
-├── agents/
-│   ├── technical_architect/agent_info.py
-│   ├── azure_expert/agent_info.py
-│   ├── eks_expert/agent_info.py
-│   ├── gke_expert/agent_info.py
-│   ├── qa_engineer/agent_info.py
-│   ├── technical_writer/agent_info.py
-│   └── yaml_expert/agent_info.py
-└── plugins/mcp_server/
-    ├── MCPBlobIOPlugin.py             # Azure Blob Storage MCP Server
-    ├── MCPMicrosoftDocs.py            # Microsoft Docs MCP Server
-    └── MCPDatetimePlugin.py           # DateTime Utilities MCP Server
+src/processor/src/
+├── main_service.py                             # Queue worker entry point
+├── services/queue_service.py                   # Azure Storage Queue consumer
+├── services/control_api.py                     # Control API (health/kill)
+├── services/process_control.py                 # Process control store/manager
+├── steps/migration_processor.py                # WorkflowBuilder + step chaining
+├── steps/analysis/workflow/analysis_executor.py
+├── steps/design/workflow/design_executor.py
+├── steps/convert/workflow/yaml_convert_executor.py
+└── steps/documentation/
+    ├── orchestration/documentation_orchestrator.py
+    ├── workflow/documentation_executor.py
+    └── agents/                                  # Agent prompt files
 ```
 
 ## Summary
 
 This architecture implements a sophisticated agentic system that combines:
 
-- **Semantic Kernel Process Framework** for structured workflow execution
-- **Multi-Agent GroupChat Orchestration** for domain expertise collaboration
+- **Microsoft Agent Framework Workflow** for structured workflow execution
+- **Multi-Agent Group Chat Orchestration** for domain expertise collaboration
 - **Model Context Protocol (MCP)** for tool integration and external system access
 - **Azure Cloud Services** for scalable storage and data management
 - **Event-Driven Architecture** for loose coupling and reliability

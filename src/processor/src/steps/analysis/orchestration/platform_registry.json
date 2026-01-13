@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "experts": [
+    {
+      "id": "eks",
+      "agent_name": "EKS Expert",
+      "prompt_file": "prompt_eks.txt",
+      "category": "managed_cloud",
+      "signals": ["eks.amazonaws.com", "aws", "arn:aws", "kops", "eksctl"]
+    },
+    {
+      "id": "gke",
+      "agent_name": "GKE Expert",
+      "prompt_file": "prompt_gke.txt",
+      "category": "managed_cloud",
+      "signals": [
+        "cloud.google.com",
+        "gke",
+        "anthos",
+        "gcr.io",
+        "artifactregistry"
+      ]
+    },
+    {
+      "id": "openshift",
+      "agent_name": "OpenShift Expert",
+      "prompt_file": "prompt_openshift.txt",
+      "category": "enterprise_distro",
+      "signals": [
+        "route.openshift.io",
+        "openshift",
+        "ocp",
+        "security.openshift.io",
+        "config.openshift.io"
+      ]
+    },
+    {
+      "id": "rancher",
+      "agent_name": "Rancher Expert",
+      "prompt_file": "prompt_rancher.txt",
+      "category": "enterprise_distro",
+      "signals": ["cattle.io", "rancher", "rke", "rke2", "k3s"]
+    },
+    {
+      "id": "tanzu",
+      "agent_name": "Tanzu Expert",
+      "prompt_file": "prompt_tanzu.txt",
+      "category": "enterprise_distro",
+      "signals": ["tanzu", "vmware", "tkg", "tkgs", "pinniped", "antrea"]
+    },
+    {
+      "id": "onprem",
+      "agent_name": "OnPremK8s Expert",
+      "prompt_file": "prompt_onprem_k8s.txt",
+      "category": "on_prem",
+      "signals": [
+        "kubeadm",
+        "kubespray",
+        "microk8s",
+        "charmed kubernetes",
+        "k0s",
+        "talos",
+        "bare metal",
+        "metal",
+        "vsphere",
+        "metallb",
+        "keepalived",
+        "openebs",
+        "rook",
+        "ceph",
+        "nfs",
+        "f5"
+      ]
+    }
+  ]
+}

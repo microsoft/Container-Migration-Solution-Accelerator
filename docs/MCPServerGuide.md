@@ -14,7 +14,7 @@ Model Context Protocol (MCP) servers provide a standardized way to extend AI age
 graph TB
     subgraph "MCP Architecture"
         subgraph "Client Layer"
-            A[AI Agents<br/>Semantic Kernel<br/>GroupChat]
+            A[AI Agents<br/>Agent Framework<br/>Orchestrations]
         end
 
         subgraph "Protocol Layer"
@@ -47,18 +47,18 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant Agent as AI Agent
-    participant SK as Semantic Kernel
+    participant AF as Agent Framework
     participant MCP as MCP Server
     participant EXT as External Service
 
-    Agent->>SK: Request tool execution
-    SK->>MCP: JSON-RPC call
+    Agent->>AF: Request tool execution
+    AF->>MCP: JSON-RPC call
     MCP->>MCP: Validate request
     MCP->>EXT: Execute operation
     EXT-->>MCP: Return result
     MCP->>MCP: Process response
-    MCP-->>SK: JSON-RPC response
-    SK-->>Agent: Tool result
+    MCP-->>AF: JSON-RPC response
+    AF-->>Agent: Tool result
 ```
 
 ## Base MCP Server Implementation
@@ -240,16 +240,19 @@ class MCPResource:
 The Container Migration Solution Accelerator includes the following MCP servers:
 
 ### MCPBlobIOPlugin.py
+
 - **Purpose**: Azure Blob Storage operations
 - **Capabilities**: Blob upload/download, container management, file operations
 - **Usage**: Stores migration results, configuration backups, temporary files
 
 ### MCPMicrosoftDocs.py
+
 - **Purpose**: Microsoft documentation integration
 - **Capabilities**: Documentation search, content retrieval, reference lookup
 - **Usage**: Access Azure documentation, best practices, configuration examples
 
 ### MCPDatetimePlugin.py
+
 - **Purpose**: Date and time utilities
 - **Capabilities**: Timestamp generation, date formatting, duration calculations
 - **Usage**: Migration tracking, log timestamping, scheduling operations

@@ -1,912 +1,305 @@
-# Process Framework Implementation Guide
+# Workflow & Executor Implementation Guide (Microsoft Agent Framework)
 
-This guide provides detailed information about the process framework used in the Container Migration Solution Accelerator, including step definitions, execution patterns, and customization options.
+This guide explains how the Container Migration Solution Accelerator processor implements step-based execution using **Microsoft Agent Framework** workflows, orchestrations, and workflow executors.
+
+> Scope: This document describes the **processor runtime and step execution model**. Infrastructure deployment details remain unchanged.
+
+## References (Official Documentation)
+
+- [Microsoft Agent Framework overview](https://learn.microsoft.com/en-us/agent-framework/overview/agent-framework-overview)
+- [Workflow core concepts (overview)](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/core-concepts/overview)
+- [Executors (core concept)](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/core-concepts/executors)
+- [Workflows (core concept)](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/core-concepts/workflows)
+- [Workflow orchestrations (patterns)](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/orchestrations/overview)
+- [Group chat orchestration](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/orchestrations/group-chat)
+- [Multi-agent orchestration patterns (architecture guidance)](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns)
 
 ## Overview
 
-The Container Migration Solution Accelerator uses a step-based process framework that breaks down complex migration tasks into manageable, sequential phases. Each step is designed to be independent, testable, and extensible.
+The processor executes a migration as a **sequential workflow** of four steps:
 
-## Process Framework Architecture
+1. **Analysis**: discover inputs and detect the source platform
+2. **Design**: propose Azure target architecture and migration approach
+3. **YAML conversion**: generate converted manifests (AKS-ready)
+4. **Documentation**: produce the final migration report and runbook
 
-### Core Components
+This repo implements that pipeline using:
 
-The Process Framework consists of six core components organized in three functional layers:
+- A top-level **Agent Framework Workflow** that routes messages between steps.
+- A step-level **Executor** per phase (analysis/design/yaml/documentation).
+- A step-level **Orchestrator** (per step) that runs a multi-agent collaboration pattern (typically group chat).
 
-#### Framework Components
+Conceptually:
 
-| Component                | Purpose                                            | Layer           |
-| ------------------------ | -------------------------------------------------- | --------------- |
-| **Process Orchestrator** | Coordinates overall migration process execution    | Control Layer   |
-| **Step Executor**        | Manages individual step execution and lifecycle    | Execution Layer |
-| **Agent Orchestrator**   | Handles multi-agent collaboration and coordination | Execution Layer |
-| **State Manager**        | Maintains process state and progress tracking      | Support Layer   |
-| **Context Manager**      | Manages execution context and data flow            | Support Layer   |
-| **Error Handler**        | Provides centralized error handling and recovery   | Support Layer   |
+- **Workflow** = the directed graph of computation (executors + edges) that defines what runs next.
+- **Executor** = the unit of work for a step; it receives an input message and emits an output message.
+- **Orchestration** = a multi-agent pattern used inside a step (for example group chat), where multiple agents collaborate to produce the step output.
 
-#### Component Interactions
+## Process Execution Flow
 
-The components interact through well-defined relationships:
-
-**Primary Flow:**
-- Process Orchestrator → Step Executor → Agent Orchestrator
-
-**State Management:**
-- Process Orchestrator → State Manager
-- Agent Orchestrator → Context Manager
-
-**Error Handling:**
-- Step Executor → Error Handler
-- State Manager → Error Handler
-- Context Manager → Error Handler
-
-### Step-Based Processing
-
-The framework divides migration into four main steps:
-
-1. **Analysis Step**: Platform detection and configuration analysis
-2. **Design Step**: Azure architecture design and service mapping
-3. **YAML Step**: Configuration transformation and Azure integration
-4. **Documentation Step**: Comprehensive documentation generation
-
-### Step Execution Flow
 ![Step Execution Flow](images/readme/step_execution_flow.png)
 
-The step execution follows a sequential pattern with built-in error handling and state management:
+At the top level, the workflow is deterministic and step-by-step: **analysis → design → yaml → documentation**.
 
-1. **Process Initialization**: Context setup and validation
-2. **Analysis Step**: Platform detection and configuration analysis
-3. **Design Step**: Azure architecture design and service mapping
-4. **YAML Step**: Configuration transformation and Azure integration
-5. **Documentation Step**: Comprehensive documentation generation
-6. **Process Completion**: Final validation and cleanup
+Inside each step, the orchestrator can use multi-agent patterns (maker-checker loops, review sign-offs, etc.) to produce the step result.
 
-Each step maintains its own state and can recover from errors independently, while the Process Orchestrator manages the overall flow and coordinates between steps.
+## How Agent Framework concepts map to this repository
 
-## Step Implementation Pattern
+### Workflow
 
-### Base Step Structure
+- Implementation: `src/processor/src/steps/migration_processor.py`
+- The processor creates a workflow with `WorkflowBuilder`.
+- It registers four executors, sets the start executor, and defines edges.
 
-Each step follows the Semantic Kernel Process Framework pattern using `KernelProcessStep`:
+Example from the repo (simplified):
 
 ```python
-from semantic_kernel.processes.kernel_process import (
-    KernelProcessStep,
-    KernelProcessStepContext,
-    KernelProcessStepState,
+from agent_framework import WorkflowBuilder
+
+workflow = (
+    WorkflowBuilder()
+    .register_executor(lambda: AnalysisExecutor(id="analysis", app_context=app_context), name="analysis")
+    .register_executor(lambda: DesignExecutor(id="design", app_context=app_context), name="design")
+    .register_executor(lambda: YamlConvertExecutor(id="yaml", app_context=app_context), name="yaml")
+    .register_executor(lambda: DocumentationExecutor(id="documentation", app_context=app_context), name="documentation")
+    .set_start_executor("analysis")
+    .add_edge("analysis", "design")
+    .add_edge("design", "yaml")
+    .add_edge("yaml", "documentation")
+    .build()
 )
-from pydantic import BaseModel, Field
-from libs.steps.base_step_state import BaseStepState
-from utils.tool_tracking import ToolTrackingMixin
-
-class StepState(BaseStepState):
-    """State for the step following SK Process Framework best practices."""
-
-    # Base fields required by KernelProcessStepState
-    name: str = Field(default="StepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    # Step-specific state fields
-    result: bool | None = None  # None = not started, True = success, False = failed
-    reason: str = ""
-    # Additional step-specific fields...
-
-class Step(KernelProcessStep[StepState], ToolTrackingMixin):
-    """
-    Step implementation following SK Process Framework best practices.
-
-    Features:
-    - Single responsibility principle
-    - Isolated kernel instance to prevent recursive invocation
-    - Proper error handling and event emission
-    - Pydantic-based parameter validation
-    """
-
-    state: StepState | None = Field(default_factory=lambda: StepState())
-
-    async def activate(self, state: KernelProcessStepState[StepState]):
-        """Activate the step for state initialization."""
-        self.state = state.state
-        self._ensure_state_initialized()
-
-    def _ensure_state_initialized(self) -> None:
-        """Ensure state is properly initialized before use."""
-        if self.state is None:
-            self.state = StepState(name="StepState", version="1.0")
 ```
 
-### Parameter Validation Pattern
+### Executors (step runtime)
 
-All steps implement Pydantic-based parameter validation:
+Executors are the fundamental building blocks that process typed messages in a workflow.
 
-```python
-from pydantic import BaseModel, ValidationError
+- Official docs: [Executors (core concept)](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/core-concepts/executors)
 
-class StepParameter(BaseModel):
-    """Pydantic model for step parameter validation"""
-    model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
+In this repo, each step executor:
 
-    process_id: str
-    source_file_folder: str
-    workspace_file_folder: str
-    output_file_folder: str
-    container_name: str
-    # Additional parameters...
+- Inherits from `agent_framework.Executor`
+- Implements a handler decorated with `@handler`
+- Receives:
+  - `message`: typed input payload
+  - `ctx`: `WorkflowContext[...]` used to forward messages or yield final output
 
-def _create_parameters(self, context_data: dict[str, Any]) -> tuple[bool, StepParameter | None]:
-    """
-    Create and validate parameters using Pydantic model validation.
+Repo implementations:
 
-    Returns:
-        tuple[bool, StepParameter | None]: (is_valid, validated_parameters)
-    """
-    try:
-        # Use Pydantic's model_validate for comprehensive type checking
-        validated_params = StepParameter.model_validate(context_data)
-        return True, validated_params
+- `src/processor/src/steps/analysis/workflow/analysis_executor.py`
+- `src/processor/src/steps/design/workflow/design_executor.py`
+- `src/processor/src/steps/convert/workflow/yaml_convert_executor.py`
+- `src/processor/src/steps/documentation/workflow/documentation_executor.py`
 
-    except ValidationError as e:
-        # Enhanced error logging with detailed Pydantic validation errors
-        error_details = []
-        for error in e.errors():
-            field = error.get("loc", ["unknown"])[0] if error.get("loc") else "unknown"
-            message = error.get("msg", "Validation failed")
-            error_details.append(f"{field}: {message}")
-
-        logger.error(f"Parameter validation failed: {'; '.join(error_details)}")
-        return False, None
-```
-
-## Step Implementations
-
-### 1. Analysis Step
-
-The analysis step detects platforms and analyzes configurations using real implementation:
+A typical executor shape (based on `AnalysisExecutor`):
 
 ```python
-from libs.steps.analysis_step import AnalysisStep, AnalysisStepState
-from libs.steps.orchestration.analysis_orchestration import AnalysisOrchestrator
+from agent_framework import Executor, WorkflowContext, handler
 
-class AnalysisStepState(BaseStepState):
-    """State for the Analysis step following best practices."""
 
-    name: str = Field(default="AnalysisStepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    result: bool | None = None  # None = not started, True = success, False = failed
-    reason: str = ""
-    platform_detected: str = ""
-    files_discovered: list = []
-    analysis_completed: bool = False
-    final_result: Analysis_ExtendedBooleanResult | None = None
-
-class AnalysisStep(KernelProcessStep[AnalysisStepState], ToolTrackingMixin):
-    """
-    Analysis step that discovers YAML files and detects source platform.
-
-    Following SK Process Framework best practices:
-    - Single responsibility: file discovery and platform detection only
-    - Isolated kernel instance to prevent recursive invocation
-    - Proper error handling and event emission
-    """
-
-    @kernel_function(name="start_migration_analysis")
-    async def start_migration_analysis(
-        self, context: KernelProcessStepContext, context_data: dict[str, Any]
-    ):
-        """Execute analysis with comprehensive error handling and orchestration."""
-
-        # Parameter validation using Pydantic
-        is_valid, params = self._create_analysis_parameters(context_data)
-        if not is_valid:
-            await self._emit_analysis_failure(context, "Parameter validation failed")
-            return
-
-        try:
-            # Initialize orchestrator with MCP plugins
-            orchestrator = AnalysisOrchestrator(
-                process_id=params.process_id,
-                app_context=params.app_context,
-                plugin_context=PluginContext()
-            )
-
-            # Execute analysis
-            result = await orchestrator.execute_analysis(params)
-
-            # Update state and emit success
-            self.state.result = True
-            self.state.platform_detected = result.platform_detected
-            self.state.files_discovered = result.files_discovered
-            self.state.analysis_completed = True
-
-            await context.emit_event(
-                KernelProcessEvent(id="analysis_completed", data=result.model_dump())
-            )
-
-        except Exception as e:
-            # Comprehensive error handling
-            await self._handle_analysis_error(context, e, params)
-```
-
-### 2. Design Step
-
-The design step creates Azure architecture recommendations using the actual implementation:
-
-```python
-from libs.steps.design_step import DesignStep, DesignStepState
-from libs.steps.orchestration.design_orchestration import DesignOrchestrator
-
-class DesignStepState(BaseStepState):
-    """State for the Design step following best practices."""
-
-    name: str = Field(default="DesignStepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    result: bool | None = None
-    reason: str = ""
-    architecture_created: str = ""
-    design_recommendations: list[str] = Field(default_factory=list)
-    azure_services: list[str] = Field(default_factory=list)
-    migration_strategy: str = ""
-    design_completed: bool = False
-
-class DesignStep(KernelProcessStep[DesignStepState], ToolTrackingMixin):
-    """
-    Design step for creating Azure architecture and service mapping.
-
-    Features:
-    - Azure service recommendations
-    - Architecture pattern suggestions
-    - Cost estimation integration
-    - Migration strategy planning
-    """
-
-    @kernel_function(name="start_migration_design")
-    async def start_migration_design(
-        self, context: KernelProcessStepContext, context_data: dict[str, Any]
-    ):
-        """Execute design phase with Azure service integration."""
-
-        try:
-            # Initialize design orchestrator with MCP plugins
-            orchestrator = DesignOrchestrator(
-                process_id=context_data["process_id"],
-                app_context=context_data["app_context"],
-                plugin_context=PluginContext()
-            )
-
-            # Execute design with multi-agent collaboration
-            result = await orchestrator.execute_design(context_data)
-
-            # Update state with design results
-            self.state.result = True
-            self.state.architecture_created = result.architecture
-            self.state.azure_services = result.recommended_services
-            self.state.migration_strategy = result.strategy
-            self.state.design_completed = True
-
-            await context.emit_event(
-                KernelProcessEvent(id="design_completed", data=result.model_dump())
-            )
-
-        except Exception as e:
-            await self._handle_design_error(context, e)
-```
-
-### 3. YAML Step
-
-The YAML step transforms configurations to Azure-compatible formats using the real implementation:
-
-```python
-from libs.steps.yaml_step import YamlStep, YamlStepState
-from libs.steps.orchestration.yaml_orchestration import YamlOrchestrator
-
-class YamlStepState(BaseStepState):
-    """State for the YAML step following best practices."""
-
-    name: str = Field(default="YamlStepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    result: bool | None = None
-    reason: str = ""
-    files_converted: list[str] = Field(default_factory=list)
-    azure_integrations: list[str] = Field(default_factory=list)
-    yaml_completed: bool = False
-
-class YamlStep(KernelProcessStep[YamlStepState], ToolTrackingMixin):
-    """
-    YAML step for converting configurations to Azure-compatible formats.
-
-    Features:
-    - Kubernetes to AKS transformation
-    - Azure service integration
-    - Configuration validation
-    - Multi-file processing
-    """
-
-    @kernel_function(name="start_migration_yaml")
-    async def start_migration_yaml(
-        self, context: KernelProcessStepContext, context_data: dict[str, Any]
-    ):
-        """Execute YAML transformation with Azure integration."""
-
-        try:
-            # Initialize YAML orchestrator with MCP plugins
-            orchestrator = YamlOrchestrator(
-                process_id=context_data["process_id"],
-                app_context=context_data["app_context"],
-                plugin_context=PluginContext()
-            )
-
-            # Execute YAML transformation
-            result = await orchestrator.execute_yaml_conversion(context_data)
-
-            # Update state with conversion results
-            self.state.result = True
-            self.state.files_converted = result.converted_files
-            self.state.azure_integrations = result.azure_services_integrated
-            self.state.yaml_completed = True
-
-            await context.emit_event(
-                KernelProcessEvent(id="yaml_completed", data=result.model_dump())
-            )
-
-        except Exception as e:
-            await self._handle_yaml_error(context, e)
-```
-
-### 4. Documentation Step
-
-The documentation step generates comprehensive migration documentation using the actual implementation:
-
-```python
-from libs.steps.documentation_step import DocumentationStep, DocumentationStepState
-from libs.steps.orchestration.documentation_orchestration import DocumentationOrchestrator
-
-class DocumentationStepState(BaseStepState):
-    """State for the Documentation step following best practices."""
-
-    name: str = Field(default="DocumentationStepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    result: bool | None = None
-    reason: str = ""
-    documents_generated: list[str] = Field(default_factory=list)
-    documentation_completed: bool = False
-
-class DocumentationStep(KernelProcessStep[DocumentationStepState], ToolTrackingMixin):
-    """
-    Documentation step for generating comprehensive migration documentation.
-
-    Features:
-    - Migration analysis reports
-    - Architecture documentation
-    - Implementation guides
-    - Troubleshooting documentation
-    """
-
-    @kernel_function(name="start_migration_documentation")
-    async def start_migration_documentation(
-        self, context: KernelProcessStepContext, context_data: dict[str, Any]
-    ):
-        """Execute documentation generation with comprehensive reporting."""
-
-        try:
-            # Initialize documentation orchestrator
-            orchestrator = DocumentationOrchestrator(
-                process_id=context_data["process_id"],
-                app_context=context_data["app_context"],
-                plugin_context=PluginContext()
-            )
-
-            # Execute documentation generation
-            result = await orchestrator.execute_documentation(context_data)
-
-            # Update state with documentation results
-            self.state.result = True
-            self.state.documents_generated = result.generated_documents
-            self.state.documentation_completed = True
-
-            await context.emit_event(
-                KernelProcessEvent(id="documentation_completed", data=result.model_dump())
-            )
-
-        except Exception as e:
-            await self._handle_documentation_error(context, e)
-```
-
-## Process Orchestration
-
-### Main Process Implementation
-
-The main migration process uses the Semantic Kernel Process Framework:
-
-```python
-from semantic_kernel.processes import ProcessBuilder
-from libs.steps.analysis_step import AnalysisStep
-from libs.steps.design_step import DesignStep
-from libs.steps.yaml_step import YamlStep
-from libs.steps.documentation_step import DocumentationStep
-
-class AKSMigrationProcess:
-    """
-    Main migration process following SK Process Framework best practices.
-
-    Process Flow:
-    Analysis → Design → YAML Generation → Documentation
-
-    Each step is isolated and communicates via events only.
-    """
-
-    @staticmethod
-    def create_process():
-        """
-        Create the migration process with proper event routing.
-
-        Following best practices:
-        - Each step has single responsibility
-        - Events handle all inter-step communication
-        - Error handling at each step
-        - Clear process boundaries
-        """
-
-        # Create ProcessBuilder with required parameters
-        process_builder = ProcessBuilder(name="AKSMigrationProcess")
-
-        # Add steps using default constructors
-        analysis_step = process_builder.add_step(AnalysisStep)
-        design_step = process_builder.add_step(DesignStep)
-        yaml_step = process_builder.add_step(YamlStep)
-        documentation_step = process_builder.add_step(DocumentationStep)
-
-        # Configure event routing between steps
-        process_builder.on_input_event("start_migration") \
-            .send_event_to(analysis_step, "start_migration_analysis")
-
-        analysis_step.on_event("analysis_completed") \
-            .send_event_to(design_step, "start_migration_design")
-
-        design_step.on_event("design_completed") \
-            .send_event_to(yaml_step, "start_migration_yaml")
-
-        yaml_step.on_event("yaml_completed") \
-            .send_event_to(documentation_step, "start_migration_documentation")
-
-        documentation_step.on_event("documentation_completed") \
-            .stop_process()
-
-        return process_builder.build()
-```
-
-### Migration Service Execution
-
-The migration service coordinates process execution with comprehensive error handling:
-
-```python
-from services.migration_service import MigrationProcessor, MigrationEngineResult
-from libs.processes.aks_migration_process import AKSMigrationProcess
-
-class MigrationProcessor:
-    """
-    Migration processor with queue-based processing and timeout protection.
-
-    Features:
-    - Azure OpenAI integration
-    - DefaultAzureCredential authentication
-    - Comprehensive error classification
-    - Telemetry and monitoring
-    """
-
-    async def process_migration_request(self, request_data: dict) -> MigrationEngineResult:
-        """
-        Process migration request using SK Process Framework.
-
-        Returns:
-            MigrationEngineResult with comprehensive execution metadata
-        """
-        process_id = request_data.get("process_id", str(uuid.uuid4()))
-        start_time = time.time()
-
-        try:
-            # Create and start the migration process
-            process = AKSMigrationProcess.create_process()
-
-            # Execute with event-driven flow
-            runtime = InProcessRuntime()
-            process_handle = await runtime.start_process(process, request_data)
-
-            # Wait for completion or timeout
-            final_state = await self._wait_for_completion(process_handle)
-
-            execution_time = time.time() - start_time
-
-            return MigrationEngineResult(
-                success=True,
-                process_id=process_id,
-                execution_time=execution_time,
-                status=ProcessStatus.COMPLETED,
-                final_state=final_state
-            )
-
-        except Exception as e:
-            # Comprehensive error classification
-            error_classification = classify_error(e)
-            execution_time = time.time() - start_time
-
-            return MigrationEngineResult(
-                success=False,
-                process_id=process_id,
-                execution_time=execution_time,
-                status=ProcessStatus.FAILED,
-                error_message=str(e),
-                error_classification=error_classification
-            )
-```
-
-## Key Framework Features
-
-### 1. MCP Plugin Integration
-
-The framework integrates with Model Context Protocol (MCP) for Azure services:
-
-```python
-from plugins.mcp_server import MCPBlobIOPlugin, MCPDatetimePlugin, MCPMicrosoftDocs
-from utils.mcp_context import PluginContext, with_name
-
-class StepOrchestrator:
-    """Base orchestrator with MCP plugin support"""
-
-    def __init__(self, process_id: str, app_context: AppContext, plugin_context: PluginContext):
-        self.process_id = process_id
+class AnalysisExecutor(Executor):
+    def __init__(self, id: str, app_context: AppContext):
+        super().__init__(id=id)
         self.app_context = app_context
-        self.plugin_context = plugin_context
 
-        # Initialize MCP plugins for Azure integration
-        self.blob_plugin = MCPBlobIOPlugin()
-        self.docs_plugin = MCPMicrosoftDocs()
-        self.datetime_plugin = MCPDatetimePlugin()
+    @handler
+    async def handle_execute(
+        self,
+        message: Analysis_TaskParam,
+        ctx: WorkflowContext[Analysis_BooleanExtendedResult],
+    ) -> None:
+        result = await AnalysisOrchestrator(self.app_context).execute(task_param=message)
+
+        # Continue the workflow with the next step input
+        if result.result and not result.result.is_hard_terminated:
+            await ctx.send_message(result.result)
+
+        # Or stop the workflow early with a final output
+        elif result.result:
+            await ctx.yield_output(result.result)
 ```
 
-### 2. Tool Tracking and Telemetry
+### Orchestrations (multi-agent collaboration inside a step)
 
-Steps include comprehensive tool tracking and telemetry:
+- Official docs overview: [Workflow orchestrations (patterns)](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/orchestrations/overview)
+- Group chat orchestration: [Group chat orchestration](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/orchestrations/group-chat)
+
+In this repository, each executor delegates the “AI-heavy” work to a step-specific orchestrator. Those orchestrators typically:
+
+- Prepare MCP tools (e.g., Microsoft Learn, Fetch, Blob IO)
+- Load and render prompts
+- Construct agent participants (coordinator + specialists)
+- Run a multi-agent orchestration (commonly group chat) to produce a typed step output
+
+Repo example:
+
+- `src/processor/src/libs/agent_framework/groupchat_orchestrator.py`
+
+This repo uses group chat for iterative refinement and review-heavy flows (for example documentation sign-off loops), aligning with Microsoft’s guidance that group chat is appropriate for collaborative problem-solving and maker-checker workflows.
+
+## Execution model in this repo
+
+### Step-to-step message flow
+
+At the top level, the workflow is sequential:
+
+- Analysis emits an `Analysis_BooleanExtendedResult`
+- Design consumes it and emits a `Design_ExtendedBooleanResult`
+- YAML conversion consumes it and emits a `Yaml_ExtendedBooleanResult`
+- Documentation consumes it and yields `Documentation_ExtendedBooleanResult` as the final workflow output
+
+### Hard termination vs failure
+
+This repo supports two distinct stop paths:
+
+- **Hard termination (graceful)**: a step decides it cannot proceed and yields an output marked as hard-terminated. The executor calls `ctx.yield_output(...)` to end the workflow with a meaningful final result.
+- **Failure (exceptional)**: an executor or workflow fails unexpectedly; the processor captures failure context and reports via telemetry.
+
+See the exception wrappers and failure summary logic in `src/processor/src/steps/migration_processor.py`.
+
+## Adding a new step (executor)
+
+To add a new step:
+
+1. Create a new executor in `src/processor/src/steps/<step>/workflow/<step>_executor.py`.
+2. Create/update typed models:
+    - `src/processor/src/steps/<step>/models/step_param.py` (input)
+    - `src/processor/src/steps/<step>/models/step_output.py` (output)
+3. Implement the step orchestrator (if multi-agent):
+   - `src/processor/src/steps/<step>/orchestration/<step>_orchestrator.py`
+4. Register and wire the executor in `src/processor/src/steps/migration_processor.py` using `WorkflowBuilder`.
+
+## Notes on MCP tools
+
+Microsoft Agent Framework supports tool calling and MCP server integration as first-class concepts.
+
+- Agent Framework MCP docs: [Model Context Protocol (MCP)](https://learn.microsoft.com/en-us/agent-framework/user-guide/model-context-protocol/)
+
+In this repo, MCP servers are integrated as **Agent Framework tools** used by orchestrators and agents.
+
+## See also
+
+- Multi-agent orchestration guide in this repo: `docs/MultiAgentOrchestration.md`
+- Overall processor architecture: `docs/AgenticArchitecture.md`
+- MCP tool configuration and server guide: `docs/ConfigureMCPServers.md` and `docs/MCPServerGuide.md`
+
+## Step implementations (real code)
+
+This repository no longer uses the previous process-framework step model for the processor pipeline.
+
+Instead, each step is implemented as:
+
+1. A **workflow executor** (Agent Framework `Executor`) that receives a typed message.
+2. A step **orchestrator** that runs a multi-agent collaboration pattern (typically group chat) and returns a typed step result.
+
+Where to look:
+
+- Top-level workflow wiring: `src/processor/src/steps/migration_processor.py`
+- Step executors:
+  - `src/processor/src/steps/analysis/workflow/analysis_executor.py`
+  - `src/processor/src/steps/design/workflow/design_executor.py`
+  - `src/processor/src/steps/convert/workflow/yaml_convert_executor.py`
+  - `src/processor/src/steps/documentation/workflow/documentation_executor.py`
+- Step orchestrators (multi-agent logic): `src/processor/src/steps/**/orchestration/`
+- Group chat orchestration implementation: `src/processor/src/libs/agent_framework/groupchat_orchestrator.py`
+
+Executor handlers use `WorkflowContext` to either:
+
+- Continue the pipeline via `ctx.send_message(...)`, or
+- Stop early with a final result via `ctx.yield_output(...)`.
+
+## Workflow execution and event streaming
+
+The processor runs the top-level workflow using event streaming in `MigrationProcessor.run(...)`:
+
+- Implementation: `src/processor/src/steps/migration_processor.py`
+- Execution: `async for event in self.workflow.run_stream(input_data): ...`
+
+The processor consumes events such as:
+
+- `WorkflowStartedEvent`
+- `ExecutorInvokedEvent`
+- `ExecutorCompletedEvent`
+- `ExecutorFailedEvent`
+- `WorkflowOutputEvent`
+- `WorkflowFailedEvent`
+
+Those events are used to:
+
+- Drive step/phase telemetry (`TelemetryManager`).
+- Populate structured reporting (`MigrationReportCollector` / `MigrationReportGenerator`).
+
+This is also where the processor differentiates between:
+
+- **Hard termination** (a step yields an output early via `ctx.yield_output(...)`), and
+- **Exceptional failure** (a step errors, producing `ExecutorFailedEvent` / `WorkflowFailedEvent`).
+
+## MCP tools integration (Agent Framework tools)
+
+In this repo, MCP servers are integrated as **Agent Framework tools**.
+
+Where to look:
+
+- Tool wrappers: `src/processor/src/libs/mcp_server/`
+- Tool usage: `src/processor/src/steps/**/orchestration/`
+
+Two connection styles are used:
+
+1. **HTTP MCP tools** (remote)
+   - Example: Microsoft Learn MCP endpoint
+   - Used via `MCPStreamableHTTPTool(name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp")`
+
+2. **Stdio MCP tools** (local subprocess)
+   - Example: blob IO, datetime, mermaid validation, yaml inventory
+   - Used via `MCPStdioTool(command="uv", args=[...])`
+   - Local MCP servers in this repo are implemented using FastMCP under `src/processor/src/libs/mcp_server/**/`.
+
+When a step runs, orchestrators typically open tool sessions like this:
 
 ```python
-from utils.tool_tracking import ToolTrackingMixin
-from utils.agent_telemetry import TelemetryManager
-
-class Step(KernelProcessStep[StepState], ToolTrackingMixin):
-    """Step with tool tracking capabilities"""
-
-    def __init__(self):
-        super().__init__()
-        self.telemetry_manager = TelemetryManager()
-
-    async def track_operation(self, operation_name: str, operation_data: dict):
-        """Track operation with telemetry"""
-        await self.telemetry_manager.record_operation(
-            step_name=self.__class__.__name__,
-            operation=operation_name,
-            data=operation_data
-        )
+async with (
+    self.mcp_tools[0],
+    self.mcp_tools[1],
+    self.mcp_tools[2],
+):
+    ...
 ```
 
-### 3. Error Classification and Recovery
+## Reporting and telemetry
 
-Comprehensive error handling with classification:
+Reporting and telemetry are driven by workflow execution events and captured in the processor:
 
-```python
-from utils.error_classifier import ErrorClassification, classify_error
-from libs.models.failure_context import StepFailureState
+- Telemetry: `src/processor/src/utils/agent_telemetry.py` (`TelemetryManager`)
+- Reporting: `src/processor/src/libs/reporting/` (`MigrationReportCollector`, `MigrationReportGenerator`)
+- Event loop: `src/processor/src/steps/migration_processor.py`
 
-async def _handle_step_error(self, context: KernelProcessStepContext, error: Exception):
-    """Handle step errors with comprehensive classification"""
+## Evaluation and quality checks
 
-    # Classify error for handling strategy
-    error_classification = classify_error(error)
+The processor’s “quality checks” are a combination of workflow-level structure plus step-level validation:
 
-    # Create rich failure context
-    failure_context = StepFailureState(
-        error_message=str(error),
-        error_type=error_classification.error_type,
-        severity=error_classification.severity,
-        is_retryable=error_classification.is_retryable,
-        step_name=self.__class__.__name__,
-        timestamp=time.time()
-    )
+- **Typed boundaries**: each executor consumes and emits typed models, which keeps step-to-step contracts explicit.
+- **Multi-agent review**: orchestrators can implement maker-checker loops and sign-offs (commonly via group chat).
+- **Tool-backed validation**: steps can call MCP tools (e.g., Mermaid validation, YAML inventory grounding, documentation lookups) to validate outputs against real inputs and references.
+- **Unit tests**: core behavior is covered by tests under `src/processor/src/tests/unit/`.
 
-    # Update step state with failure context
-    self.state.failure_context = failure_context
-    self.state.result = False
-    self.state.reason = str(error)
+To run processor unit tests locally (example):
 
-    # Emit failure event
-    await context.emit_event(
-        KernelProcessEvent(
-            id="step_failed",
-            data={
-                "step_name": self.__class__.__name__,
-                "error": str(error),
-                "classification": error_classification.model_dump()
-            }
-        )
-    )
+```bash
+cd src/processor
+uv run python -m pytest src/processor/src/tests/unit -v
 ```
 
-## State Management
+## Extending the pipeline
 
-### Shared Process State
+Use the steps in “Adding a new step (executor)” above, then wire the executor into the workflow graph in `src/processor/src/steps/migration_processor.py`.
 
-The framework uses a shared state model that flows between steps:
+## Troubleshooting notes
 
-```python
-from libs.processes.models.migration_state import MigrationProcessState
+- If a step appears to “hang”, check MCP tool startup (stdio tools spawn subprocesses via `uv`/`uvx`).
+- If an executor fails, the processor surfaces structured details via `WorkflowExecutorFailedException`.
+- If the workflow completes but the output is missing, the processor raises `WorkflowOutputMissingException`.
 
-class MigrationProcessState(BaseModel):
-    """
-    Shared state that flows between all migration process steps.
-
-    This represents the complete state of a migration process,
-    designed to be passed as events between SK Process steps.
-    """
-
-    # Process Identity
-    process_id: str
-    user_request: str = ""
-
-    # Step Control
-    current_step: str = "initialization"
-
-    # Shared Configuration
-    source_platform: str = ""  # eks, gke, etc.
-    target_platform: str = "azure"
-    workspace_file_folder: str = "workspace"
-
-    # Analysis Step Results
-    platform_detected: str = ""
-    files_discovered: list[str] = Field(default_factory=list)
-    file_count: int = 0
-    analysis_summary: str = ""
-    analysis_completed: bool = False
-
-    # Design Step Results
-    architecture_created: str = ""
-    design_recommendations: list[str] = Field(default_factory=list)
-    azure_services: list[str] = Field(default_factory=list)
-    migration_strategy: str = ""
-    design_completed: bool = False
-
-    # YAML Step Results
-    files_converted: list[str] = Field(default_factory=list)
-    azure_integrations: list[str] = Field(default_factory=list)
-    yaml_completed: bool = False
-
-    # Documentation Step Results
-    documents_generated: list[str] = Field(default_factory=list)
-    documentation_completed: bool = False
-```
-
-### Step-Specific State
-
-Each step maintains its own isolated state that extends the base pattern:
-
-```python
-from libs.steps.base_step_state import BaseStepState
-from libs.models.failure_context import StepFailureState
-
-class BaseStepState(KernelProcessStepState):
-    """Base state for all migration steps"""
-
-    # Base fields required by KernelProcessStepState
-    name: str = Field(default="BaseStepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    # Rich failure context for error handling
-    failure_context: StepFailureState | None = Field(
-        default=None, description="Rich failure context when step fails"
-    )
-
-    # Comprehensive timing infrastructure
-    execution_start_time: float | None = Field(default=None)
-    execution_end_time: float | None = Field(default=None)
-    orchestration_start_time: float | None = Field(default=None)
-    orchestration_end_time: float | None = Field(default=None)
-```
-
-## Monitoring and Reporting
-
-### Process Monitoring
-
-The framework includes comprehensive monitoring and telemetry:
-
-```python
-from utils.agent_telemetry import TelemetryManager
-from libs.reporting import MigrationReportGenerator, MigrationReportCollector
-
-class ProcessMonitor:
-    """Monitors process execution and collects telemetry"""
-
-    def __init__(self):
-        self.telemetry_manager = TelemetryManager()
-        self.report_collector = MigrationReportCollector()
-
-    async def monitor_step_execution(self, step_name: str, step_state: BaseStepState):
-        """Monitor individual step execution"""
-
-        # Record step metrics
-        await self.telemetry_manager.record_step_metrics(
-            step_name=step_name,
-            execution_time=step_state.execution_end_time - step_state.execution_start_time,
-            success=step_state.result,
-            failure_context=step_state.failure_context
-        )
-
-        # Collect reporting data
-        self.report_collector.add_step_result(step_name, step_state)
-```
-
-### Migration Reporting
-
-Comprehensive reporting system for migration results:
-
-```python
-from libs.reporting.models.Processes import Process, Step
-from libs.reporting import FailureType, FailureSeverity
-
-class MigrationReportGenerator:
-    """Generates comprehensive migration reports"""
-
-    async def generate_migration_report(self, process_state: MigrationProcessState) -> dict:
-        """Generate comprehensive migration report"""
-
-        report = {
-            "process_summary": {
-                "process_id": process_state.process_id,
-                "source_platform": process_state.source_platform,
-                "target_platform": process_state.target_platform,
-                "files_processed": process_state.file_count,
-                "overall_status": self._determine_overall_status(process_state)
-            },
-            "step_results": {
-                "analysis": {
-                    "completed": process_state.analysis_completed,
-                    "platform_detected": process_state.platform_detected,
-                    "files_discovered": len(process_state.files_discovered)
-                },
-                "design": {
-                    "completed": process_state.design_completed,
-                    "azure_services": len(process_state.azure_services),
-                    "architecture_created": bool(process_state.architecture_created)
-                },
-                "yaml": {
-                    "completed": process_state.yaml_completed,
-                    "files_converted": len(process_state.files_converted),
-                    "azure_integrations": len(process_state.azure_integrations)
-                },
-                "documentation": {
-                    "completed": process_state.documentation_completed,
-                    "documents_generated": len(process_state.documents_generated)
-                }
-            }
-        }
-
-        return report
-```
-
-## Customization Guide
-
-### Adding Custom Steps
-
-To add a new processing step to the framework:
-
-1. **Create Step State Class**: Inherit from `BaseStepState`
-2. **Create Step Class**: Inherit from `KernelProcessStep` and `ToolTrackingMixin`
-3. **Implement Kernel Functions**: Add `@kernel_function` decorated methods
-4. **Add Error Handling**: Implement comprehensive error classification
-5. **Register in Process**: Add to `AKSMigrationProcess`
-6. **Create Orchestrator**: Implement step-specific orchestration if needed
-
-### Example Custom Step
-
-```python
-from semantic_kernel.functions import kernel_function
-from libs.steps.base_step_state import BaseStepState
-from semantic_kernel.processes.kernel_process import (
-    KernelProcessStep,
-    KernelProcessStepContext,
-    KernelProcessEvent
-)
-
-class CustomStepState(BaseStepState):
-    """State for custom processing step"""
-
-    name: str = Field(default="CustomStepState", description="Name of the step state")
-    version: str = Field(default="1.0", description="Version of the step state")
-
-    result: bool | None = None
-    reason: str = ""
-    custom_data: str = ""
-    custom_completed: bool = False
-
-class CustomStep(KernelProcessStep[CustomStepState], ToolTrackingMixin):
-    """
-    Custom step for specialized processing requirements.
-
-    Following SK Process Framework best practices:
-    - Single responsibility principle
-    - Event-driven communication
-    - Comprehensive error handling
-    - Pydantic-based validation
-    """
-
-    state: CustomStepState | None = Field(
-        default_factory=lambda: CustomStepState(name="CustomStepState", version="1.0")
-    )
-
-    async def activate(self, state: KernelProcessStepState[CustomStepState]):
-        """Activate the step for state initialization."""
-        self.state = state.state
-        self._ensure_state_initialized()
-
-    @kernel_function(name="start_custom_processing")
-    async def start_custom_processing(
-        self, context: KernelProcessStepContext, context_data: dict[str, Any]
-    ):
-        """Execute custom processing with error handling."""
-
-        try:
-            # Parameter validation
-            is_valid, params = self._validate_parameters(context_data)
-            if not is_valid:
-                await self._emit_failure(context, "Parameter validation failed")
-                return
-
-            # Execute custom logic
-            result = await self._perform_custom_processing(params)
-
-            # Update state
-            self.state.result = True
-            self.state.custom_data = result
-            self.state.custom_completed = True
-
-            # Emit success event
-            await context.emit_event(
-                KernelProcessEvent(id="custom_completed", data={"result": result})
-            )
-
-        except Exception as e:
-            await self._handle_custom_error(context, e)
-
-    def _ensure_state_initialized(self) -> None:
-        """Ensure state is properly initialized before use."""
-        if self.state is None:
-            self.state = CustomStepState(name="CustomStepState", version="1.0")
-```
-
-### Integration with Process
-
-Add the custom step to the migration process:
-
-```python
-# In AKSMigrationProcess.create_process()
-custom_step = process_builder.add_step(CustomStep)
-
-# Configure event routing
-yaml_step.on_event("yaml_completed") \
-    .send_event_to(custom_step, "start_custom_processing")
-
-custom_step.on_event("custom_completed") \
-    .send_event_to(documentation_step, "start_migration_documentation")
-```
-
-## Next Steps
-
-1. **Understand Step Pattern**: Learn the step implementation pattern
-2. **Review Existing Steps**: Study the current step implementations
-3. **Identify Custom Needs**: Determine if custom steps are needed
-4. **Implement Extensions**: Add custom steps and orchestration patterns
-5. **Monitor and Optimize**: Implement monitoring and optimize performance
-
-For additional information, refer to:
+## Next steps
 
 - [Multi-Agent Orchestration Approach](MultiAgentOrchestration.md)
 - [Technical Architecture](TechnicalArchitecture.md)

@@ -12,11 +12,23 @@ import asyncio
 import logging
 import os
 
-from libs.base.ApplicationBase import ApplicationBase
+from libs.agent_framework.agent_framework_helper import AgentFrameworkHelper
+from libs.agent_framework.mem0_async_memory import Mem0AsyncMemoryManager
+from libs.agent_framework.middlewares import (
+    DebuggingMiddleware,
+    InputObserverMiddleware,
+    LoggingFunctionMiddleware,
+)
+from libs.base.application_base import ApplicationBase
+from services.control_api import ControlApiConfig, ControlApiServer
+from services.process_control import ProcessControlManager
 from services.queue_service import (
     QueueMigrationService,
     QueueServiceConfig,
 )
+from steps.migration_processor import MigrationProcessor
+from utils.agent_telemetry import TelemetryManager
+from utils.logging_utils import configure_application_logging
 
 logger = logging.getLogger(__name__)
 
@@ -32,19 +44,20 @@ class QueueMigrationServiceApp(ApplicationBase):
     - Provides comprehensive error handling and monitoring
     """
 
-    def __init__(self, config_override: dict | None = None, **kwargs):
+    def __init__(self, config_override: dict | None = None, debug_mode: bool = False):
         """Initialize the queue service application"""
-        super().__init__(**kwargs)
+        super().__init__(env_file_path=os.path.join(os.path.dirname(__file__), ".env"))
         self.queue_service: QueueMigrationService | None = None
+        self.control_api: ControlApiServer | None = None
         self.config_override = config_override or {}
+        self.debug_mode = debug_mode
 
         # Configure logging based on debug_mode from constructor
         self._configure_logging()
+        self.initialize()
 
     def _configure_logging(self):
         """Configure logging based on debug_mode setting"""
-        # Import and use comprehensive logging suppression
-        from utils.logging_utils import configure_application_logging
 
         # Apply comprehensive verbose logging suppression
         configure_application_logging(debug_mode=self.debug_mode)
@@ -53,13 +66,84 @@ class QueueMigrationServiceApp(ApplicationBase):
             print("🐛 Debug logging enabled - level set to DEBUG")
             logger.debug("🔇 Verbose third-party logging suppressed to reduce noise")
 
-    async def initialize_service(self):
+    def initialize(self):
+        # Initialize the ApplicationBase (this sets up application_context with Cosmos DB config)
         """
-        Initialize the queue migration service with configuration.
+        Initialize the application.
+        This method can be overridden by subclasses to perform any necessary setup.
         """
-        # Initialize the ApplicationBase (this sets up app_context with Cosmos DB config)
-        await super().initialize_async()
+        print(
+            "Application initialized with configuration:",
+            self.application_context.configuration,
+        )
+        self.register_services()
 
+    def register_services(self):
+        # Additional initialization logic can be added here
+        ############################################################################
+        ## Initialize AgentFrameworkHelper and add it to the application context  ##
+        ############################################################################
+        self.application_context.add_singleton(
+            AgentFrameworkHelper, AgentFrameworkHelper()
+        )
+        ## Initialize AgentFrameworkHelper with LLM settings from application context
+        self.application_context.get_service(AgentFrameworkHelper).initialize(
+            self.application_context.llm_settings
+        )
+
+        ##################################################################################
+        ## Initialize middlewares - All Middlewares below are registered as a singleton ##
+        ##################################################################################
+        ### InputObserverMiddleware(Agent Level)
+        ### LoggingFunctionMiddleware(Agent Level)
+        ### DebuggingMiddleware(Run Level)
+        (
+            # Register DebuggingMiddleware as a singleton
+            self.application_context.add_singleton(
+                DebuggingMiddleware, DebuggingMiddleware
+            )
+            # Register LoggingFunctionMiddleware as a singleton
+            .add_singleton(LoggingFunctionMiddleware, LoggingFunctionMiddleware)
+            .add_singleton(InputObserverMiddleware, InputObserverMiddleware)
+            .add_singleton(Mem0AsyncMemoryManager, Mem0AsyncMemoryManager)
+            .add_async_singleton(
+                TelemetryManager, lambda: TelemetryManager(self.application_context)
+            )
+            .add_async_singleton(
+                ProcessControlManager,
+                lambda: ProcessControlManager(self.application_context),
+            )
+            .add_transient(
+                MigrationProcessor,
+                lambda: MigrationProcessor(app_context=self.application_context),
+            )
+        )
+
+        # Optional: Cosmos checkpoint storage. This dependency can be version-sensitive
+        # (agent_framework exports have changed across versions). If it's unavailable,
+        # we skip registration so the app can still run.
+        try:
+            from libs.agent_framework.cosmos_checkpoint_storage import (
+                CosmosCheckpointStorage,
+                CosmosWorkflowCheckpointRepository,
+            )
+
+            self.application_context.add_singleton(
+                CosmosCheckpointStorage,
+                lambda: CosmosCheckpointStorage(
+                    CosmosWorkflowCheckpointRepository(
+                        account_url="https://[your cosmosdb].documents.azure.com:443/",
+                        database_name="checkpoints",
+                        container_name="workflow_checkpoints",
+                    )
+                ),
+            )
+        except Exception as e:
+            # Keep it as a print to match the current style of this entrypoint.
+            print(
+                "[WARN] Cosmos checkpoint storage disabled due to import/config error:",
+                e,
+            )
         # Only log initialization if debug mode is explicitly enabled
         if self.debug_mode:
             logger.info("[DOCKER] Initializing Queue Migration Service...")
@@ -70,11 +154,49 @@ class QueueMigrationServiceApp(ApplicationBase):
         # Create queue migration service
         self.queue_service = QueueMigrationService(
             config=config,
-            app_context=self.app_context,
+            app_context=self.application_context,
             debug_mode=self.debug_mode,  # Use the debug_mode from constructor
         )
 
-        logger.info("✅ Queue Migration Service initialized for Docker deployment")
+        # Control API is built/started from an async context in start_service().
+        self.control_api = None
+
+        logger.info("Queue Migration Service initialized for Docker deployment")
+
+    async def _build_control_api(self) -> ControlApiServer | None:
+        enabled = os.getenv("CONTROL_API_ENABLED", "1").strip().lower() not in {
+            "0",
+            "false",
+            "no",
+        }
+        if not enabled:
+            return None
+
+        token = (os.getenv("CONTROL_API_TOKEN", "") or "").strip()
+
+        # Internal-only API: bind to all interfaces by default so other apps
+        # within the same environment/VNet can reach it. Deployment-time ingress
+        # decides whether this is externally reachable.
+        host = (os.getenv("CONTROL_API_HOST", "") or "").strip() or "0.0.0.0"
+
+        try:
+            port = int(os.getenv("CONTROL_API_PORT", "8080"))
+        except Exception:
+            port = 8080
+
+        try:
+            control: ProcessControlManager = await self.app_context.get_service_async(
+                ProcessControlManager
+            )
+        except Exception:
+            control = ProcessControlManager(self.application_context)
+
+        return ControlApiServer(
+            control=control,
+            config=ControlApiConfig(
+                enabled=True, host=host, port=port, bearer_token=token
+            ),
+        )
 
     def _build_service_config(
         self, config_override: dict | None = None
@@ -85,9 +207,9 @@ class QueueMigrationServiceApp(ApplicationBase):
 
         # Add protective checks for environment variables
         visibility_timeout = os.getenv("VISIBILITY_TIMEOUT_MINUTES", "5")
-        max_retry_count = os.getenv("MAX_RETRY_COUNT", "0")
         poll_interval = os.getenv("POLL_INTERVAL_SECONDS", "5")
         message_timeout = os.getenv("MESSAGE_TIMEOUT_MINUTES", "25")
+        concurrent_workers = os.getenv("CONCURRENT_WORKERS", "1")
 
         # Debug print to see what we're getting (only if debug mode is enabled)
         if self.debug_mode:
@@ -96,26 +218,25 @@ class QueueMigrationServiceApp(ApplicationBase):
                 f"  VISIBILITY_TIMEOUT_MINUTES: {visibility_timeout} (type: {type(visibility_timeout)})"
             )
             print(
-                f"  MAX_RETRY_COUNT: {max_retry_count} (type: {type(max_retry_count)})"
-            )
-            print(
                 f"  POLL_INTERVAL_SECONDS: {poll_interval} (type: {type(poll_interval)})"
             )
             print(
                 f"  MESSAGE_TIMEOUT_MINUTES: {message_timeout} (type: {type(message_timeout)})"
             )
+            print(
+                f"  CONCURRENT_WORKERS: {concurrent_workers} (type: {type(concurrent_workers)})"
+            )
 
         config = QueueServiceConfig(
             use_entra_id=True,
-            storage_account_name=self.app_context.configuration.storage_queue_account,  # type:ignore
-            queue_name=self.app_context.configuration.storage_account_process_queue,  # type:ignore
-            dead_letter_queue_name=f"{self.app_context.configuration.storage_account_process_queue}-dead-letter-queue",
+            storage_account_name=self.application_context.configuration.storage_queue_account,  # type:ignore
+            queue_name=self.application_context.configuration.storage_account_process_queue,  # type:ignore
             visibility_timeout_minutes=int(visibility_timeout)
             if isinstance(visibility_timeout, str)
             else visibility_timeout,
-            max_retry_count=int(max_retry_count)
-            if isinstance(max_retry_count, str)
-            else max_retry_count,
+            concurrent_workers=int(concurrent_workers)
+            if isinstance(concurrent_workers, str)
+            else concurrent_workers,
             poll_interval_seconds=int(poll_interval)
             if isinstance(poll_interval, str)
             else poll_interval,
@@ -139,21 +260,35 @@ class QueueMigrationServiceApp(ApplicationBase):
                 "Service not initialized. Call initialize_service() first."
             )
 
-        logger.info("🐳 Starting Queue-based Migration Service...")
+        logger.info("Starting Queue-based Migration Service...")
 
         try:
+            if self.control_api is None:
+                try:
+                    self.control_api = await self._build_control_api()
+                except Exception as e:
+                    logger.warning(f"Failed to build control API: {e}")
+                    self.control_api = None
+
+            if self.control_api:
+                await self.control_api.start()
+
             # Start the service (this will run until stopped)
             await self.queue_service.start_service()
         except KeyboardInterrupt:
-            logger.info("🛑 Service interrupted by user (SIGTERM/SIGINT)")
+            logger.info("Service interrupted by user (SIGTERM/SIGINT)")
         except Exception as e:
-            logger.error(f"❌ Service error: {e}")
+            logger.error(f"Service error: {e}")
         finally:
             await self.shutdown_service()
-            logger.info("🐳 Service stopped")
+            logger.info("Service stopped")
 
     async def shutdown_service(self):
         """Gracefully shutdown the service"""
+        if self.control_api:
+            await self.control_api.stop()
+            self.control_api = None
+
         if self.queue_service:
             logger.info("Shutting down Queue Migration Service...")
             await self.queue_service.stop_service()
@@ -164,7 +299,7 @@ class QueueMigrationServiceApp(ApplicationBase):
     async def force_stop_service(self):
         """Force immediate shutdown of the service"""
         if self.queue_service:
-            logger.warning("🚨 Force stopping Queue Migration Service...")
+            logger.warning("Force stopping Queue Migration Service...")
             await self.queue_service.force_stop()
             self.queue_service = None
 
@@ -195,8 +330,6 @@ class QueueMigrationServiceApp(ApplicationBase):
 
     async def run(self):
         """Run the migration service"""
-        # Initializing Queue Service
-        await self.initialize_service()
         # Starting the Queue Service
         await self.start_service()
 
@@ -219,15 +352,14 @@ async def run_queue_service(
     app = QueueMigrationServiceApp(
         config_override=config_override,
         debug_mode=debug_mode,
-        env_file_path=os.path.join(os.path.dirname(__file__), ".env"),
     )
 
     try:
         # Initialize and start service
-        logger.info("🐳 Docker container starting queue service...")
+        logger.info("Starting queue service...")
         await app.run()
     except KeyboardInterrupt:
-        logger.info("🐳 Docker container received shutdown signal")
+        logger.info("Received shutdown signal")
         # Properly stop the service before exiting
         try:
             if app.queue_service:
@@ -235,10 +367,10 @@ async def run_queue_service(
             logger.info("Service shutdown complete")
         except Exception as cleanup_error:
             logger.warning(f"Error during cleanup: {cleanup_error}")
-        logger.info("🐳 Service stopped")
+        logger.info("Service stopped")
         # Exit gracefully without raising the KeyboardInterrupt
     except Exception as e:
-        logger.error(f"❌ Failed to run queue service: {e}")
+        logger.error(f"Failed to run queue service: {e}")
         # Attempt cleanup even on errors
         try:
             if app.queue_service:
@@ -252,5 +384,5 @@ async def run_queue_service(
 # Entry point
 if __name__ == "__main__":
     # Allow debug mode to be controlled by environment variable
-    debug_mode = True
+    debug_mode = False
     asyncio.run(run_queue_service(debug_mode=debug_mode))

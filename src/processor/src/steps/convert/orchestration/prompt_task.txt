@@ -1,0 +1,231 @@
+**YAML CONVERT STEP OBJECTIVE**:
+- Convert Kubernetes YAML manifests from the detected source platform to **AKS-ready** manifests.
+- Use `analysis_result.md` and `design_result.md` in {{output_file_folder}} as authoritative guidance.
+- Read input YAMLs from {{source_file_folder}}.
+- Save converted YAMLs into {{output_file_folder}}.
+- Save the primary human-readable artifact as `file_converting_result.md` in {{output_file_folder}}.
+
+**IMPORTANT RESPONSE RULE (prevents workflow deadlocks)**:
+- Participants (YAML Expert, QA Engineer, AKS Expert, Azure Architect, Chief Architect) MUST NOT respond with the final `Yaml_ExtendedBooleanResult` JSON during normal turns.
+- Their job is to use tools, create/update the converted YAML blobs and `file_converting_result.md`, and record blockers/sign-offs in the report.
+- The final `Yaml_ExtendedBooleanResult` JSON is produced only at the very end by the Result Generator / termination logic.
+
+**SCOPE**:
+- Source folder: {{source_file_folder}}
+- Output folder: {{output_file_folder}}
+- Container: {{container_name}}
+
+**AKS-ONLY TARGET RULE (NON-NEGOTIABLE)**:
+- Target Kubernetes runtime is Azure Kubernetes Service (AKS).
+- Do not propose other target clusters (ARO/Arc/etc.) as the migration target.
+
+**MANDATORY WORKFLOW**:
+1) Discover YAMLs: list YAML/YML files in {{source_file_folder}} (do not assume).
+2) Read `analysis_result.md` and `design_result.md` from {{output_file_folder}}.
+3) Convert YAMLs to AKS-compatible manifests.
+4) Save each converted YAML to {{output_file_folder}}.
+5) Create/extend `file_converting_result.md` (do not delete other agents’ content; additive only).
+6) Conduct a single review round (preferred) to reduce turnaround:
+  - QA Engineer verifies outputs exist and are sane
+  - AKS Expert reviews AKS alignment
+  - Azure Architect reviews Azure integration / Well-Architected alignment
+7) If any reviewer FAILs, Chief Architect merges/de-duplicates blockers into one prioritized fix plan.
+8) YAML Expert applies the merged fix plan in one pass (re-save YAMLs, update `file_converting_result.md`, regenerate inventory if needed).
+9) Re-check only the previously failing reviewer(s) until they PASS.
+10) Chief Architect confirms consensus and readiness.
+
+**COLLABORATIVE QUALITY GATE (NON-NEGOTIABLE)**:
+- SUCCESS termination is allowed ONLY when:
+  - `## Blockers (Open must be empty to finish)` contains no Open items
+  - Any missing concrete environment values are captured under `## Assumptions / Needs Confirmation` and reflected in YAML as explicit placeholders
+  - `## Sign-off` includes PASS from: QA Engineer, AKS Expert, Azure Architect, Chief Architect
+- If QA or AKS or Azure Architect or Chief Architect is FAIL, you MUST continue the conversation and iterate fixes.
+
+**CONVERSION GUIDELINES (high level)**:
+- Remove/replace cloud-specific objects and annotations (EKS/GKE-specific).
+- Use AKS-compatible storage classes/CSI references per design.
+- Align ingress/load balancer choices per design.
+- Preserve functional intent; call out any manual steps.
+
+**REQUIRED REPORT STRUCTURE** (`file_converting_result.md`):
+# YAML Conversion Report
+
+## Summary
+- Process Id : [grab this value from 'Source folder' path **Process Id**/source]
+- Source platform: [from analysis]
+- Target platform: AKS
+- Files converted: [count]
+- Success rate: [percent]
+
+## Inputs Used
+- analysis_result.md: [path]
+- design_result.md: [path]
+
+## Converted Files
+[Table: source_file | converted_file | conversion_difficulty (1-5) | status | concerns | azure_enhancements]
+- conversion_difficulty scoring:
+  - 1: Direct copy/rename (minimal changes)
+  - 2: Simple substitutions (storage class, node selectors)
+  - 3: Moderate restructuring (service type changes, volume conversions)
+  - 4: Complex transformations (identity integration, ingress patterns)
+  - 5: Complete redesign (fundamentally different patterns)
+
+## Notable Conversion Decisions
+[Bullets]
+
+## Manual Follow-ups
+[Prioritized list with P0/P1/P2/P3 prefix]
+- P0: Critical blockers preventing deployment (must resolve before any testing)
+- P1: Required for production (must resolve before go-live)
+- P2: Important optimizations (should resolve within sprint cycles)
+- P3: Nice-to-have enhancements (can defer to post-migration)
+
+[Format each item as: **P0:** Item description | **P1:** Item description | etc.]
+
+## Blockers (Open must be empty to finish)
+[If any: list blockers with id, file, symptom, owner, status(Open/Resolved/Assumed). If none: write "None".]
+
+## Expert Insights
+[Multi-paragraph consensus narrative from the conversion team]
+- Explain the conversion philosophy and approach taken (faithful vs. optimized)
+- Highlight key trade-offs and decisions made during conversion (e.g., BlobFuse2 vs SDK, AGIC vs LoadBalancer)
+- Discuss validation strategy and confidence level in the conversions
+- Address any architectural pivots from the original source patterns
+- Note areas where AKS patterns diverge significantly from source platform
+
+## Assumptions / Needs Confirmation
+[Table format for clarity]
+| Assumption | Rationale | Impact if Incorrect | What to Confirm |
+|------------|-----------|---------------------|------------------|
+| [Assumption text] | [Why we made this assumption] | [Risk/rework if wrong] | [Specific verification needed] |
+
+[If no assumptions: write "None"]
+
+## Sign-off
+Each reviewer must provide sign-off in this exact format:
+
+**[Role]:** SIGN-OFF: PASS
+[Optional notes on separate lines]
+
+OR
+
+**[Role]:** SIGN-OFF: FAIL
+[Required: specific blockers with evidence]
+
+Required sign-offs:
+- **YAML Expert:** SIGN-OFF: PASS/FAIL
+  [Notes about conversion approach and placeholder handling]
+
+- **QA Engineer:** SIGN-OFF: PASS/FAIL
+  [Notes about file validation and structural correctness]
+
+- **AKS Expert:** SIGN-OFF: PASS/FAIL
+  [Notes about AKS alignment and design compliance]
+
+- **Azure Architect:** SIGN-OFF: PASS/FAIL
+  [Notes about Azure integration and Well-Architected alignment]
+
+- **Chief Architect:** SIGN-OFF: PASS/FAIL
+  [Summary notes] **INTEGRATED: YES/NO**
+
+## References
+[List any Microsoft Learn links actually used]
+
+**URL VALIDATION REQUIREMENT (MANDATORY FOR ALL URLS)**:
+- **EVERY** URL in the References section MUST be validated with `fetch_webpage` before inclusion
+- This includes ALL `learn.microsoft.com` URLs - they can be outdated, moved, or deprecated
+- If any URL returns 404, 403, or error, use `microsoft_docs_search` to find the current correct URL
+- Verify the replacement URL with `fetch_webpage` before including it
+- Do NOT include any unverified or broken URLs in the final report
+- Do NOT append per-link validation suffixes like "- Verified January 09, 2026" to each URL. Validation is enforced by the workflow/tools, not by annotating each link.
+
+---
+*Generated by AI AKS migration agent team*
+*Report generated on: [CURRENT_TIMESTAMP]*
+
+**TIMESTAMP REQUIREMENT**:
+When saving the final report, replace `[CURRENT_TIMESTAMP]` with the actual current date and time in this format: "January 7, 2026 10:30 UTC".
+
+##final_response
+NOTE: This `##final_response` section is for the Result Generator / termination decision only.
+Participants should NOT output this JSON in their normal turns.
+
+When conversion is complete, return JSON that matches the `Yaml_ExtendedBooleanResult` schema.
+
+SUCCESS (terminate):
+{
+  "result": true,
+  "reason": "YAML conversion complete: outputs verified; QA+AKS+Azure Architect+Chief Architect sign-off PASS; no Open blockers (assumptions documented if any).",
+  "is_hard_terminated": false,
+  "termination_output": {
+    "converted_files": [],
+    "multi_dimensional_analysis": {
+      "network_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""},
+      "security_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""},
+      "storage_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""},
+      "compute_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""}
+    },
+    "overall_conversion_metrics": {
+      "total_files": 0,
+      "successful_conversions": 0,
+      "failed_conversions": 0,
+      "overall_accuracy": "",
+      "azure_compatibility": ""
+    },
+    "conversion_quality": {
+      "azure_best_practices": "",
+      "security_hardening": "",
+      "performance_optimization": "",
+      "production_readiness": ""
+    },
+    "summary": "",
+    "expert_insights": [],
+    "conversion_report_file": ""
+  },
+  "termination_type": "soft_completion",
+  "blocking_issues": []
+}
+
+CONTINUE (not done yet):
+{
+  "result": false,
+  "reason": "Conversion in progress: Open blockers or missing sign-offs; iterate until reviewers PASS and Open blockers cleared (assumptions must be documented).",
+  "is_hard_terminated": false,
+  "termination_output": null,
+  "termination_type": "soft_completion",
+  "blocking_issues": []
+}
+
+HARD BLOCKED (terminate due to blockers):
+{
+  "result": true,
+  "reason": "Conversion blocked: missing source YAML files or required inputs.",
+  "is_hard_terminated": true,
+  "termination_output": {
+    "converted_files": [],
+    "multi_dimensional_analysis": {
+      "network_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""},
+      "security_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""},
+      "storage_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""},
+      "compute_analysis": {"complexity": "", "converted_components": [], "azure_optimizations": "", "concerns": [], "success_rate": ""}
+    },
+    "overall_conversion_metrics": {
+      "total_files": 0,
+      "successful_conversions": 0,
+      "failed_conversions": 0,
+      "overall_accuracy": "0%",
+      "azure_compatibility": "0%"
+    },
+    "conversion_quality": {
+      "azure_best_practices": "Blocked",
+      "security_hardening": "Blocked",
+      "performance_optimization": "Blocked",
+      "production_readiness": "Blocked"
+    },
+    "summary": "Blocked: missing required inputs.",
+    "expert_insights": [],
+    "conversion_report_file": ""
+  },
+  "termination_type": "hard_blocked",
+  "blocking_issues": ["<blocking issue>"]
+}

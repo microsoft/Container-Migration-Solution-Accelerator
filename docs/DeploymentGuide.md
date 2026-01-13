@@ -51,7 +51,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 - [Azure App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/)
 - [Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/)
 - [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues/)
-- [o3 Model Capacity](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure)
+- [GPT-5.1 Model Capacity](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure)
 
 **Recommended Regions:** East US, East US2, Australia East, UK South, France Central
 
@@ -272,7 +272,7 @@ azd up
 **During deployment, you'll be prompted for:**
 1. **Environment name** (e.g., "conmig") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
-3. **Azure AI Foundry deployment region** - Select a region with available o3 model quota for AI operations
+3. **Azure AI Foundry deployment region** - Select a region with available GPT-5.1 model quota for AI operations
 4. **Primary location** - Select the region where your infrastructure resources will be deployed
 5. **Resource group** selection (create new or use existing)
 

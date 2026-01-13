@@ -1,0 +1,135 @@
+**ANALYSIS STEP OBJECTIVE**
+- Perform comprehensive source platform analysis and file discovery for Azure migration.
+- Persist a human-readable report named **analysis_result.md** to the Output folder **only when NOT hard-terminated**.
+- Return a structured JSON result for downstream steps.
+
+**SCOPE**
+- Container: {{container_name}}
+- Source folder: {{source_file_folder}} (READ-ONLY)
+- Output folder: {{output_file_folder}} (WRITE)
+- Workspace folder: {{workspace_file_folder}} (temporary working)
+
+**TOOLS (azure_blob_io_service)**
+Use these MCP tools as needed:
+- `list_blobs_in_container(container_name, folder_path, recursive=True)`
+- `find_blobs(pattern, container_name, folder_path, recursive=True)`
+- `read_blob_content(blob_name, container_name, folder_path)`
+- `save_content_to_blob(blob_name, content, container_name, folder_path)`
+- `check_blob_exists(blob_name, container_name, folder_path)`
+
+**DELIVERABLES**
+1) File discovery: catalog YAML/YML/JSON/config artifacts with metadata.
+2) Platform identification: definitive source platform (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s) with confidence score.
+3) Complexity assessment: network/security/storage/compute.
+4) Azure migration readiness: initial risks + recommendations.
+
+**IMMEDIATE HARD TERMINATION SCENARIOS** (evidence required)
+- `NO_YAML_FILES`, `NO_KUBERNETES_CONTENT`, `ALL_CORRUPTED`, `SECURITY_POLICY_VIOLATION`, `RAI_POLICY_VIOLATION`, `PROFANITY_DETECTED`, `MIXED_PLATFORM_DETECTED`
+
+**HARD TERMINATION EVIDENCE RULE (NON-NEGOTIABLE)**
+- If `is_hard_terminated=true`, the returned JSON `reason` MUST include a short **Evidence** section with:
+  - Which file(s) triggered the termination (blob paths under `{{source_file_folder}}`)
+  - What was detected (e.g., `kind: Secret`, suspicious key names, corrupted/empty file)
+  - For missing-file terminations, include the blob listing summary (counts + example filenames)
+- NEVER include secret values, tokens, private keys, passwords, or full base64 blobs in any output.
+
+Hard-termination handling:
+- Any participant may recommend hard termination ONLY with direct MCP tool evidence.
+- The Chief Architect is expected to lead hard-termination verification.
+- If credible tool evidence is provided, the Coordinator must stop immediately.
+
+**OUTPUT RULES (CONDITIONAL)**
+- Normal completion (no hard termination):
+  1) Create/Update **analysis_result.md** and save it to blob storage using:
+     `save_content_to_blob(blob_name="analysis_result.md", content=..., container_name="{{container_name}}", folder_path="{{output_file_folder}}")`
+  2) Verify the report exists and is non-empty using:
+     `check_blob_exists(blob_name="analysis_result.md", container_name="{{container_name}}", folder_path="{{output_file_folder}}")`
+     and (optionally) `read_blob_content(...)`.
+  3) Return structured JSON with `is_hard_terminated=false` and `output.analysis_file="{{output_file_folder}}/analysis_result.md"`.
+- Hard termination:
+  1) **DO NOT** create or overwrite **analysis_result.md**.
+  2) Return structured JSON with `is_hard_terminated=true`, `termination_type="hard_blocked"`, and `output=null`.
+
+**REQUIRED MARKDOWN REPORT STRUCTURE** (analysis_result.md)
+# Platform Analysis Report
+
+## Platform Analysis Summary
+- Process Id: {{process_id}}
+- Platform detected: <platform> (<confidence>)
+- Total files analyzed: <number>
+- Overall migration readiness: <assessment>
+
+## File Discovery and Classification
+Provide a markdown table with these columns:
+
+| filename | type | complexity | complexity_score | azure_mapping |
+
+Where:
+- complexity: qualitative description (Low/Medium/High with brief rationale)
+- complexity_score: numeric score 1-5 (1=trivial, 2=low, 3=medium, 4=high, 5=very high)
+
+## Complexity Assessment
+### Network Complexity
+### Security Complexity
+### Storage Complexity
+### Compute Complexity
+
+## Azure Migration Readiness
+### Key Concerns
+List major migration blockers, risks, and challenges with impact assessment.
+
+### Recommendations
+Provide prioritized recommendations using this structure:
+
+**Priority 0 (Pre-requisites - Must complete before migration):**
+- [Action item with clear rationale]
+
+**Priority 1 (Critical - Address during migration planning):**
+- [Action item with clear rationale]
+
+**Priority 2 (Important - Address during/after migration):**
+- [Action item with clear rationale]
+
+**Priority 3 (Optional - Optimization opportunities):**
+- [Action item with clear rationale]
+
+## Expert Insights
+Provide a consensus narrative (not just bullet points) that:
+- Summarizes how the team reached consensus on platform identification and migration approach
+- Documents key discussions, trade-offs considered, and decisions made
+- Highlights where experts agreed immediately vs. where integration/reconciliation was needed
+- Notes contributions from Chief Architect, detected platform expert, and AKS Expert
+
+## Assumptions
+Document any assumptions made during analysis where concrete information was unavailable:
+
+| Assumption | Rationale | Impact if incorrect | What to confirm |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+If no assumptions were made, state "None - all analysis based on discovered artifacts and documented evidence."
+
+## Sign-off
+Each reviewer must provide sign-off in this exact format:
+
+**[Role]:** SIGN-OFF: PASS
+[Optional notes on separate lines]
+
+OR
+
+**[Role]:** SIGN-OFF: FAIL
+[Required: specific blockers with evidence and acceptance criteria]
+
+Required sign-offs:
+- **Chief Architect:** SIGN-OFF: PASS/FAIL
+- **Source Platform Expert** (matching the detected platform): SIGN-OFF: PASS/FAIL
+- **AKS Expert:** SIGN-OFF: PASS/FAIL
+
+**REPORT MUST INCLUDE CONSISTENT FOOTER WITH TIMESTAMP**:
+When saving the final `analysis_result.md`, replace `[CURRENT_TIMESTAMP]` with the actual current date and time in this format: "January 7, 2026 10:30 UTC".
+
+```
+---
+*Generated by AI AKS migration agent team*
+*Report generated on: [CURRENT_TIMESTAMP]*
+```
