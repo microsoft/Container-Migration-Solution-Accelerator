@@ -12,12 +12,12 @@ This guide walks you through deploying the Container Migration Solution Accelera
 
 Ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the following permissions:
 
-| **Required Permission/Role** | **Scope** | **Purpose** |
-|------------------------------|-----------|-------------|
-| **Contributor** | Subscription level | Create and manage Azure resources |
-| **User Access Administrator** | Subscription level | Manage user access and role assignments |
-| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions |
-| **App Registration Creation** | Azure Active Directory | Create and configure authentication |
+| **Required Permission/Role**  | **Scope**                         | **Purpose**                             |
+| ----------------------------- | --------------------------------- | --------------------------------------- |
+| **Contributor**               | Subscription level                | Create and manage Azure resources       |
+| **User Access Administrator** | Subscription level                | Manage user access and role assignments |
+| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions              |
+| **App Registration Creation** | Azure Active Directory            | Create and configure authentication     |
 
 **🔍 How to Check Your Permissions:**
 
@@ -77,12 +77,12 @@ Select one of the following options to deploy the Container Migration Solution A
 
 ### Environment Comparison
 
-| **Option** | **Best For** | **Prerequisites** | **Setup Time** |
-|------------|--------------|-------------------|----------------|
-| **GitHub Codespaces** | Quick deployment, no local setup required | GitHub account | ~3-5 minutes |
-| **VS Code Dev Containers** | Fast deployment with local tools | Docker Desktop, VS Code | ~5-10 minutes |
-| **VS Code Web** | Quick deployment, no local setup required | Azure account | ~2-4 minutes |
-| **Local Environment** | Enterprise environments, full control | All tools individually | ~15-30 minutes |
+| **Option**                 | **Best For**                              | **Prerequisites**       | **Setup Time** |
+| -------------------------- | ----------------------------------------- | ----------------------- | -------------- |
+| **GitHub Codespaces**      | Quick deployment, no local setup required | GitHub account          | ~3-5 minutes   |
+| **VS Code Dev Containers** | Fast deployment with local tools          | Docker Desktop, VS Code | ~5-10 minutes  |
+| **VS Code Web**            | Quick deployment, no local setup required | Azure account           | ~2-4 minutes   |
+| **Local Environment**      | Enterprise environments, full control     | All tools individually  | ~15-30 minutes |
 
 **💡 Recommendation:** For fastest deployment, start with **GitHub Codespaces** - no local installation required.
 
@@ -174,14 +174,14 @@ Review the configuration options below. You can customize any settings that meet
 
 ### 3.1 Choose Deployment Type (Optional)
 
-| **Aspect** | **Development/Testing (Default)** | **Production** |
-|------------|-----------------------------------|----------------|
-| **Configuration File** | `main.parameters.json` (sandbox) | Copy `main.waf.parameters.json` to `main.parameters.json` |
-| **Security Controls** | Minimal (for rapid iteration) | Enhanced (production best practices) |
-| **Cost** | Lower costs | Cost optimized |
-| **Use Case** | POCs, development, testing | Production workloads |
-| **Framework** | Basic configuration | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
-| **Features** | Core functionality | Reliability, security, operational excellence |
+| **Aspect**             | **Development/Testing (Default)** | **Production**                                                                          |
+| ---------------------- | --------------------------------- | --------------------------------------------------------------------------------------- |
+| **Configuration File** | `main.parameters.json` (sandbox)  | Copy `main.waf.parameters.json` to `main.parameters.json`                               |
+| **Security Controls**  | Minimal (for rapid iteration)     | Enhanced (production best practices)                                                    |
+| **Cost**               | Lower costs                       | Cost optimized                                                                          |
+| **Use Case**           | POCs, development, testing        | Production workloads                                                                    |
+| **Framework**          | Basic configuration               | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
+| **Features**           | Core functionality                | Reliability, security, operational excellence                                           |
 
 **To use production configuration:**
 

@@ -118,13 +118,13 @@ To deploy this solution accelerator, ensure you have access to an [Azure subscri
 
 **Required Azure Services:**
 
-| Service                 | Description                                                                                 | Pricing                                                                                   |
-| ----------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Service                 | Description                                                                       | Pricing                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Azure OpenAI Service    | Provides REST API access to the GPT-5.1 model for advanced reasoning and analysis | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
-| Azure Container Apps    | Runs containerized migration processor without managing infrastructure                      | [Pricing](https://azure.microsoft.com/pricing/details/container-apps/)                    |
-| Azure Blob Storage      | Stores source configurations, processed files, and migration reports                        | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)                     |
-| Azure App Configuration | Manages application settings and agent configurations                                       | [Pricing](https://azure.microsoft.com/pricing/details/app-configuration/)                 |
-| Azure Queue Storage     | Handles event-driven processing and agent communication                                     | [Pricing](https://azure.microsoft.com/pricing/details/storage/queues/)                    |
+| Azure Container Apps    | Runs containerized migration processor without managing infrastructure            | [Pricing](https://azure.microsoft.com/pricing/details/container-apps/)                    |
+| Azure Blob Storage      | Stores source configurations, processed files, and migration reports              | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)                     |
+| Azure App Configuration | Manages application settings and agent configurations                             | [Pricing](https://azure.microsoft.com/pricing/details/app-configuration/)                 |
+| Azure Queue Storage     | Handles event-driven processing and agent communication                           | [Pricing](https://azure.microsoft.com/pricing/details/storage/queues/)                    |
 
 Pricing varies per region and usage, so it isn't possible to predict exact costs for your usage. The majority of the Azure resources used in this infrastructure are on usage-based pricing tiers.
 

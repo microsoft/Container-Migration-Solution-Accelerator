@@ -6,20 +6,20 @@ By default this template will use the environment name as the prefix to prevent 
 
 ## Parameters
 
-| Name                            | Type    | Example Value           | Purpose                                                                               |
-| ------------------------------- | ------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| `AZURE_ENV_NAME`                | string  | `conmig`                | Sets the environment name prefix for all Azure resources.                             |
-| `AZURE_LOCATION`                | string  | `westus`                | Sets the location/region for all Azure resources.                                     |
-| `AZURE_SECONDARY_LOCATION`      | string  | `eastus2`               | Specifies a secondary Azure region.                                                   |
-| `AZURE_CONTAINER_REGISTRY_HOST` | string  | `myregistry.azurecr.io` | Specifies the container registry from which to pull app container images.             |
-| `AZURE_AI_DEPLOYMENT_LOCATION`  | string  | `eastus2`               | Specifies alternative location for AI model resources.                                |
-| `AZURE_AI_DEPLOYMENT_TYPE`      | string  | `GlobalStandard`        | Defines the model deployment type (allowed values: `Standard`, `GlobalStandard`).     |
-| `AZURE_AI_MODEL_NAME`           | string  | `gpt-5.1`               | Specifies the Azure OpenAI model name to deploy.                                      |
-| `AZURE_AI_MODEL_VERSION`        | string  | `your-model-version`    | Specifies the model version (use a version available in your region/subscription).   |
-| `AZURE_AI_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available quota).       |
-| `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                   |
-| `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                   |
-| `AZURE_ENV_IMAGETAG`            | string  | `latest`                | Specifies the container image tag to use for deployment.                              |
+| Name                            | Type    | Example Value           | Purpose                                                                            |
+| ------------------------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| `AZURE_ENV_NAME`                | string  | `conmig`                | Sets the environment name prefix for all Azure resources.                          |
+| `AZURE_LOCATION`                | string  | `westus`                | Sets the location/region for all Azure resources.                                  |
+| `AZURE_SECONDARY_LOCATION`      | string  | `eastus2`               | Specifies a secondary Azure region.                                                |
+| `AZURE_CONTAINER_REGISTRY_HOST` | string  | `myregistry.azurecr.io` | Specifies the container registry from which to pull app container images.          |
+| `AZURE_AI_DEPLOYMENT_LOCATION`  | string  | `eastus2`               | Specifies alternative location for AI model resources.                             |
+| `AZURE_AI_DEPLOYMENT_TYPE`      | string  | `GlobalStandard`        | Defines the model deployment type (allowed values: `Standard`, `GlobalStandard`).  |
+| `AZURE_AI_MODEL_NAME`           | string  | `gpt-5.1`               | Specifies the Azure OpenAI model name to deploy.                                   |
+| `AZURE_AI_MODEL_VERSION`        | string  | `your-model-version`    | Specifies the model version (use a version available in your region/subscription). |
+| `AZURE_AI_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available quota).     |
+| `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                |
+| `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                |
+| `AZURE_ENV_IMAGETAG`            | string  | `latest`                | Specifies the container image tag to use for deployment.                           |
 
 ## How to Set a Parameter
 
