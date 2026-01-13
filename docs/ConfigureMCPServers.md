@@ -300,14 +300,14 @@ The MCP servers integrate into the migration workflow as follows:
 
 Each expert agent uses specific MCP servers:
 
-| Agent                   | MCP Tools Available                                    | Use Cases                                                    |
-| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
-| **Technical Architect** | docs, fetch, blob, datetime                            | Architecture analysis, best practices research               |
-| **Azure Architect**     | docs, fetch, blob, datetime                            | Azure-specific optimizations, service documentation          |
+| Agent                                                           | MCP Tools Available                                    | Use Cases                                                    |
+| --------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| **Technical Architect**                                         | docs, fetch, blob, datetime                            | Architecture analysis, best practices research               |
+| **Azure Architect**                                             | docs, fetch, blob, datetime                            | Azure-specific optimizations, service documentation          |
 | **Platform Expert (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)** | docs, fetch, blob, datetime                            | Source platform analysis, migration patterns                 |
-| **YAML Expert**         | docs, fetch, blob, datetime                            | Configuration conversion, YAML validation                    |
-| **QA Engineer**         | docs, fetch, blob, datetime                            | Quality assurance, testing validation                        |
-| **Technical Writer**    | docs, fetch, blob, datetime, yaml-inventory (doc step) | Documentation generation, runbook artifacts, report creation |
+| **YAML Expert**                                                 | docs, fetch, blob, datetime                            | Configuration conversion, YAML validation                    |
+| **QA Engineer**                                                 | docs, fetch, blob, datetime                            | Quality assurance, testing validation                        |
+| **Technical Writer**                                            | docs, fetch, blob, datetime, yaml-inventory (doc step) | Documentation generation, runbook artifacts, report creation |
 
 ## Creating Custom MCP Servers (FastMCP + Agent Framework tools)
 

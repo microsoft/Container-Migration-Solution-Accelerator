@@ -581,11 +581,11 @@ Before using the application, confirm all three services are running in separate
 
 ### Terminal Status Checklist
 
-| Terminal | Service | Command | Expected Output | URL |
-|----------|---------|---------|-----------------|-----|
-| **Terminal 1** | Processor (Queue Mode) | `python -m main_service` | `INFO: No messages in main queue` (repeating every 5s) | N/A |
-| **Terminal 2** | Backend API | `python -m uvicorn main:app --reload` | `INFO: Application startup complete` | http://localhost:8000 |
-| **Terminal 3** | Frontend | `npm run dev` | `Local: http://localhost:5173/` | http://localhost:5173 |
+| Terminal       | Service                | Command                               | Expected Output                                        | URL                   |
+| -------------- | ---------------------- | ------------------------------------- | ------------------------------------------------------ | --------------------- |
+| **Terminal 1** | Processor (Queue Mode) | `python -m main_service`              | `INFO: No messages in main queue` (repeating every 5s) | N/A                   |
+| **Terminal 2** | Backend API            | `python -m uvicorn main:app --reload` | `INFO: Application startup complete`                   | http://localhost:8000 |
+| **Terminal 3** | Frontend               | `npm run dev`                         | `Local: http://localhost:5173/`                        | http://localhost:5173 |
 
 ### Quick Verification
 
