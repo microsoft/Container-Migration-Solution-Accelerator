@@ -317,18 +317,6 @@ The subscription 'xxxx-xxxx' cannot have more than 1 Container App Environments 
 
 </details>
 
-<details><summary><b>Conflict - Cannot use the SKU Basic with File Change Audit for site.</b></summary>
-
-- This error happens because File Change Audit logs aren’t supported on Basic SKU App Service Plans.
-
-- Upgrading to Premium/Isolated SKU (supports File Change Audit), or
-
-- Disabling File Change Audit in Diagnostic Settings if you must stay on Basic.
-- Always cross-check the [supported log types](https://aka.ms/supported-log-types)
-  before adding diagnostic logs to your Bicep templates.
-
-</details>
-
 <details>
 
 <summary><b>AccountPropertyCannotBeUpdated</b></summary>

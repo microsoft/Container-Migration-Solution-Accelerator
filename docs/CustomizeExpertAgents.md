@@ -14,8 +14,12 @@ The solution includes these expert agents:
 
 - **Technical Architect**: Overall architecture analysis and design decisions
 - **Azure Architect / AKS Expert**: Azure-specific optimizations and Well-Architected Framework compliance
-- **GKE Expert**: Google Kubernetes Engine specific knowledge and migration patterns
+- **GKE Expert**: Google Kubernetes Engine (GKE/Anthos) specific knowledge and migration patterns
 - **EKS Expert**: Amazon Elastic Kubernetes Service expertise and AWS-to-Azure translations
+- **OpenShift Expert**: Red Hat OpenShift specific knowledge and migration patterns
+- **Rancher Expert**: Rancher/RKE/RKE2/K3s specific knowledge and migration patterns
+- **Tanzu Expert**: VMware Tanzu/TKG specific knowledge and migration patterns
+- **OnPremK8s Expert**: Self-managed/on-prem Kubernetes migration patterns
 - **QA Engineer**: Validation, testing strategies, and quality assurance
 - **YAML Expert**: Configuration transformation and syntax optimization
 
@@ -33,10 +37,10 @@ In the current processor implementation, “expert agents” are configured prim
 
 Add your expert prompt file to the step(s) it should participate in:
 
-- Analysis: `src/processor/src/steps/analysis/agents/`
-- Design: `src/processor/src/steps/design/agents/`
-- YAML conversion: `src/processor/src/steps/convert/agents/`
-- Documentation: `src/processor/src/steps/documentation/agents/`
+- Analysis: [src/processor/src/steps/analysis/agents/](../src/processor/src/steps/analysis/agents/)
+- Design: [src/processor/src/steps/design/agents/](../src/processor/src/steps/design/agents/)
+- YAML conversion: [src/processor/src/steps/convert/agents/](../src/processor/src/steps/convert/agents/)
+- Documentation: [src/processor/src/steps/documentation/agents/](../src/processor/src/steps/documentation/agents/)
 
 Use the existing prompt files in those folders as templates.
 
@@ -44,7 +48,7 @@ Use the existing prompt files in those folders as templates.
 
 Analysis experts are loaded dynamically from:
 
-- `src/processor/src/steps/analysis/orchestration/platform_registry.json`
+- [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json)
 
 Add your expert there to have it participate in the analysis phase.
 
@@ -58,20 +62,20 @@ Add your agent to the appropriate step orchestrator so it participates in the gr
 
 The processor uses step-level orchestrators under:
 
-- `src/processor/src/steps/analysis/orchestration/`
-- `src/processor/src/steps/design/orchestration/`
-- `src/processor/src/steps/convert/orchestration/`
-- `src/processor/src/steps/documentation/orchestration/`
+- [src/processor/src/steps/analysis/orchestration/](../src/processor/src/steps/analysis/orchestration/)
+- [src/processor/src/steps/design/orchestration/](../src/processor/src/steps/design/orchestration/)
+- [src/processor/src/steps/convert/orchestration/](../src/processor/src/steps/convert/orchestration/)
+- [src/processor/src/steps/documentation/orchestration/](../src/processor/src/steps/documentation/orchestration/)
 
 Each orchestrator builds its agent set using `AgentInfo` objects and runs a `GroupChatOrchestrator`.
 
 **Analysis phase (platform experts)** is registry-driven via:
 
-- `src/processor/src/steps/analysis/orchestration/platform_registry.json`
+- [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json)
 
 To add a new analysis expert:
 
-1. Add a new prompt file under `src/processor/src/steps/analysis/agents/`
+1. Add a new prompt file under [src/processor/src/steps/analysis/agents/](../src/processor/src/steps/analysis/agents/)
 2. Add an entry to `platform_registry.json` pointing at the prompt file and desired `agent_name`
 
 For other phases, add a new `AgentInfo(...)` entry in the relevant orchestrator’s `prepare_agent_infos()` implementation.
@@ -137,7 +141,7 @@ The actual implementation supports conditional agent inclusion. Study the existi
 - YAML phase includes transformation specialists
 - Documentation phase involves technical writers
 
-Refer to the actual orchestration implementations in `src/processor/src/steps/**/orchestration/` for patterns.
+Refer to the actual orchestration implementations in `src/processor/src/steps/**/orchestration/` for patterns (under [src/processor/src/steps/](../src/processor/src/steps/)).
 
 ## Troubleshooting
 
@@ -159,9 +163,9 @@ Refer to the actual orchestration implementations in `src/processor/src/steps/**
 
 Study the existing expert prompts and orchestrators in your codebase for real patterns:
 
-- Prompt files: `src/processor/src/steps/**/agents/`
-- Analysis expert registry: `src/processor/src/steps/analysis/orchestration/platform_registry.json`
-- Orchestrators: `src/processor/src/steps/**/orchestration/`
+- Prompt files: `src/processor/src/steps/**/agents/` (under [src/processor/src/steps/](../src/processor/src/steps/))
+- Analysis expert registry: [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json)
+- Orchestrators: `src/processor/src/steps/**/orchestration/` (under [src/processor/src/steps/](../src/processor/src/steps/))
 
 These provide tested patterns for implementing custom expert agents in your migration solution.
 

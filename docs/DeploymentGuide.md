@@ -310,7 +310,7 @@ After successful deployment:
 Follow the detailed workflow to test the migration functionality:
 
 **Quick Test Steps:**
-1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples)
+1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples). You can also upload manifests from other supported source platforms (e.g., OpenShift/Rancher/Tanzu/on-prem Kubernetes).
 2. Upload the files to the application
 3. Click **Start Processing** to begin the migration
 4. Monitor the batch processing status (typically takes 20-30 minutes)

@@ -1,6 +1,6 @@
 # Extending Platform Support
 
-This guide explains how to extend the Container Migration Solution Accelerator to support additional source platforms beyond EKS and GKE, and provides comprehensive setup instructions for different development environments including Windows, Linux, and macOS.
+This guide explains how to extend the Container Migration Solution Accelerator to support additional source Kubernetes platforms/distributions (including enterprise and on-prem/self-managed environments), and provides comprehensive setup instructions for different development environments including Windows, Linux, and macOS.
 
 ## Overview
 
@@ -22,8 +22,12 @@ The solution is designed with a modular architecture that makes it relatively st
 The solution currently supports:
 
 - **Amazon EKS**: Full migration support with AWS-specific service mapping
-- **Google GKE**: Complete GKE to AKS transformation capabilities
-- **Generic Kubernetes**: Basic Kubernetes workload migration
+- **Google GKE/Anthos**: GKE/Anthos to AKS transformation capabilities
+- **Red Hat OpenShift**: OpenShift-aware analysis and migration guidance
+- **Rancher (RKE/RKE2/K3s)**: Rancher-aware analysis and migration guidance
+- **VMware Tanzu (TKG/TKGS)**: Tanzu-aware analysis and migration guidance
+- **Self-managed / On-prem Kubernetes**: On-prem-aware analysis and migration guidance
+- **Generic Kubernetes**: Baseline Kubernetes workload migration
 
 ### Platform Detection System
 
@@ -83,9 +87,9 @@ edit src/processor/src/steps/analysis/orchestration/platform_registry.json
 
 For other phases, add corresponding prompt files under:
 
-- `src/processor/src/steps/design/agents/`
-- `src/processor/src/steps/convert/agents/`
-- `src/processor/src/steps/documentation/agents/`
+- [src/processor/src/steps/design/agents/](../src/processor/src/steps/design/agents/)
+- [src/processor/src/steps/convert/agents/](../src/processor/src/steps/convert/agents/)
+- [src/processor/src/steps/documentation/agents/](../src/processor/src/steps/documentation/agents/)
 
 #### How Platform Detection Really Works
 
@@ -93,23 +97,17 @@ Your codebase uses **intelligent multi-agent conversation** for platform detecti
 
 ```python
 # Real platform detection flow (from analysis_orchestration.py)
-# 1. Multi-agent team collaborates: Technical Architect + EKS Expert + GKE Expert
+# 1. Multi-agent team collaborates: Technical Architect + one or more platform experts (registry-driven)
 # 2. Agents examine YAML files and discuss findings through conversation
 # 3. Expert consensus emerges through collaborative analysis
 # 4. Result captured in termination_output.platform_detected
 
-# Current agent team structure (analysis_orchestration.py):
-from agents.technical_architect.agent_info import get_agent_info as architect_agent
-from agents.eks_expert.agent_info import get_agent_info as eks_expert  
-from agents.gke_expert.agent_info import get_agent_info as gke_expert
-
-# Agent creation with phase-specific prompts:
-architect_config = architect_agent(phase=MigrationPhase.ANALYSIS)
-eks_config = eks_expert(phase=MigrationPhase.ANALYSIS)
-gke_config = gke_expert(phase=MigrationPhase.ANALYSIS)
+# Current agent team structure (analysis_orchestrator.py):
+# - Technical Architect (orchestrates analysis)
+# - Platform experts loaded from `platform_registry.json` (e.g., EKS, GKE/Anthos, OpenShift, Rancher, Tanzu, OnPremK8s)
 
 # Result structure:
-platform_detected: str = Field(description="Platform detected (EKS or GKE only)")
+platform_detected: str = Field(description="Platform detected (e.g., EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)")
 confidence_score: str = Field(description="Confidence score for platform detection (e.g., '95%')")
 ```
 
@@ -129,9 +127,8 @@ To add OpenShift support, you would register the new expert in the analysis orch
 
 # The multi-agent conversation will then include:
 # - Technical Architect (orchestrates analysis)
-# - EKS Expert (recognizes AWS/EKS patterns)
-# - GKE Expert (recognizes GCP/GKE patterns)  
-# - OpenShift Expert (recognizes OpenShift-specific patterns)
+# - One or more platform experts selected via registry signals
+#   (e.g., EKS, GKE/Anthos, OpenShift, Rancher, Tanzu, OnPremK8s)
 ```
 
 ### Step-by-Step Implementation Guide
@@ -202,8 +199,8 @@ When adding new platform support, ensure proper agent registration in the orches
 
 For the analysis phase, register your new platform expert by:
 
-1. Adding a new prompt file under `src/processor/src/steps/analysis/agents/`
-2. Adding an entry to `src/processor/src/steps/analysis/orchestration/platform_registry.json`
+1. Adding a new prompt file under [src/processor/src/steps/analysis/agents/](../src/processor/src/steps/analysis/agents/)
+2. Adding an entry to [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json)
 
 For other phases, update the relevant step orchestrator’s `prepare_agent_infos()` to include a new `AgentInfo`.
 
@@ -225,7 +222,7 @@ Integrate your new platform expert into the actual analysis orchestration:
 
 **Key Points:**
 
-- Analysis experts are loaded from `platform_registry.json` (config-driven)
+- Analysis experts are loaded from [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json) (config-driven)
 - Each agent gets MCP tool access via the step orchestrator’s `self.mcp_tools`
 - Prompts are rendered from files under the step’s `agents/` directory
 
@@ -334,7 +331,7 @@ def test_platform_prompt_file_exists():
 
 
 # Run tests using existing test framework:
-# uv run python -m pytest src/processor/src/tests/unit -v
+# uv run --prerelease=allow python -m pytest src/processor/src/tests/unit -v
 ```
 
 ## Troubleshooting Platform Extensions

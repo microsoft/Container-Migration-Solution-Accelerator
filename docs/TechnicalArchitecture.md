@@ -58,8 +58,8 @@ The processor runs as a queue-driven worker in hosted scenarios.
 
 **Implementation Locations:**
 
-- `src/processor/src/main_service.py`
-- `src/processor/src/services/queue_service.py`
+- [src/processor/src/main_service.py](../src/processor/src/main_service.py)
+- [src/processor/src/services/queue_service.py](../src/processor/src/services/queue_service.py)
 
 **Operational Notes:**
 
@@ -71,8 +71,8 @@ The processor exposes a lightweight control surface for health and termination.
 
 **Implementation Locations:**
 
-- `src/processor/src/services/control_api.py`
-- `src/processor/src/services/process_control.py`
+- [src/processor/src/services/control_api.py](../src/processor/src/services/control_api.py)
+- [src/processor/src/services/process_control.py](../src/processor/src/services/process_control.py)
 
 ### 3. Workflow Engine (Microsoft Agent Framework)
 
@@ -84,7 +84,7 @@ The migration pipeline is defined as an Agent Framework workflow built via `Work
 
 **Implementation Location:**
 
-- `src/processor/src/steps/migration_processor.py`
+- [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py)
 
 ### 4. Multi-Agent Orchestration
 
@@ -98,10 +98,10 @@ Steps that require multi-agent reasoning use a group chat style orchestrator.
 
 **Implementation Locations:**
 
-- `src/processor/src/libs/agent_framework/groupchat_orchestrator.py`
-- `src/processor/src/libs/agent_framework/agent_builder.py`
-- `src/processor/src/libs/agent_framework/agent_info.py`
-- Platform expert registry: `src/processor/src/steps/analysis/orchestration/platform_registry.json`
+- [src/processor/src/libs/agent_framework/groupchat_orchestrator.py](../src/processor/src/libs/agent_framework/groupchat_orchestrator.py)
+- [src/processor/src/libs/agent_framework/agent_builder.py](../src/processor/src/libs/agent_framework/agent_builder.py)
+- [src/processor/src/libs/agent_framework/agent_info.py](../src/processor/src/libs/agent_framework/agent_info.py)
+- Platform expert registry: [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json)
 
 ### 5. MCP Tool Integration (Agent Framework Tools)
 
@@ -109,11 +109,11 @@ Tools are exposed to agents using Agent Framework tool abstractions, including M
 
 **Processor MCP tools:**
 
-- `src/processor/src/libs/mcp_server/MCPBlobIOTool.py`
-- `src/processor/src/libs/mcp_server/MCPMicrosoftDocs.py`
-- `src/processor/src/libs/mcp_server/MCPMermaidTool.py`
-- `src/processor/src/libs/mcp_server/MCPDatetimeTool.py`
-- `src/processor/src/libs/mcp_server/MCPYamlInventoryTool.py`
+- [src/processor/src/libs/mcp_server/MCPBlobIOTool.py](../src/processor/src/libs/mcp_server/MCPBlobIOTool.py)
+- [src/processor/src/libs/mcp_server/MCPMicrosoftDocs.py](../src/processor/src/libs/mcp_server/MCPMicrosoftDocs.py)
+- [src/processor/src/libs/mcp_server/MCPMermaidTool.py](../src/processor/src/libs/mcp_server/MCPMermaidTool.py)
+- [src/processor/src/libs/mcp_server/MCPDatetimeTool.py](../src/processor/src/libs/mcp_server/MCPDatetimeTool.py)
+- [src/processor/src/libs/mcp_server/MCPYamlInventoryTool.py](../src/processor/src/libs/mcp_server/MCPYamlInventoryTool.py)
 
 ## Technology Stack (Processor)
 

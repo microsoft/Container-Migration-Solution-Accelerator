@@ -47,7 +47,7 @@ src/processor/src/libs/mcp_server/
 - **Tool Wrapper Files**: Agent Framework MCP tools (stdio/http) used by agents and orchestrators
 - **Server Implementation Folders**: FastMCP server implementations that provide the tool endpoints
 - **Credential Utilities**: Shared authentication and credential management for Azure services
-- **Process Architecture**: MCP tools spawn server processes using `uv run`/`uvx` for isolated execution
+- **Process Architecture**: MCP tools spawn server processes using `uv run --prerelease=allow`/`uvx` for isolated execution
 
 The processor also uses a standard Fetch MCP server (installed/executed via `uvx mcp-server-fetch`) that is not implemented in this repository.
 
@@ -304,7 +304,7 @@ Each expert agent uses specific MCP servers:
 | ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
 | **Technical Architect** | docs, fetch, blob, datetime                            | Architecture analysis, best practices research               |
 | **Azure Architect**     | docs, fetch, blob, datetime                            | Azure-specific optimizations, service documentation          |
-| **EKS/GKE Expert**      | docs, fetch, blob, datetime                            | Source platform analysis, migration patterns                 |
+| **Platform Expert (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)** | docs, fetch, blob, datetime                            | Source platform analysis, migration patterns                 |
 | **YAML Expert**         | docs, fetch, blob, datetime                            | Configuration conversion, YAML validation                    |
 | **QA Engineer**         | docs, fetch, blob, datetime                            | Quality assurance, testing validation                        |
 | **Technical Writer**    | docs, fetch, blob, datetime, yaml-inventory (doc step) | Documentation generation, runbook artifacts, report creation |
@@ -464,7 +464,7 @@ uv --version
 
 # Test MCP server directly
 cd src/processor/src/libs/mcp_server/blob_io_operation
-uv run mcp_blob_io_operation.py
+uv run --prerelease=allow mcp_blob_io_operation.py
 
 # Check Python environment
 python --version
@@ -499,7 +499,7 @@ python -c "from agent_framework import MCPStreamableHTTPTool; print('MCP support
 
 - ✅ Internet connectivity available
 - ✅ No firewall blocking HTTP requests
-- ✅ Agent Framework dependencies installed (see `src/processor/pyproject.toml`)
+- ✅ Agent Framework dependencies installed (see [src/processor/pyproject.toml](../src/processor/pyproject.toml))
 
 For additional information, refer to:
 

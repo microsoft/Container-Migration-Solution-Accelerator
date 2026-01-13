@@ -8,6 +8,18 @@ The Container Migration Solution Accelerator uses a multi-agent orchestration ap
 
 ## Agent Roles
 
+### Platform Experts (Source Kubernetes)
+
+Platform experts provide source-platform-specific context and are selected dynamically based on platform signals detected during analysis (registry-driven). Built-in examples include **EKS**, **GKE/Anthos**, **OpenShift**, **Rancher (RKE/RKE2/K3s)**, **VMware Tanzu**, and **self-managed/on-prem Kubernetes**.
+
+### EKS Expert
+
+- **Role**: Amazon EKS migration expertise
+- **Responsibilities**:
+  - EKS workload analysis
+  - AWS service mapping (IAM/IRSA, ELB/ALB patterns, EBS/EFS)
+  - AWS-to-Azure translations
+
 ### GKE Expert
 
 - **Role**: Google GKE migration expertise
@@ -17,6 +29,34 @@ The Container Migration Solution Accelerator uses a multi-agent orchestration ap
   - Container migration from GCR
   - Network policy transformation
   - Identity and access management
+
+### OpenShift Expert
+
+- **Role**: Red Hat OpenShift migration expertise
+- **Responsibilities**:
+  - OpenShift resource detection (Routes, SCC, Operators)
+  - OpenShift-to-AKS mapping guidance
+
+### Rancher Expert
+
+- **Role**: Rancher/RKE migration expertise
+- **Responsibilities**:
+  - Rancher-managed cluster patterns (Fleet, Projects/RBAC)
+  - GitOps and multi-cluster management mapping
+
+### Tanzu Expert
+
+- **Role**: VMware Tanzu/TKG migration expertise
+- **Responsibilities**:
+  - Tanzu/TKG-specific identity and networking patterns
+  - Migration considerations for vSphere integration
+
+### OnPremK8s Expert
+
+- **Role**: Self-managed/on-prem Kubernetes migration expertise
+- **Responsibilities**:
+  - Common on-prem dependencies (ingress/LB, storage, identity)
+  - On-prem-to-AKS modernization considerations
 
 ### 3. Quality and Documentation Agents
 
@@ -62,7 +102,7 @@ Each migration step owns an orchestrator class responsible for:
 - Loading and rendering agent prompt files
 - Running the multi-agent conversation via `GroupChatOrchestrator`
 
-Example (simplified; see `src/processor/src/steps/*/orchestration/*_orchestrator.py`):
+Example (simplified; see `src/processor/src/steps/*/orchestration/*_orchestrator.py` under [src/processor/src/steps/](../src/processor/src/steps/)):
 
 ```python
 from libs.agent_framework.groupchat_orchestrator import GroupChatOrchestrator
@@ -96,11 +136,11 @@ class SomeStepOrchestrator:
 
 The processor integrates MCP servers as Agent Framework tools. Typical tools include:
 
-- Microsoft Learn MCP (HTTP)
-- Fetch MCP tool (stdio)
-- Blob IO (internal MCP wrapper)
-- DateTime
-- YAML inventory generation (to ground runbooks in real converted objects)
+- `Microsoft Learn MCP` (HTTP)
+- `Fetch MCP Tool` (stdio)
+- `azure_blob_io_service` (Blob IO operations; internal MCP wrapper)
+- `datetime_service` (timestamps/time-window logic)
+- `yaml_inventory_service` (ground runbooks in real converted objects)
 
 ### 3. Platform-Specific Experts (Registry Driven)
 

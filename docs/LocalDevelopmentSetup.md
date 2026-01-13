@@ -62,9 +62,9 @@ cd path/to/Container-Migration-Solution-Accelerator
 
 This project uses separate `.env` files in each service directory with different configuration requirements:
 
-- **Processor**: `src/processor/src/.env` - Azure App Configuration URL
-- **Backend API**: `src/backend-api/src/app/.env` - Azure App Configuration URL  
-- **Frontend**: `src/frontend/.env` - Azure AD authentication settings
+- **Processor**: `.env` under [src/processor/src/](../src/processor/src/) - Azure App Configuration URL
+- **Backend API**: `.env` under [src/backend-api/src/app/](../src/backend-api/src/app/) - Azure App Configuration URL  
+- **Frontend**: `.env` under [src/frontend/](../src/frontend/) - Azure AD authentication settings
 
 When copying `.env` samples, always navigate to the specific service directory first.
 
@@ -256,7 +256,7 @@ cd src/processor
 
 ### 4.2. Configure Processor Environment Variables
 
-Create a `.env` file in the `src/processor/src` directory (NOT in `src/processor` root):
+Create a `.env` file in the [src/processor/src/](../src/processor/src/) directory (NOT in [src/processor/](../src/processor/) root):
 
 ```bash
 cd src
@@ -272,7 +272,7 @@ Add the following to the `.env` file:
 APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
 ```
 
-> **⚠️ Important**: The `.env` file must be located in `src/processor/src/` directory, not in `src/processor/` root. The application looks for the `.env` file in the same directory as `main.py` and `main_service.py`.
+> **⚠️ Important**: The `.env` file must be located in [src/processor/src/](../src/processor/src/) directory, not in [src/processor/](../src/processor/) root. The application looks for the `.env` file in the same directory as `main.py` and `main_service.py`.
 
 ### 4.3. Install Processor Dependencies
 
@@ -286,7 +286,7 @@ source .venv/bin/activate  # Linux/WSL2
 .\.venv\Scripts\Activate.ps1  # Windows PowerShell
 
 # Install dependencies
-uv sync --python 3.12
+uv sync --python 3.12 --prerelease=allow
 ```
 
 **Windows users**: If you encounter issues with the `uv` command not being found, use the Python Launcher instead:
@@ -296,10 +296,10 @@ uv sync --python 3.12
 py -3.12 -m uv venv .venv
 
 # Install dependencies
-py -3.12 -m uv sync
+py -3.12 -m uv sync --prerelease=allow
 ```
 
-> **⚠️ Important**: Always run `uv sync` (or `py -3.12 -m uv sync` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
+> **⚠️ Important**: This repo currently depends on a prerelease/dev version of Microsoft Agent Framework. Always run `uv sync --prerelease=allow` (or `py -3.12 -m uv sync --prerelease=allow` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
 
 ### 4.4. Run the Processor
 
@@ -363,7 +363,7 @@ cd src/backend-api
 
 ### 5.2. Configure Backend API Environment Variables
 
-Create a `.env` file in the `src/backend-api/src/app` directory:
+Create a `.env` file in the [src/backend-api/src/app/](../src/backend-api/src/app/) directory:
 
 ```bash
 cd src/app
@@ -391,7 +391,7 @@ source .venv/bin/activate  # Linux/WSL2
 .\.venv\Scripts\Activate.ps1  # Windows PowerShell
 
 # Install dependencies
-uv sync --python 3.12
+uv sync --python 3.12 --prerelease=allow
 ```
 
 ### 5.4. Run the Backend API
@@ -412,7 +412,7 @@ The Backend API will start at:
 
 > **📋 Terminal Reminder**: Open a **third dedicated terminal window (Terminal 3)** for the Frontend. Keep Terminals 1 (Processor) and 2 (Backend API) running. All commands assume you start from the **repository root directory**.
 
-The UI is located under `src/frontend`.
+The UI is located under [src/frontend/](../src/frontend/).
 
 ### 6.1. Navigate to Frontend Directory
 
@@ -429,7 +429,7 @@ npm install
 
 ### 6.3. Configure UI Environment Variables
 
-Create a `.env` file in the `src/frontend` directory:
+Create a `.env` file in the [src/frontend/](../src/frontend/) directory:
 
 ```bash
 # Copy the example file
@@ -538,7 +538,7 @@ uv venv .venv
 # Activate and reinstall
 source .venv/bin/activate  # Linux
 # or .\.venv\Scripts\Activate.ps1  # Windows
-uv sync --python 3.12
+uv sync --python 3.12 --prerelease=allow
 ```
 
 #### Permission Issues (Linux)
@@ -625,7 +625,7 @@ Once all services are running (as confirmed in Step 7), you can:
 
 1. **Access the Application**: Open `http://localhost:5173` in your browser to explore the frontend UI
 2. **Try a Sample Workflow**: Follow [SampleWorkflow.md](SampleWorkflow.md) for a guided walkthrough of the migration process
-3. **Explore the Codebase**: Start with `src/processor/src/main_service.py` to understand the agent architecture
+3. **Explore the Codebase**: Start with [src/processor/src/main_service.py](../src/processor/src/main_service.py) to understand the agent architecture
 4. **Customize Agents**: Follow [CustomizeExpertAgents.md](CustomizeExpertAgents.md) to modify agent behavior
 5. **Extend Platform Support**: Follow [ExtendPlatformSupport.md](ExtendPlatformSupport.md) to add new cloud platforms
 

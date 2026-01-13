@@ -1,104 +1,60 @@
 # Agentic Architecture - Container Migration Solution Accelerator
 
-Based on your actual implementation, here's the comprehensive agentic architecture that mirrors the style of your reference image:
+High-level view of how the 4-step orchestration works (executors, group chat orchestrators, and tools).
 
 ## Architecture Overview
 
 ```mermaid
 flowchart LR
     %% Top-level orchestration + telemetry
-    TELEM[Agent and Process Status\nReal-time telemetry]
-    COSMOS[(Cosmos DB\ntelemetry/state)]
-    PROC[Process Orchestration\nAgent Framework WorkflowBuilder]
+    TELEM["Agent & Process Status<br/>(telemetry)"]
+    COSMOS[("Cosmos DB<br/>telemetry/state")]
+    PROC["Process Orchestration<br/>Agent Framework WorkflowBuilder"]
 
     TELEM --> COSMOS
     PROC --- TELEM
 
-    %% Step lanes (match the README image layout)
-    subgraph STEP1["Step 1: Analysis"]
+    %% Step lanes
+    subgraph S1["Step 1: Analysis"]
         direction TB
-        S1EXEC[Analysis Executor]
-        S1ORCH[Analysis Chat Orchestrator\nGroupChatOrchestrator]
-        S1AGENTS["Analysis Agents\nChief Architect\nAKS Expert\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
-        S1EXEC --> S1ORCH --> S1AGENTS
+        S1EXEC["Analysis Executor"] --> S1ORCH["Analysis Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S1AGENTS["Agents:<br/>Chief Architect<br/>AKS Expert<br/>Platform experts (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)"]
     end
 
-    subgraph STEP2["Step 2: Design"]
+    subgraph S2["Step 2: Design"]
         direction TB
-        S2EXEC[Design Executor]
-        S2ORCH[Design Chat Orchestrator\nGroupChatOrchestrator]
-        S2AGENTS["Design Agents\nChief Architect\nAzure Architect\nAKS Expert\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
-        S2EXEC --> S2ORCH --> S2AGENTS
+        S2EXEC["Design Executor"] --> S2ORCH["Design Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S2AGENTS["Agents:<br/>Chief Architect<br/>AKS Expert<br/>Platform experts (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)"]
     end
 
-    subgraph STEP3["Step 3: YAML Conversion"]
+    subgraph S3["Step 3: YAML Conversion"]
         direction TB
-        S3EXEC[Convert Executor]
-        S3ORCH[YAML Chat Orchestrator\nGroupChatOrchestrator]
-        S3AGENTS["YAML Converting Agents\nYAML Expert\nAzure Architect\nAKS Expert\nQA Engineer\nChief Architect\nCoordinator"]
-        S3EXEC --> S3ORCH --> S3AGENTS
+        S3EXEC["Convert Executor"] --> S3ORCH["YAML Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S3AGENTS["Agents:<br/>YAML Expert<br/>Azure Architect<br/>AKS Expert<br/>QA Engineer<br/>Chief Architect"]
     end
 
-    subgraph STEP4["Step 4: Documentation"]
+    subgraph S4["Step 4: Documentation"]
         direction TB
-        S4EXEC[Documentation Executor]
-        S4ORCH[Documentation Chat Orchestrator\nGroupChatOrchestrator]
-        S4AGENTS["Documentation Agents\nTechnical Writer\nAzure Architect\nAKS Expert\nChief Architect\nPlatform Experts (EKS/GKE/...)\nCoordinator"]
-        S4EXEC --> S4ORCH --> S4AGENTS
+        S4EXEC["Documentation Executor"] --> S4ORCH["Documentation Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S4AGENTS["Agents:<br/>Technical Writer<br/>Azure Architect<br/>AKS Expert<br/>Chief Architect<br/>Platform experts (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)"]
     end
 
-    %% Step sequencing
-    PROC --> STEP1
-    STEP1 -->|Analysis Result| STEP2
-    STEP2 -->|Design Result| STEP3
-    STEP3 -->|YAML Converting Result| STEP4
+    PROC --> S1
+    S1 -->|Analysis Result| S2
+    S2 -->|Design Result| S3
+    S3 -->|YAML Converting Result| S4
 
-    %% MCP tools
-    subgraph MCPTOOLS["MCP Server Tools"]
-        direction LR
-        BLOB[Azure Blob IO Operation]
-        DT[Datetime Utility]
-        DOCS[Microsoft Learn MCP]
-        FETCH[Fetch MCP Tool]
-        MERMAID[Mermaid Validation]
-        YINV[YAML Inventory]
-    end
-
-    STEP1 --- MCPTOOLS
-    STEP2 --- MCPTOOLS
-    STEP3 --- MCPTOOLS
-    STEP4 --- MCPTOOLS
-
-    %% External systems
-    STORAGE[(Azure Blob Storage)]
-    LEARN[(Microsoft Learn\nMCP Server)]
-
-    BLOB --> STORAGE
-    DOCS --> LEARN
-
-    %% Style (keep minimal; Mermaid defaults render consistently)
-    style PROC fill:#111827,color:#ffffff,stroke:#111827
-    style MCPTOOLS fill:#f8fafc,stroke:#94a3b8
-    style STORAGE fill:#e0f2fe,stroke:#0284c7
-    style COSMOS fill:#e0f2fe,stroke:#0284c7
-    style LEARN fill:#ffffff,stroke:#94a3b8
 ```
 
 ## Agent Specialization by Phase
 
 ### Analysis Phase Agents
 
-- **Technical Architect**: Leads overall analysis strategy and coordination
-- **EKS Expert**: Identifies AWS EKS-specific patterns and configurations
-- **GKE Expert**: Identifies Google GKE-specific patterns and configurations
+- **Chief Architect**: Leads overall analysis strategy and coordination
+- **AKS Expert**: Reviews for AKS/Azure migration readiness
+- **Platform experts**: Registry-loaded participants (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s); coordinator keeps non-matching experts quiet
 
 ### Design Phase Agents
 
-- **Technical Architect**: Defines migration architecture patterns
-- **Azure Architect**: Designs Azure service mappings and optimizations
+- **Chief Architect**: Defines migration architecture patterns and reconciles trade-offs
 - **AKS Expert**: Ensures AKS-specific conventions and constraints are applied
-- **EKS Expert**: Provides source platform context for AWS workloads
-- **GKE Expert**: Provides source platform context for GCP workloads
+- **Platform experts**: Provide source-platform context and constraints for the detected platform
 
 ### YAML Conversion Phase Agents
 
@@ -106,16 +62,15 @@ flowchart LR
 - **Azure Architect**: Ensures Azure service integration and compliance
 - **AKS Expert**: Ensures converted manifests align with AKS expectations
 - **QA Engineer**: Validates converted configurations and tests
-- **Technical Writer**: Documents conversion decisions and generates reports
+- **Chief Architect**: Provides overall review and integration
 
 ### Documentation Phase Agents
 
-- **Technical Architect**: Provides architectural documentation and migration summary
+- **Technical Writer**: Creates comprehensive migration documentation
 - **Azure Architect**: Documents Azure-specific configurations and optimizations
 - **AKS Expert**: Documents AKS-focused implementation guidance and caveats
-- **EKS/GKE Experts**: Document source platform analysis and transformation logic
-- **QA Engineer**: Provides validation reports and testing documentation
-- **Technical Writer**: Creates comprehensive migration documentation
+- **Chief Architect**: Provides architectural documentation and migration summary
+- **Platform experts**: Document source platform analysis and transformation logic
 
 ## Data Flow Architecture
 
@@ -180,7 +135,7 @@ The processor uses multiple quality signals to reduce regressions and increase r
 - **Typed step outputs**: workflow executors and orchestrators exchange typed models per step (analysis → design → yaml → documentation).
 - **QA sign-offs**: the QA agent focuses on validation steps and flags missing/unsafe transformations.
 - **Tool-backed validation**: steps can call validation tools via MCP (e.g., Mermaid validation, YAML inventory grounding, docs lookups).
-- **Unit tests**: processor unit tests live under `src/processor/src/tests/unit/`.
+- **Unit tests**: processor unit tests live under [src/processor/src/tests/unit/](../src/processor/src/tests/unit/).
 
 ### Tool-Enabled Intelligence
 

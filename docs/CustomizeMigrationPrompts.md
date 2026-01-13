@@ -4,7 +4,7 @@ This guide explains how to customize the migration prompts used by expert agents
 
 ## Overview
 
-The Container Migration Solution Accelerator uses a sophisticated prompt engineering system with phase-specific prompts for each expert agent. You can customize these prompts to:
+The Container Migration Solution Accelerator uses a step-based prompt engineering system with per-agent prompts plus per-step orchestration templates (task + coordinator). You can customize these prompts to:
 
 - Adapt to specific organizational standards and requirements
 - Support additional platforms or technologies
@@ -13,24 +13,32 @@ The Container Migration Solution Accelerator uses a sophisticated prompt enginee
 
 ## Prompt Architecture
 
-### Phase-Based Prompt System
+### Step-Based Prompt System (v2)
 
-Each migration phase uses specialized prompts:
+Prompts are organized per step (analysis/design/convert/documentation). Each step uses **three** prompt layers:
 
-1. **Analysis Phase**: Platform detection, configuration analysis, and complexity assessment
-2. **Design Phase**: Azure architecture design and service mapping
-3. **YAML Conversion Phase**: Configuration transformation and Azure integration
-4. **Documentation Phase**: Migration documentation and implementation guidance
+1. **Task prompt template** (`prompt_task.txt`): the main step instruction given to the orchestrator.
+2. **Agent instruction prompts** (`agents/prompt_*.txt`): role/persona prompts for each participating agent.
+3. **Coordinator routing prompt** (`prompt_coordinator.txt`): enforces sequencing, sign-off rules, and termination criteria.
 
-### Agent-Specific Prompts
+In addition, some steps use a **platform registry** (`platform_registry.json`) to select platform experts dynamically.
 
-Each expert agent has its own prompt files:
+The canonical layout looks like:
 
 ```text
-src/processor/src/steps/<step>/agents/
-├── prompt_*.txt             # Step-specific expert prompts
-└── ...
+src/processor/src/steps/<step>/
+├── agents/
+│   ├── prompt_*.txt                # Agent instruction prompts
+│   └── ...
+└── orchestration/
+    ├── prompt_task.txt             # Step task template (rendered with variables)
+    ├── prompt_coordinator.txt      # Coordinator routing/sign-off rules
+    └── platform_registry.json      # (analysis/design/documentation only)
 ```
+
+### Template Variables
+
+The step task template is rendered at runtime using `{{variable}}` placeholders (for example `{{process_id}}`, `{{container_name}}`, `{{source_file_folder}}`, `{{output_file_folder}}`, `{{workspace_file_folder}}`).
 
 ## Customizing Existing Prompts
 
@@ -38,14 +46,26 @@ src/processor/src/steps/<step>/agents/
 
 Locate the prompt files you want to customize:
 
+- Analysis step prompts: [src/processor/src/steps/analysis/](../src/processor/src/steps/analysis/)
+- Design step prompts: [src/processor/src/steps/design/](../src/processor/src/steps/design/)
+- Convert step prompts: [src/processor/src/steps/convert/](../src/processor/src/steps/convert/)
+- Documentation step prompts: [src/processor/src/steps/documentation/](../src/processor/src/steps/documentation/)
+
+Note: prompt filenames can differ by step (for example, the AKS agent prompt is [src/processor/src/steps/analysis/agents/prompt_aks.txt](../src/processor/src/steps/analysis/agents/prompt_aks.txt) in analysis, but [src/processor/src/steps/convert/agents/prompt_aks_expert.txt](../src/processor/src/steps/convert/agents/prompt_aks_expert.txt) in convert).
+
 ```bash
-# List all prompt files
+# List all agent prompt files
 find src/processor/src/steps -path "*/agents/*" -name "prompt*.txt"
+
+# List orchestration templates (task + coordinator)
+find src/processor/src/steps -path "*/orchestration/*" -name "prompt_*.txt" -o -name "prompt_task.txt" -o -name "prompt_coordinator.txt"
 
 # Example output:
 # src/processor/src/steps/analysis/agents/prompt_architect.txt
 # src/processor/src/steps/convert/agents/prompt_yaml_expert.txt
 # src/processor/src/steps/documentation/agents/prompt_technical_writer.txt
+# src/processor/src/steps/analysis/orchestration/prompt_task.txt
+# src/processor/src/steps/analysis/orchestration/prompt_coordinator.txt
 ```
 
 ### Step 2: Backup Original Prompts
@@ -58,6 +78,10 @@ mkdir src/processor/src/steps/backups
 
 # Backup specific prompts
 cp src/processor/src/steps/analysis/agents/prompt_architect.txt src/processor/src/steps/backups/
+
+# (Recommended) also backup orchestration templates you plan to change
+cp src/processor/src/steps/analysis/orchestration/prompt_task.txt src/processor/src/steps/backups/
+cp src/processor/src/steps/analysis/orchestration/prompt_coordinator.txt src/processor/src/steps/backups/
 ```
 
 ### Step 3: Customize Prompt Content
@@ -65,9 +89,11 @@ cp src/processor/src/steps/analysis/agents/prompt_architect.txt src/processor/sr
 Edit the prompt files to include your customizations:
 
 ```text
-# Example: Customizing Azure Architect / AKS Expert Analysis Prompt
+# Example: Customizing AKS Expert prompt (Analysis step)
 
-# Azure Architect / AKS Expert - Analysis Phase (CUSTOMIZED FOR ORGANIZATION)
+# File: src/processor/src/steps/analysis/agents/prompt_aks.txt
+
+# AKS Expert - Analysis Step (CUSTOMIZED FOR ORGANIZATION)
 
 You are an Azure solution architect with expertise in enterprise migrations and deep knowledge of Azure Well-Architected Framework principles.
 
@@ -77,7 +103,7 @@ You are an Azure solution architect with expertise in enterprise migrations and 
 - **Cost Optimization**: Target 30% cost reduction from current platform
 - **Naming Convention**: Follow company naming standards (env-app-region-001)
 
-## Your Role in Analysis Phase
+## Your Role in the Analysis Step
 
 **Primary Objectives:**
 1. **Platform Assessment**: Evaluate source platform compatibility with Azure
@@ -87,6 +113,38 @@ You are an Azure solution architect with expertise in enterprise migrations and 
 
 [Continue with existing prompt content...]
 ```
+
+### Step 3b: Customize the Step Task Template (if needed)
+
+The step task template is often the highest-leverage place to customize deliverables, report structure, sign-off format, and hard-termination rules.
+
+- Analysis task template: [src/processor/src/steps/analysis/orchestration/prompt_task.txt](../src/processor/src/steps/analysis/orchestration/prompt_task.txt)
+- Design task template: [src/processor/src/steps/design/orchestration/prompt_task.txt](../src/processor/src/steps/design/orchestration/prompt_task.txt)
+- Convert task template: [src/processor/src/steps/convert/orchestration/prompt_task.txt](../src/processor/src/steps/convert/orchestration/prompt_task.txt)
+- Documentation task template: [src/processor/src/steps/documentation/orchestration/prompt_task.txt](../src/processor/src/steps/documentation/orchestration/prompt_task.txt)
+
+If you edit these files, keep the `{{...}}` placeholders intact unless you are also updating the orchestrator/runtime to provide new values.
+
+### Step 3c: Customize Coordinator Routing Rules (advanced)
+
+The coordinator prompt controls routing and completion rules (for example sign-off gating and hard termination). Customize with care:
+
+- Analysis coordinator rules: [src/processor/src/steps/analysis/orchestration/prompt_coordinator.txt](../src/processor/src/steps/analysis/orchestration/prompt_coordinator.txt)
+- Design coordinator rules: [src/processor/src/steps/design/orchestration/prompt_coordinator.txt](../src/processor/src/steps/design/orchestration/prompt_coordinator.txt)
+- Convert coordinator rules: [src/processor/src/steps/convert/orchestration/prompt_coordinator.txt](../src/processor/src/steps/convert/orchestration/prompt_coordinator.txt)
+- Documentation coordinator rules: [src/processor/src/steps/documentation/orchestration/prompt_coordinator.txt](../src/processor/src/steps/documentation/orchestration/prompt_coordinator.txt)
+
+Small wording changes here can change when the workflow terminates or which agents get selected.
+
+### Step 3d: Customize Platform Expert Selection (registry-driven steps)
+
+For steps that load platform experts from a registry, update the registry to add/remove experts or adjust selection signals:
+
+- Analysis registry: [src/processor/src/steps/analysis/orchestration/platform_registry.json](../src/processor/src/steps/analysis/orchestration/platform_registry.json)
+- Design registry: [src/processor/src/steps/design/orchestration/platform_registry.json](../src/processor/src/steps/design/orchestration/platform_registry.json)
+- Documentation registry: [src/processor/src/steps/documentation/orchestration/platform_registry.json](../src/processor/src/steps/documentation/orchestration/platform_registry.json)
+
+Each entry points to an agent prompt file under that step’s `agents/` folder.
 
 ### Step 4: Add Organization-Specific Context
 

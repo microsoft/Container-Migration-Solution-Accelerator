@@ -37,7 +37,76 @@ Conceptually:
 
 ## Process Execution Flow
 
-![Step Execution Flow](images/readme/step_execution_flow.png)
+```mermaid
+flowchart TB
+    %% Process Execution Flow (v2) - Microsoft Agent Framework
+
+    Q[("Azure Storage Queue<br/>job message")]
+    MP["Migration Processor<br/>run_stream(...)"]
+    WB["Agent Framework Workflow<br/>WorkflowBuilder.build()"]
+
+    Q --> MP --> WB
+
+    subgraph WF["Workflow: Analysis -> Design -> YAML -> Documentation"]
+        direction TB
+        AEX["Analysis Executor<br/>(Executor)"]
+        DEX["Design Executor<br/>(Executor)"]
+        YEX["YAML Convert Executor<br/>(Executor)"]
+        DOX["Documentation Executor<br/>(Executor)"]
+
+        AEX -->|ctx.send_message| DEX
+        DEX -->|ctx.send_message| YEX
+        YEX -->|ctx.send_message| DOX
+    end
+
+    WB --> AEX
+
+    OUT["Final Output<br/>Documentation_ExtendedBooleanResult"]
+    DOX -->|ctx.yield_output| OUT
+    AEX -.->|ctx.yield_output hard-terminate| OUT
+    DEX -.->|ctx.yield_output hard-terminate| OUT
+    YEX -.->|ctx.yield_output hard-terminate| OUT
+
+    %% Inside each step: orchestrator + group chat + tools
+    subgraph STEP["Within each executor"]
+        direction TB
+        ORCH["Step Orchestrator<br/>(e.g., AnalysisOrchestrator)"]
+        GCO["Group Chat Orchestrator<br/>(GroupChatOrchestrator)"]
+        AG["Specialist Agents<br/>(Chief Architect, AKS Expert, etc.)"]
+        MCP["MCP tools<br/>(Microsoft Learn, Fetch, Blob IO, DateTime, ...)"]
+        ORCH --> GCO --> AG --> MCP
+    end
+
+    AEX --- ORCH
+    DEX --- ORCH
+    YEX --- ORCH
+    DOX --- ORCH
+
+    %% Telemetry
+    TELEM["Telemetry events"]
+    COSMOS[("Cosmos DB<br/>telemetry/state")]
+    MP --> TELEM --> COSMOS
+
+    %% Styling (subtle theme)
+    %% - Infra/services: blue accent
+    %% - Workflow executors: neutral with blue border
+    %% - Orchestration internals: warm accent
+    classDef core fill:#ffffff,stroke:#111827,color:#111827,stroke-width:1px;
+    classDef infra fill:#e0f2fe,stroke:#0284c7,color:#111827,stroke-width:1px;
+    classDef exec fill:#ffffff,stroke:#0284c7,color:#111827,stroke-width:1px;
+    classDef orch fill:#fff7ed,stroke:#f59e0b,color:#111827,stroke-width:1px;
+    classDef meta fill:#f8fafc,stroke:#94a3b8,color:#111827,stroke-width:1px;
+
+    class Q,COSMOS infra;
+    class MCP infra;
+    class MP,WB meta;
+    class AEX,DEX,YEX,DOX,OUT exec;
+    class ORCH,GCO,AG orch;
+    class TELEM meta;
+
+    style WF fill:#f8fafc,stroke:#94a3b8,color:#111827;
+    style STEP fill:#fff7ed,stroke:#f59e0b,color:#111827;
+```
 
 At the top level, the workflow is deterministic and step-by-step: **analysis → design → yaml → documentation**.
 
@@ -47,7 +116,7 @@ Inside each step, the orchestrator can use multi-agent patterns (maker-checker l
 
 ### Workflow
 
-- Implementation: `src/processor/src/steps/migration_processor.py`
+- Implementation: [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py)
 - The processor creates a workflow with `WorkflowBuilder`.
 - It registers four executors, sets the start executor, and defines edges.
 
@@ -86,10 +155,10 @@ In this repo, each step executor:
 
 Repo implementations:
 
-- `src/processor/src/steps/analysis/workflow/analysis_executor.py`
-- `src/processor/src/steps/design/workflow/design_executor.py`
-- `src/processor/src/steps/convert/workflow/yaml_convert_executor.py`
-- `src/processor/src/steps/documentation/workflow/documentation_executor.py`
+- [src/processor/src/steps/analysis/workflow/analysis_executor.py](../src/processor/src/steps/analysis/workflow/analysis_executor.py)
+- [src/processor/src/steps/design/workflow/design_executor.py](../src/processor/src/steps/design/workflow/design_executor.py)
+- [src/processor/src/steps/convert/workflow/yaml_convert_executor.py](../src/processor/src/steps/convert/workflow/yaml_convert_executor.py)
+- [src/processor/src/steps/documentation/workflow/documentation_executor.py](../src/processor/src/steps/documentation/workflow/documentation_executor.py)
 
 A typical executor shape (based on `AnalysisExecutor`):
 
@@ -133,7 +202,7 @@ In this repository, each executor delegates the “AI-heavy” work to a step-sp
 
 Repo example:
 
-- `src/processor/src/libs/agent_framework/groupchat_orchestrator.py`
+- [src/processor/src/libs/agent_framework/groupchat_orchestrator.py](../src/processor/src/libs/agent_framework/groupchat_orchestrator.py)
 
 This repo uses group chat for iterative refinement and review-heavy flows (for example documentation sign-off loops), aligning with Microsoft’s guidance that group chat is appropriate for collaborative problem-solving and maker-checker workflows.
 
@@ -155,19 +224,19 @@ This repo supports two distinct stop paths:
 - **Hard termination (graceful)**: a step decides it cannot proceed and yields an output marked as hard-terminated. The executor calls `ctx.yield_output(...)` to end the workflow with a meaningful final result.
 - **Failure (exceptional)**: an executor or workflow fails unexpectedly; the processor captures failure context and reports via telemetry.
 
-See the exception wrappers and failure summary logic in `src/processor/src/steps/migration_processor.py`.
+See the exception wrappers and failure summary logic in [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py).
 
 ## Adding a new step (executor)
 
 To add a new step:
 
-1. Create a new executor in `src/processor/src/steps/<step>/workflow/<step>_executor.py`.
+1. Create a new executor in `src/processor/src/steps/<step>/workflow/<step>_executor.py` (under [src/processor/src/steps/](../src/processor/src/steps/)).
 2. Create/update typed models:
     - `src/processor/src/steps/<step>/models/step_param.py` (input)
     - `src/processor/src/steps/<step>/models/step_output.py` (output)
 3. Implement the step orchestrator (if multi-agent):
    - `src/processor/src/steps/<step>/orchestration/<step>_orchestrator.py`
-4. Register and wire the executor in `src/processor/src/steps/migration_processor.py` using `WorkflowBuilder`.
+4. Register and wire the executor in [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py) using `WorkflowBuilder`.
 
 ## Notes on MCP tools
 
@@ -179,9 +248,9 @@ In this repo, MCP servers are integrated as **Agent Framework tools** used by or
 
 ## See also
 
-- Multi-agent orchestration guide in this repo: `docs/MultiAgentOrchestration.md`
-- Overall processor architecture: `docs/AgenticArchitecture.md`
-- MCP tool configuration and server guide: `docs/ConfigureMCPServers.md` and `docs/MCPServerGuide.md`
+- Multi-agent orchestration guide in this repo: [docs/MultiAgentOrchestration.md](MultiAgentOrchestration.md)
+- Overall processor architecture: [docs/AgenticArchitecture.md](AgenticArchitecture.md)
+- MCP tool configuration and server guide: [docs/ConfigureMCPServers.md](ConfigureMCPServers.md) and [docs/MCPServerGuide.md](MCPServerGuide.md)
 
 ## Step implementations (real code)
 
@@ -194,14 +263,14 @@ Instead, each step is implemented as:
 
 Where to look:
 
-- Top-level workflow wiring: `src/processor/src/steps/migration_processor.py`
+- Top-level workflow wiring: [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py)
 - Step executors:
-  - `src/processor/src/steps/analysis/workflow/analysis_executor.py`
-  - `src/processor/src/steps/design/workflow/design_executor.py`
-  - `src/processor/src/steps/convert/workflow/yaml_convert_executor.py`
-  - `src/processor/src/steps/documentation/workflow/documentation_executor.py`
-- Step orchestrators (multi-agent logic): `src/processor/src/steps/**/orchestration/`
-- Group chat orchestration implementation: `src/processor/src/libs/agent_framework/groupchat_orchestrator.py`
+    - [src/processor/src/steps/analysis/workflow/analysis_executor.py](../src/processor/src/steps/analysis/workflow/analysis_executor.py)
+    - [src/processor/src/steps/design/workflow/design_executor.py](../src/processor/src/steps/design/workflow/design_executor.py)
+    - [src/processor/src/steps/convert/workflow/yaml_convert_executor.py](../src/processor/src/steps/convert/workflow/yaml_convert_executor.py)
+    - [src/processor/src/steps/documentation/workflow/documentation_executor.py](../src/processor/src/steps/documentation/workflow/documentation_executor.py)
+- Step orchestrators (multi-agent logic): `src/processor/src/steps/**/orchestration/` (under [src/processor/src/steps/](../src/processor/src/steps/))
+- Group chat orchestration implementation: [src/processor/src/libs/agent_framework/groupchat_orchestrator.py](../src/processor/src/libs/agent_framework/groupchat_orchestrator.py)
 
 Executor handlers use `WorkflowContext` to either:
 
@@ -212,7 +281,7 @@ Executor handlers use `WorkflowContext` to either:
 
 The processor runs the top-level workflow using event streaming in `MigrationProcessor.run(...)`:
 
-- Implementation: `src/processor/src/steps/migration_processor.py`
+- Implementation: [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py)
 - Execution: `async for event in self.workflow.run_stream(input_data): ...`
 
 The processor consumes events such as:
@@ -240,8 +309,8 @@ In this repo, MCP servers are integrated as **Agent Framework tools**.
 
 Where to look:
 
-- Tool wrappers: `src/processor/src/libs/mcp_server/`
-- Tool usage: `src/processor/src/steps/**/orchestration/`
+- Tool wrappers: [src/processor/src/libs/mcp_server/](../src/processor/src/libs/mcp_server/)
+- Tool usage: `src/processor/src/steps/**/orchestration/` (under [src/processor/src/steps/](../src/processor/src/steps/))
 
 Two connection styles are used:
 
@@ -252,7 +321,7 @@ Two connection styles are used:
 2. **Stdio MCP tools** (local subprocess)
    - Example: blob IO, datetime, mermaid validation, yaml inventory
    - Used via `MCPStdioTool(command="uv", args=[...])`
-   - Local MCP servers in this repo are implemented using FastMCP under `src/processor/src/libs/mcp_server/**/`.
+    - Local MCP servers in this repo are implemented using FastMCP under [src/processor/src/libs/mcp_server/](../src/processor/src/libs/mcp_server/).
 
 When a step runs, orchestrators typically open tool sessions like this:
 
@@ -269,9 +338,9 @@ async with (
 
 Reporting and telemetry are driven by workflow execution events and captured in the processor:
 
-- Telemetry: `src/processor/src/utils/agent_telemetry.py` (`TelemetryManager`)
-- Reporting: `src/processor/src/libs/reporting/` (`MigrationReportCollector`, `MigrationReportGenerator`)
-- Event loop: `src/processor/src/steps/migration_processor.py`
+- Telemetry: [src/processor/src/utils/agent_telemetry.py](../src/processor/src/utils/agent_telemetry.py) (`TelemetryManager`)
+- Reporting: [src/processor/src/libs/reporting/](../src/processor/src/libs/reporting/) (`MigrationReportCollector`, `MigrationReportGenerator`)
+- Event loop: [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py)
 
 ## Evaluation and quality checks
 
@@ -280,18 +349,18 @@ The processor’s “quality checks” are a combination of workflow-level struc
 - **Typed boundaries**: each executor consumes and emits typed models, which keeps step-to-step contracts explicit.
 - **Multi-agent review**: orchestrators can implement maker-checker loops and sign-offs (commonly via group chat).
 - **Tool-backed validation**: steps can call MCP tools (e.g., Mermaid validation, YAML inventory grounding, documentation lookups) to validate outputs against real inputs and references.
-- **Unit tests**: core behavior is covered by tests under `src/processor/src/tests/unit/`.
+- **Unit tests**: core behavior is covered by tests under [src/processor/src/tests/unit/](../src/processor/src/tests/unit/).
 
 To run processor unit tests locally (example):
 
 ```bash
 cd src/processor
-uv run python -m pytest src/processor/src/tests/unit -v
+uv run --prerelease=allow python -m pytest src/processor/src/tests/unit -v
 ```
 
 ## Extending the pipeline
 
-Use the steps in “Adding a new step (executor)” above, then wire the executor into the workflow graph in `src/processor/src/steps/migration_processor.py`.
+Use the steps in “Adding a new step (executor)” above, then wire the executor into the workflow graph in [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py).
 
 ## Troubleshooting notes
 
