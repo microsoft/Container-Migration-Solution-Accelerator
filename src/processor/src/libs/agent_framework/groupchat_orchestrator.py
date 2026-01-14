@@ -858,11 +858,13 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             name = getattr(item, "name", None)
             call_id = getattr(item, "call_id", None)
             if name and call_id:
-                calls.append({
-                    "name": name,
-                    "call_id": call_id,
-                    "arguments": getattr(item, "arguments", None),
-                })
+                calls.append(
+                    {
+                        "name": name,
+                        "call_id": call_id,
+                        "arguments": getattr(item, "arguments", None),
+                    }
+                )
                 continue
 
             # Dict path (serialized content)
@@ -870,11 +872,13 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 "function_call",
                 "tool_call",
             }:
-                calls.append({
-                    "name": item.get("name"),
-                    "call_id": item.get("call_id"),
-                    "arguments": item.get("arguments"),
-                })
+                calls.append(
+                    {
+                        "name": item.get("name"),
+                        "call_id": item.get("call_id"),
+                        "arguments": item.get("arguments"),
+                    }
+                )
                 continue
 
         return calls
@@ -1026,7 +1030,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     else:
                         self._last_coordinator_selection = selection_key
                         self._coordinator_selection_streak = 1
-                        self._last_coordinator_selection_progress = self._progress_counter
+                        self._last_coordinator_selection_progress = (
+                            self._progress_counter
+                        )
 
                     # If the Coordinator repeats the exact same ask 3 times, break.
                     if self._coordinator_selection_streak >= 3:
@@ -1044,13 +1050,11 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 # To keep the workflow robust, we also treat certain instructions as explicit
                 # termination requests even when finish=false.
                 selected_norm = (
-                    selected.strip().lower()
-                    if isinstance(selected, str)
-                    else "none"
+                    selected.strip().lower() if isinstance(selected, str) else "none"
                 )
-                coordinator_signaled_stop = (
-                    manager_response.finish is True
-                    or (selected_norm in ("", "none") and instruction in ("complete", "blocked", "fail", "failed"))
+                coordinator_signaled_stop = manager_response.finish is True or (
+                    selected_norm in ("", "none")
+                    and instruction in ("complete", "blocked", "fail", "failed")
                 )
 
                 if coordinator_signaled_stop:

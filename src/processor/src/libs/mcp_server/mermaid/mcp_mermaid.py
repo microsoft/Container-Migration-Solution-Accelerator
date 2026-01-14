@@ -359,13 +359,15 @@ def validate_mermaid_in_markdown(markdown: str) -> dict:
     results = []
     for i, block in enumerate(blocks):
         v = basic_validate_mermaid(block)
-        results.append({
-            "index": i,
-            "valid": v.valid,
-            "errors": v.errors,
-            "warnings": v.warnings,
-            "diagram_type": v.diagram_type,
-        })
+        results.append(
+            {
+                "index": i,
+                "valid": v.valid,
+                "errors": v.errors,
+                "warnings": v.warnings,
+                "diagram_type": v.diagram_type,
+            }
+        )
 
     return {
         "blocks_found": len(blocks),
@@ -393,13 +395,15 @@ def fix_mermaid_in_markdown(markdown: str) -> dict:
     def _replace(match: re.Match) -> str:
         raw = match.group(1)
         fixed, applied, v = basic_fix_mermaid(raw)
-        per_block.append({
-            "valid": v.valid,
-            "errors": v.errors,
-            "warnings": v.warnings,
-            "diagram_type": v.diagram_type,
-            "applied_fixes": applied,
-        })
+        per_block.append(
+            {
+                "valid": v.valid,
+                "errors": v.errors,
+                "warnings": v.warnings,
+                "diagram_type": v.diagram_type,
+                "applied_fixes": applied,
+            }
+        )
         return "```mermaid\n" + fixed + "\n```"
 
     updated = pattern.sub(_replace, text)

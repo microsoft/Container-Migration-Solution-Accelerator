@@ -7,7 +7,9 @@ import asyncio
 
 from libs.agent_framework.groupchat_orchestrator import OrchestrationResult
 from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
-from steps.convert.orchestration.yaml_convert_orchestrator import YamlConvertOrchestrator
+from steps.convert.orchestration.yaml_convert_orchestrator import (
+    YamlConvertOrchestrator,
+)
 from steps.design.models.step_output import Design_ExtendedBooleanResult
 
 
@@ -23,7 +25,12 @@ def test_yaml_convert_orchestrator_renders_expected_folder_params(monkeypatch):
     async def _run():
         orch = YamlConvertOrchestrator.__new__(YamlConvertOrchestrator)
         orch.initialized = True
-        orch.mcp_tools = [_DummyAsyncCM(), _DummyAsyncCM(), _DummyAsyncCM(), _DummyAsyncCM()]
+        orch.mcp_tools = [
+            _DummyAsyncCM(),
+            _DummyAsyncCM(),
+            _DummyAsyncCM(),
+            _DummyAsyncCM(),
+        ]
         orch.agents = []
 
         captured: dict[str, object] = {}

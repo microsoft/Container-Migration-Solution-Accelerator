@@ -191,9 +191,9 @@ class DesignOrchestrator(
         # Render coordinator prompt with the current participant list.
         # participant_names = [ai.agent_name for ai in agent_infos] + ["Coordinator"]
         participant_names = [ai.agent_name for ai in agent_infos]
-        valid_participants_block = "\n".join([
-            f'- "{name}"' for name in participant_names
-        ])
+        valid_participants_block = "\n".join(
+            [f'- "{name}"' for name in participant_names]
+        )
         coordinator_agent_info.render(
             process_id=self.task_param.output.process_id,
             container_name="processes",

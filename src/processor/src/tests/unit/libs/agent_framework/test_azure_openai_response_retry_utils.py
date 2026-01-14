@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import os
 
 from libs.agent_framework.azure_openai_response_retry import (
     ContextTrimConfig,
@@ -50,7 +49,9 @@ def test_looks_like_context_length_detects_common_signals() -> None:
 
 def test_truncate_text_includes_marker_and_respects_budget() -> None:
     text = "A" * 200 + "B" * 200
-    truncated = _truncate_text(text, max_chars=120, keep_head_chars=40, keep_tail_chars=40)
+    truncated = _truncate_text(
+        text, max_chars=120, keep_head_chars=40, keep_tail_chars=40
+    )
     assert len(truncated) <= 120
     assert "TRUNCATED" in truncated
 

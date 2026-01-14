@@ -4,7 +4,9 @@
 from libs.application.service_config import ServiceConfig
 
 
-def test_service_config_valid_with_entra_id_requires_endpoint_and_chat_deployment() -> None:
+def test_service_config_valid_with_entra_id_requires_endpoint_and_chat_deployment() -> (
+    None
+):
     env = {
         "AZURE_OPENAI_ENDPOINT": "https://example.openai.azure.com",
         "AZURE_OPENAI_CHAT_DEPLOYMENT_NAME": "chat",

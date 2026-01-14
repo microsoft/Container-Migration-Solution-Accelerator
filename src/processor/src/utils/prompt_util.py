@@ -5,6 +5,7 @@
 # it should support async resource management.
 from jinja2 import Template
 
+
 class TemplateUtility:
     @staticmethod
     def render_from_file(file_path: str, **kwargs) -> str:

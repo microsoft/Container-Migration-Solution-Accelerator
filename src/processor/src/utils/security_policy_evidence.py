@@ -154,12 +154,14 @@ def collect_security_policy_evidence(
                     signals.append("generic_secret_keywords")
 
                 if signals:
-                    findings.append({
-                        "blob": name,
-                        "size_bytes": size,
-                        "signals": sorted(set(signals)),
-                        "secret_key_names": secret_keys,
-                    })
+                    findings.append(
+                        {
+                            "blob": name,
+                            "size_bytes": size,
+                            "signals": sorted(set(signals)),
+                            "secret_key_names": secret_keys,
+                        }
+                    )
             except Exception as e:
                 errors.append(f"{name}: {type(e).__name__}: {e}")
                 continue

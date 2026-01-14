@@ -160,9 +160,9 @@ class AnalysisOrchestrator(
 
         # Render coordinator prompt with the current participant list.
         participant_names = [ai.agent_name for ai in agent_infos]
-        valid_participants_block = "\n".join([
-            f'- "{name}"' for name in participant_names
-        ])
+        valid_participants_block = "\n".join(
+            [f'- "{name}"' for name in participant_names]
+        )
         coordinator_agent_info.render(
             **self.task_param.model_dump(),
             step_name="Analysis",

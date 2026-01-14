@@ -391,7 +391,9 @@ class TelemetryManager:
         # even if the workflow emits step "invoked" events late.
         if (phase or "").strip().lower() == "start" and (step or "").strip():
             timing = new_process.step_timings.get(step) or {}
-            timing["started_at"] = timing.get("started_at") or new_process.started_at_time
+            timing["started_at"] = (
+                timing.get("started_at") or new_process.started_at_time
+            )
             timing.pop("ended_at", None)
             timing.pop("elapsed_seconds", None)
             new_process.step_timings[step] = timing
@@ -678,7 +680,9 @@ class TelemetryManager:
                 # Record step start timing on phase=start.
                 if (phase or "").strip().lower() == "start" and step:
                     timing = current_process.step_timings.get(step) or {}
-                    timing["started_at"] = timing.get("started_at") or _get_utc_timestamp()
+                    timing["started_at"] = (
+                        timing.get("started_at") or _get_utc_timestamp()
+                    )
                     timing.pop("ended_at", None)
                     timing.pop("elapsed_seconds", None)
                     current_process.step_timings[step] = timing
@@ -1176,39 +1180,47 @@ class TelemetryManager:
 
                                     # YAML phase uses ConvertedFile shape.
                                     if phase == "yaml":
-                                        generated_files.append({
-                                            "phase": phase,
-                                            "source_file": file_info.get(
-                                                "source_file", ""
-                                            ),
-                                            "file_name": file_info.get(
-                                                "converted_file", ""
-                                            ),
-                                            "file_type": file_info.get(
-                                                "file_type",
-                                                file_info.get("file_kind", ""),
-                                            ),
-                                            "status": file_info.get(
-                                                "conversion_status", "Success"
-                                            ),
-                                            "accuracy": file_info.get(
-                                                "accuracy_rating", ""
-                                            ),
-                                            "summary": "",
-                                            "timestamp": _get_utc_timestamp(),
-                                        })
+                                        generated_files.append(
+                                            {
+                                                "phase": phase,
+                                                "source_file": file_info.get(
+                                                    "source_file", ""
+                                                ),
+                                                "file_name": file_info.get(
+                                                    "converted_file", ""
+                                                ),
+                                                "file_type": file_info.get(
+                                                    "file_type",
+                                                    file_info.get("file_kind", ""),
+                                                ),
+                                                "status": file_info.get(
+                                                    "conversion_status", "Success"
+                                                ),
+                                                "accuracy": file_info.get(
+                                                    "accuracy_rating", ""
+                                                ),
+                                                "summary": "",
+                                                "timestamp": _get_utc_timestamp(),
+                                            }
+                                        )
                                     else:
-                                        generated_files.append({
-                                            "phase": phase,
-                                            "file_name": file_info.get("file_name", ""),
-                                            "file_type": file_info.get("file_type", ""),
-                                            "status": "Success",
-                                            "accuracy": "",
-                                            "summary": file_info.get(
-                                                "content_summary", ""
-                                            ),
-                                            "timestamp": _get_utc_timestamp(),
-                                        })
+                                        generated_files.append(
+                                            {
+                                                "phase": phase,
+                                                "file_name": file_info.get(
+                                                    "file_name", ""
+                                                ),
+                                                "file_type": file_info.get(
+                                                    "file_type", ""
+                                                ),
+                                                "status": "Success",
+                                                "accuracy": "",
+                                                "summary": file_info.get(
+                                                    "content_summary", ""
+                                                ),
+                                                "timestamp": _get_utc_timestamp(),
+                                            }
+                                        )
 
                     # Extract conversion metrics
                     if isinstance(metrics, dict):
@@ -1272,11 +1284,13 @@ class TelemetryManager:
                     isinstance(conversion_report_file, str)
                     and conversion_report_file.strip()
                 ):
-                    finalized_generated["artifacts"].append({
-                        "type": "conversion_report",
-                        "container": container,
-                        "path": conversion_report_file,
-                    })
+                    finalized_generated["artifacts"].append(
+                        {
+                            "type": "conversion_report",
+                            "container": container,
+                            "path": conversion_report_file,
+                        }
+                    )
 
                 # Record the final outcome
                 current_process.final_outcome = {
@@ -1432,7 +1446,9 @@ class TelemetryManager:
                 return {"error": "No active process"}
             else:
                 step_timings = getattr(current_process, "step_timings", {}) or {}
-                step_lap_times, total_elapsed_seconds = _build_step_lap_times(step_timings)
+                step_lap_times, total_elapsed_seconds = _build_step_lap_times(
+                    step_timings
+                )
                 return {
                     "process_id": current_process.id,
                     "status": current_process.status,

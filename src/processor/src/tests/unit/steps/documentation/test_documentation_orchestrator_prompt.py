@@ -69,7 +69,9 @@ def test_documentation_orchestrator_renders_expected_folder_params(monkeypatch):
                     conversation=[],
                     agent_responses=[],
                     tool_usage={},
-                    result=Documentation_ExtendedBooleanResult(process_id=self.process_id),
+                    result=Documentation_ExtendedBooleanResult(
+                        process_id=self.process_id
+                    ),
                 )
 
         monkeypatch.setattr(

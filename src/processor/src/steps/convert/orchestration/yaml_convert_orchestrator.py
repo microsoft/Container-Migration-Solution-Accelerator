@@ -177,9 +177,9 @@ class YamlConvertOrchestrator(
             tools=self.mcp_tools[2],  # Blob IO tool only
         )
         participant_names = [ai.agent_name for ai in agent_infos]
-        valid_participants_block = "\n".join([
-            f'- "{name}"' for name in participant_names
-        ])
+        valid_participants_block = "\n".join(
+            [f'- "{name}"' for name in participant_names]
+        )
         coordinator_agent_info.render(
             **render_params,
             step_name="Convert",

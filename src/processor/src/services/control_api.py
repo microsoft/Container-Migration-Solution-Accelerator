@@ -77,18 +77,20 @@ def create_control_app(
                 {"process_id": process_id, "exists": False}, status=200
             )
 
-        return _json_response({
-            "process_id": record.id,
-            "exists": True,
-            "kill_requested": record.kill_requested,
-            "kill_requested_at": record.kill_requested_at,
-            "kill_reason": record.kill_reason,
-            "kill_state": record.kill_state,
-            "kill_ack_instance_id": record.kill_ack_instance_id,
-            "kill_ack_at": record.kill_ack_at,
-            "kill_executed_at": record.kill_executed_at,
-            "last_update_time": record.last_update_time,
-        })
+        return _json_response(
+            {
+                "process_id": record.id,
+                "exists": True,
+                "kill_requested": record.kill_requested,
+                "kill_requested_at": record.kill_requested_at,
+                "kill_reason": record.kill_reason,
+                "kill_state": record.kill_state,
+                "kill_ack_instance_id": record.kill_ack_instance_id,
+                "kill_ack_at": record.kill_ack_at,
+                "kill_executed_at": record.kill_executed_at,
+                "last_update_time": record.last_update_time,
+            }
+        )
 
     async def request_kill(request: web.Request) -> web.Response:
         process_id = request.match_info.get("process_id", "").strip()

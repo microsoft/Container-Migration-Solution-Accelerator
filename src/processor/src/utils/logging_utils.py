@@ -210,20 +210,24 @@ def get_error_details(exception: Exception) -> dict[str, Any]:
 
     # Add specific details for Azure HTTP errors
     if isinstance(exception, HttpResponseError):
-        details.update({
-            "http_status_code": getattr(exception, "status_code", None),
-            "http_reason": getattr(exception, "reason", None),
-            "http_response": getattr(exception, "response", None),
-            "http_model": getattr(exception, "model", None),
-        })
+        details.update(
+            {
+                "http_status_code": getattr(exception, "status_code", None),
+                "http_reason": getattr(exception, "reason", None),
+                "http_response": getattr(exception, "response", None),
+                "http_model": getattr(exception, "model", None),
+            }
+        )
 
     # Add details for AzureChatCompletion specific errors
     if "AzureChatCompletion" in str(type(exception)):
-        details.update({
-            "azure_chat_completion_error": True,
-            "model_deployment": getattr(exception, "model", None),
-            "endpoint": getattr(exception, "endpoint", None),
-        })
+        details.update(
+            {
+                "azure_chat_completion_error": True,
+                "model_deployment": getattr(exception, "model", None),
+                "endpoint": getattr(exception, "endpoint", None),
+            }
+        )
 
     return details
 

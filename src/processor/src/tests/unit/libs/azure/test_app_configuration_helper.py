@@ -35,7 +35,9 @@ def test_app_configuration_helper_initializes_client(monkeypatch) -> None:
 
     monkeypatch.setattr(mod, "AzureAppConfigurationClient", _factory)
 
-    helper = mod.AppConfigurationHelper("https://appconfig.example", credential=object())
+    helper = mod.AppConfigurationHelper(
+        "https://appconfig.example", credential=object()
+    )
 
     assert helper.app_config_client is not None
     assert helper.app_config_client.endpoint == "https://appconfig.example"
@@ -87,7 +89,9 @@ def test_read_and_set_environmental_variables_sets_os_environ(monkeypatch) -> No
 
     monkeypatch.setattr(mod, "AzureAppConfigurationClient", _factory)
 
-    helper = mod.AppConfigurationHelper("https://appconfig.example", credential=object())
+    helper = mod.AppConfigurationHelper(
+        "https://appconfig.example", credential=object()
+    )
 
     # Ensure we don't leak env changes between tests.
     monkeypatch.delenv("K1", raising=False)

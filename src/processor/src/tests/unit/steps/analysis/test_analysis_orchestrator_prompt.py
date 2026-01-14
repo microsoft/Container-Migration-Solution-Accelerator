@@ -23,7 +23,12 @@ def test_analysis_orchestrator_renders_prompt_with_task_param_fields(monkeypatch
     async def _run():
         orch = AnalysisOrchestrator.__new__(AnalysisOrchestrator)
         orch.initialized = True
-        orch.mcp_tools = [_DummyAsyncCM(), _DummyAsyncCM(), _DummyAsyncCM(), _DummyAsyncCM()]
+        orch.mcp_tools = [
+            _DummyAsyncCM(),
+            _DummyAsyncCM(),
+            _DummyAsyncCM(),
+            _DummyAsyncCM(),
+        ]
         orch.agents = []
 
         captured: dict[str, object] = {}

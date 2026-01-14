@@ -68,7 +68,9 @@ def test_workflow_executor_failed_exception_includes_traceback_when_present():
 def test_details_to_dict_handles_model_dump_dict_and_attrs():
     payload = {"executor_id": "design", "error_type": "X", "message": "m"}
 
-    got = WorkflowExecutorFailedException._details_to_dict(_DetailsWithModelDump(payload))
+    got = WorkflowExecutorFailedException._details_to_dict(
+        _DetailsWithModelDump(payload)
+    )
     assert got["executor_id"] == "design"
 
     got = WorkflowExecutorFailedException._details_to_dict(_DetailsWithDict(payload))

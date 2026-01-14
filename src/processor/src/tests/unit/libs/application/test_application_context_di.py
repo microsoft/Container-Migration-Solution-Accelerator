@@ -64,7 +64,9 @@ def test_app_context_async_scoped_calls_cleanup_on_scope_exit() -> None:
             self.closed = True
 
     async def _run() -> None:
-        ctx = AppContext().add_async_scoped(_AsyncScoped, _AsyncScoped, cleanup_method="close")
+        ctx = AppContext().add_async_scoped(
+            _AsyncScoped, _AsyncScoped, cleanup_method="close"
+        )
 
         async with ctx.create_scope() as scope:
             svc = await scope.get_service_async(_AsyncScoped)

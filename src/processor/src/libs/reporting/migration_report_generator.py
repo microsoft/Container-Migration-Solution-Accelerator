@@ -112,14 +112,16 @@ class MigrationReportCollector:
         self._current_agent = agent_name
 
         # Track agent activity
-        self._agent_activities.append({
-            "timestamp": time.time(),
-            "agent_name": agent_name,
-            "agent_role": agent_role,
-            "activity": activity,
-            "step": self._current_step,
-            "file": self._current_file,
-        })
+        self._agent_activities.append(
+            {
+                "timestamp": time.time(),
+                "agent_name": agent_name,
+                "agent_role": agent_role,
+                "activity": activity,
+                "step": self._current_step,
+                "file": self._current_file,
+            }
+        )
 
     def record_failure(
         self,
@@ -141,7 +143,9 @@ class MigrationReportCollector:
             severity = self._classify_failure_severity(exception, failure_type)
 
         # Create failure context
-        effective_stack_trace = stack_trace if stack_trace is not None else traceback.format_exc()
+        effective_stack_trace = (
+            stack_trace if stack_trace is not None else traceback.format_exc()
+        )
         if effective_stack_trace and len(effective_stack_trace) > 20000:
             # Keep head+tail to preserve the most useful frames.
             head = effective_stack_trace[:8000]
@@ -297,11 +301,13 @@ class MigrationReportGenerator:
         executive_summary = ExecutiveSummary(
             completion_percentage=0.0,  # Will be updated based on steps
             total_files=len(self.collector._file_contexts),
-            critical_issues_count=len([
-                f
-                for f in self.collector._failure_contexts
-                if f.severity in [FailureSeverity.CRITICAL, FailureSeverity.HIGH]
-            ]),
+            critical_issues_count=len(
+                [
+                    f
+                    for f in self.collector._failure_contexts
+                    if f.severity in [FailureSeverity.CRITICAL, FailureSeverity.HIGH]
+                ]
+            ),
         )
 
         # Create input analysis
@@ -485,14 +491,16 @@ class MigrationReportGenerator:
         # Get recent log excerpts (this could be enhanced to capture actual logs)
         log_excerpts = []
         for failure in self.collector._failure_contexts[-3:]:  # Last 3 failures
-            log_excerpts.append({
-                "timestamp": failure.timestamp_iso,
-                "level": "ERROR",
-                "message": failure.error_message,
-                "source": failure.step_context.step_name
-                if failure.step_context
-                else "unknown",
-            })
+            log_excerpts.append(
+                {
+                    "timestamp": failure.timestamp_iso,
+                    "level": "ERROR",
+                    "message": failure.error_message,
+                    "source": failure.step_context.step_name
+                    if failure.step_context
+                    else "unknown",
+                }
+            )
 
         # Environment info
         env_info = {}

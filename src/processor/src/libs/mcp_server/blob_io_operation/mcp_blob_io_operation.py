@@ -393,15 +393,17 @@ def list_blobs_in_container(
                 size_mb = blob.size / 1024 / 1024 if blob.size else 0
                 total_size += blob.size if blob.size else 0
 
-                blob_list.append({
-                    "name": blob.name,
-                    "size": blob.size or 0,
-                    "size_mb": size_mb,
-                    "last_modified": blob.last_modified,
-                    "content_type": blob.content_settings.content_type
-                    if blob.content_settings
-                    else "unknown",
-                })
+                blob_list.append(
+                    {
+                        "name": blob.name,
+                        "size": blob.size or 0,
+                        "size_mb": size_mb,
+                        "last_modified": blob.last_modified,
+                        "content_type": blob.content_settings.content_type
+                        if blob.content_settings
+                        else "unknown",
+                    }
+                )
 
             if not blob_list:
                 return f"""[FOLDER] CONTAINER: {container_name}
@@ -496,11 +498,13 @@ def list_containers() -> str:
 
         container_list = []
         for container in containers:
-            container_list.append({
-                "name": container.name,
-                "last_modified": container.last_modified,
-                "metadata": container.metadata or {},
-            })
+            container_list.append(
+                {
+                    "name": container.name,
+                    "last_modified": container.last_modified,
+                    "metadata": container.metadata or {},
+                }
+            )
 
         if not container_list:
             return """[PACKAGE] STORAGE ACCOUNT CONTAINERS
@@ -598,12 +602,14 @@ def find_blobs(
                     blob.name, pattern
                 ):
                     size_mb = blob.size / 1024 / 1024 if blob.size else 0
-                    matching_blobs.append({
-                        "name": blob.name,
-                        "size": blob.size or 0,
-                        "size_mb": size_mb,
-                        "last_modified": blob.last_modified,
-                    })
+                    matching_blobs.append(
+                        {
+                            "name": blob.name,
+                            "size": blob.size or 0,
+                            "size_mb": size_mb,
+                            "last_modified": blob.last_modified,
+                        }
+                    )
 
             if not matching_blobs:
                 return f"""[SEARCH] BLOB SEARCH RESULTS

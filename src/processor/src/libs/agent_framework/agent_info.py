@@ -17,8 +17,13 @@ class AgentInfo(BaseModel):
     agent_description: str | None = Field(default=None)
     agent_instruction: str | None = Field(default=None)
     agent_framework_helper: AgentFrameworkHelper | None = Field(default=None)
-    tools: ToolProtocol| Callable[..., Any] | MutableMapping[str, Any]| Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]] | None = Field(default=None)
-    
+    tools: (
+        ToolProtocol
+        | Callable[..., Any]
+        | MutableMapping[str, Any]
+        | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+        | None
+    ) = Field(default=None)
 
     model_config = {
         "arbitrary_types_allowed": True,
