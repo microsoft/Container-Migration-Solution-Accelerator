@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pre-commit>=4.0.1", "ruff>=0.8.6"]
+dev = ["pre-commit>=4.0.1", "ruff>=0.8.6", "pytest>=8.0.0", "pytest-asyncio>=0.23.0", "pytest-mock>=3.12.0"]
 
 [tool.ruff]
 # Set the target Python version
@@ -83,3 +83,32 @@ docstring-code-format = true
 
 # Remove trailing whitespace
 skip-magic-trailing-comma = false
+
+[tool.pytest.ini_options]
+# Test discovery patterns
+pythonpath = ["src"]
+testpaths = ["src/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Async support
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+# Output options
+addopts = [
+    "-v",                    # Verbose output
+    "--strict-markers",      # Strict marker checking
+    "--tb=short",           # Shorter traceback format
+    "--color=yes",          # Colored output
+    "-ra",                  # Show all test summary info
+]
+
+# Markers for categorizing tests
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+    "asyncio: Async tests",
+]
