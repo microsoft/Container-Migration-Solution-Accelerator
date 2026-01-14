@@ -11,6 +11,7 @@ Notes:
     - Output is optimized for human readability in interactive terminals.
 """
 
+
 # Color and icon utility functions for enhanced display
 class ConsoleColors:
     """ANSI color codes for terminal output"""
@@ -147,4 +148,9 @@ def format_agent_message(name, content, timestamp, max_content_length=400):
 
     content_display = f"{content_color}{content_text}{ConsoleColors.RESET}"
 
-    return f"{role_display}: {content_display}{f' ({timestamp})' if timestamp else ''}"
+    if timestamp:
+        timestamp_display = f" {ConsoleColors.BOLD}{ConsoleColors.RED}({timestamp}){ConsoleColors.RESET}"
+    else:
+        timestamp_display = ""
+
+    return f"{role_display}: {content_display}{timestamp_display}"

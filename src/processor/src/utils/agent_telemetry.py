@@ -477,9 +477,14 @@ class TelemetryManager:
 
         # Update current state
         agent.current_action = action
-        agent.last_message_preview = (
-            message_preview if message_preview is not None else ""
-        )
+        preview = message_preview if message_preview is not None else ""
+        # If callers provide only a full_message, derive a small preview for UI.
+        if not preview and full_message:
+            preview = full_message
+        # Keep previews small to avoid noisy UI / large Cosmos documents.
+        if isinstance(preview, str) and len(preview) > 300:
+            preview = preview[:300] + "..."
+        agent.last_message_preview = preview
         if full_message is not None:
             agent.last_full_message = full_message
             agent.message_word_count = len(full_message.split()) if full_message else 0
@@ -618,6 +623,17 @@ class TelemetryManager:
                 if current_process:
                     current_process.last_update_time = _get_utc_timestamp()
                     current_process.status = status
+
+                    # If the process is in a terminal state, ensure telemetry reflects it.
+                    if status in {"completed", "failed"}:
+                        current_process.phase = "end"
+                        for agent in current_process.agents.values():
+                            agent.is_active = False
+                            agent.is_currently_thinking = False
+                            agent.is_currently_speaking = False
+                            agent.current_action = "idle"
+                            agent.participation_status = "standby"
+                            agent.last_update_time = _get_utc_timestamp()
                     await self.repository.update_async(current_process)
 
             except Exception:
@@ -1076,6 +1092,20 @@ class TelemetryManager:
                     "timestamp": _get_utc_timestamp(),
                     "step_name": step_name,
                 }
+
+                # Normalize common "singleton list" patterns to keep telemetry schema stable.
+                # Some executors yield `[{'result': ...}]` while others yield `{...}`.
+                # Keeping a dict here helps downstream extraction (e.g., conversion_report_file).
+                try:
+                    stored = current_process.step_results[step_name]["result"]
+                    if (
+                        isinstance(stored, list)
+                        and len(stored) == 1
+                        and isinstance(stored[0], dict)
+                    ):
+                        current_process.step_results[step_name]["result"] = stored[0]
+                except Exception:
+                    pass
 
                 # Lap time: end the timer for this step.
                 if step_name:

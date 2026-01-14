@@ -10,6 +10,7 @@
 # ]
 # ///
 
+import importlib.util
 from datetime import UTC, datetime, timedelta
 
 from fastmcp import FastMCP
@@ -21,10 +22,8 @@ try:
     TIMEZONE_LIB = "pytz"
 except ImportError:
     try:
-        from zoneinfo import ZoneInfo
-
-        TIMEZONE_LIB = "zoneinfo"
-    except ImportError:
+        TIMEZONE_LIB = "zoneinfo" if importlib.util.find_spec("zoneinfo") else None
+    except Exception:
         TIMEZONE_LIB = None
 
 # Common timezone aliases for better compatibility

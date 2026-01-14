@@ -27,8 +27,6 @@ class _FakeAppConfigClient:
 def test_app_configuration_helper_initializes_client(monkeypatch) -> None:
     from libs.azure import app_configuration as mod
 
-    fake_client = _FakeAppConfigClient("https://example", object())
-
     def _factory(endpoint: str, credential: object):
         # Return a new fake client each time so the test can assert endpoint wiring.
         return _FakeAppConfigClient(endpoint, credential)

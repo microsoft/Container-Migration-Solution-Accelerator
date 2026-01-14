@@ -107,18 +107,27 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
             # Only attach tools when provided. (Coordinator should typically have none.)
             if agent_info.tools is not None:
-                builder = builder.with_tools(agent_info.tools).with_temperature(0.8)
+                builder = (
+                    builder.with_tools(agent_info.tools)
+                    .with_temperature(0.0)
+                    .with_max_tokens(20_000)
+                )
 
             if agent_info.agent_name == "Coordinator":
                 # Routing-only: keep deterministic and small.
                 builder = (
                     builder.with_temperature(0.0)
                     .with_response_format(ManagerSelectionResponse)
+                    .with_max_tokens(1_500)
                     .with_tools(agent_info.tools)  # for checking file existence
                 )
             elif agent_info.agent_name == "ResultGenerator":
                 # Structured JSON generation; deterministic and bounded.
-                builder = builder.with_temperature(0.0).with_tool_choice("none")
+                builder = (
+                    builder.with_temperature(0.0)
+                    .with_max_tokens(12_000)
+                    .with_tool_choice("none")
+                )
             agent = builder.build()
             agents[agent_info.agent_name] = agent
 

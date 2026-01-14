@@ -344,14 +344,12 @@ class MigrationProcessor:
                         )
 
                         # Raise a rich exception so the queue worker reports a meaningful reason.
-                        raise WorkflowExecutorFailedException(
-                            {
-                                "executor_id": event.source_executor_id or "unknown",
-                                "error_type": "WorkflowOutputMissing",
-                                "message": "Workflow output is None",
-                                "traceback": None,
-                            }
-                        )
+                        raise WorkflowExecutorFailedException({
+                            "executor_id": event.source_executor_id or "unknown",
+                            "error_type": "WorkflowOutputMissing",
+                            "message": "Workflow output is None",
+                            "traceback": None,
+                        })
 
                     is_hard_terminated = bool(
                         getattr(event.data, "is_hard_terminated", False)

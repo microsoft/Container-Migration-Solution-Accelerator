@@ -218,7 +218,6 @@ class MigrationReportCollector:
 
     def _classify_failure_type(self, exception: Exception) -> FailureType:
         """Automatically classify failure type based on exception."""
-        exception_name = type(exception).__name__
         error_message = str(exception).lower()
 
         # Network and connectivity
