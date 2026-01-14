@@ -1,6 +1,17 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Security policy evidence collection (redacted).
+
+This module performs a best-effort scan over a source artifact folder in Azure
+Blob Storage to collect *non-sensitive* evidence when a security policy
+violation is detected.
+
+Key guarantee:
+    Returned results never include secret values. Only blob names, key names,
+    and high-level pattern signals are emitted for auditing/telemetry.
+"""
+
 import re
 from typing import Any
 

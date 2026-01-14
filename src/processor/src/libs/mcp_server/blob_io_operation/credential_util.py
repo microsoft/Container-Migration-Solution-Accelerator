@@ -1,6 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Credential selection for the MCP blob I/O server.
+
+This module provides credential helpers used by the blob I/O MCP tools.
+Operationally, it prefers managed identity when hosted in Azure and falls back
+to CLI credentials for local development.
+"""
+
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [

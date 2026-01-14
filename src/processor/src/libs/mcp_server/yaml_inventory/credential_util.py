@@ -1,6 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Credential selection for the MCP YAML inventory server.
+
+This module provides lightweight Azure credential helpers intended to run in a
+FastMCP tool context. It selects managed identity when running in Azure and
+falls back to CLI credentials for local development.
+"""
+
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [

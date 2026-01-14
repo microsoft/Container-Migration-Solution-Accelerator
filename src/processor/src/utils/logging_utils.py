@@ -1,6 +1,19 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Logging helpers for the migration processor.
+
+This module provides:
+        - A single place to configure global logging levels and suppress noisy
+            third-party libraries.
+        - A small set of safe formatting helpers for structured context logging.
+        - Standardized message templates for common success/failure patterns.
+
+Design goals:
+        - Prefer predictable runtime logging over verbose debug traces.
+        - Make error logs actionable by including relevant context and tracebacks.
+"""
+
 import logging
 import os
 import traceback

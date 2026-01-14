@@ -1,6 +1,19 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Agent Framework client factory and initialization helpers.
+
+This module centralizes the construction of Agent Framework client instances
+used by the migration processor. It provides:
+    - A small enum describing supported client types.
+    - A helper that initializes clients from `AgentFrameworkSettings` and
+      exposes a consistent lookup API.
+
+Operational notes:
+    - Authentication is typically provided via Entra ID token providers.
+    - Client initialization is driven by configured services in settings.
+"""
+
 import logging
 from enum import Enum
 from typing import TYPE_CHECKING, Any, overload
@@ -26,6 +39,8 @@ if TYPE_CHECKING:
 
 
 class ClientType(Enum):
+    """Supported Agent Framework client types."""
+
     OpenAIChatCompletion = "OpenAIChatCompletion"
     OpenAIAssistant = "OpenAIAssistant"
     OpenAIResponse = "OpenAIResponse"
@@ -37,13 +52,28 @@ class ClientType(Enum):
 
 
 class AgentFrameworkHelper:
+    """Initialize and cache Agent Framework clients for configured services."""
+
     def __init__(self):
+        """Create an empty client registry.
+
+        Call `initialize()` to populate clients from settings.
+        """
         self.ai_clients: dict[
             str,
             Any,
         ] = {}
 
     def initialize(self, settings: AgentFrameworkSettings):
+        """Initialize all clients configured in `settings`.
+
+        Args:
+            settings: Configuration object describing available services and
+                their endpoints/deployments.
+
+        Raises:
+            ValueError: If `settings` is not provided.
+        """
         if settings is None:
             raise ValueError(
                 "AgentFrameworkSettings must be provided to initialize clients."
@@ -52,6 +82,7 @@ class AgentFrameworkHelper:
         self._initialize_all_clients(settings=settings)
 
     def _initialize_all_clients(self, settings: AgentFrameworkSettings):
+        """Create all configured clients and cache them by service ID."""
         if settings is None:
             raise ValueError(
                 "AgentFrameworkSettings must be provided to initialize clients."
@@ -92,6 +123,11 @@ class AgentFrameworkHelper:
             # )
 
     async def get_client_async(self, service_id: str = "default") -> Any | None:
+        """Return a cached client for `service_id`.
+
+        This is declared async to match call sites that may already be async.
+        The lookup itself is in-memory.
+        """
         return self.ai_clients.get(service_id)
 
     # Type-specific overloads for better IntelliSense (Type Hint)
@@ -231,11 +267,10 @@ class AgentFrameworkHelper:
         model_deployment_name: str | None = None,
         async_credential: object | None = None,
     ):
-        """
-        Create a client instance based on the agent type with full parameter support.
+        """Create an Agent Framework client instance.
 
         Args:
-            agent_type: The type of agent client to create
+            client_type: The client type to construct.
 
             Common Azure OpenAI Parameters (Chat/Assistant/Response):
                 api_key: Azure OpenAI API key (if not using Entra ID)

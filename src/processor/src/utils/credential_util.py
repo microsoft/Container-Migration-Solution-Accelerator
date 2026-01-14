@@ -1,6 +1,17 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Azure credential selection helpers.
+
+This module centralizes credential selection for Azure SDK clients.
+
+Operational behavior:
+        - In Azure-hosted environments, prefer managed identity (RBAC-based auth).
+        - In local development, prefer CLI-backed credentials ("az" / "azd").
+        - Provide both sync and async credential helpers for SDKs that require
+            async authentication.
+"""
+
 import logging
 import os
 from typing import Any
@@ -27,35 +38,27 @@ from azure.identity.aio import (
     ManagedIdentityCredential as AsyncManagedIdentityCredential,
 )
 from azure.identity.aio import (
-    get_bearer_token_provider as get_async_bearer_token_provider,
+    get_bearer_token_provider as identity_get_async_bearer_token_provider,
 )
 
 
 async def get_async_bearer_token_provider():
-    """
-    Get a bearer token provider for async Azure SDK clients that require it.
-
-    This function uses the same logic as get_async_azure_credential to determine
-    the appropriate credential based on the environment.
+    """Return a bearer token provider for async Azure SDK clients.
 
     Returns:
-        A callable that provides bearer tokens for async Azure SDK clients.
+        A callable suitable for SDK clients that accept a token provider.
     """
     credential = await get_async_azure_credential()
-    return get_async_bearer_token_provider(
+    return identity_get_async_bearer_token_provider(
         credential, "https://cognitiveservices.azure.com/.default"
     )
 
 
 def get_bearer_token_provider():
-    """
-    Get a bearer token provider for Azure SDK clients that require it.
-
-    This function uses the same logic as get_azure_credential to determine
-    the appropriate credential based on the environment.
+    """Return a bearer token provider for sync Azure SDK clients.
 
     Returns:
-        A callable that provides bearer tokens for Azure SDK clients.
+        A callable suitable for SDK clients that accept a token provider.
     """
     # credential = get_azure_credential()
     # return identity_get_bearer_token_provider(credential)
@@ -66,19 +69,12 @@ def get_bearer_token_provider():
 
 
 def get_azure_credential():
-    """
-    Get the appropriate Azure credential based on environment.
+    """Return the best Azure credential for the current runtime environment.
 
-    Following Azure authentication best practices:
-    - Local Development: Use AzureCliCredential (requires 'az login')
-    - Azure Container/VM: Use ManagedIdentityCredential (role-based auth)
-    - Azure App Service/Functions: Use ManagedIdentityCredential
-    - Fallback: DefaultAzureCredential with explicit instantiation
-
-    This pattern ensures:
-    - Local dev uses 'az login' credentials
-    - Azure-hosted containers use assigned managed identity roles
-    - Production environments get proper RBAC-based authentication
+    Operational preference order:
+        1) Azure-hosted: managed identity (system- or user-assigned)
+        2) Local: Azure CLI and Azure Developer CLI credentials
+        3) Fallback: DefaultAzureCredential
     """
 
     # Check if running in Azure environment (container, app service, VM, etc.)
@@ -142,10 +138,7 @@ def get_azure_credential():
 
 
 def get_async_azure_credential():
-    """
-    Get the appropriate async Azure credential based on environment.
-    Used for Azure services that require async credentials like AzureAIAgent.
-    """
+    """Return the best async Azure credential for the current runtime environment."""
     import os
 
     # Check if running in Azure environment (container, app service, VM, etc.)
@@ -211,11 +204,11 @@ def get_async_azure_credential():
 
 
 def validate_azure_authentication() -> dict[str, Any]:
-    """
-    Validate Azure authentication setup and provide helpful diagnostics.
+    """Validate Azure authentication configuration and return diagnostics.
 
     Returns:
-        dict with authentication status, credential type, and recommendations
+        JSON-serializable diagnostic payload including environment indicators,
+        chosen credential type, and actionable recommendations.
     """
     import os
 

@@ -1,6 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Console formatting helpers.
+
+This module centralizes ANSI color codes and lightweight formatting helpers used
+to display agent messages consistently in terminal output.
+
+Notes:
+    - These utilities are display-only; they should not affect control flow.
+    - Output is optimized for human readability in interactive terminals.
+"""
+
 # Color and icon utility functions for enhanced display
 class ConsoleColors:
     """ANSI color codes for terminal output"""
@@ -37,7 +47,14 @@ class ConsoleColors:
 
 
 def get_role_style(name=None):
-    """Get color, icon, and formatting for different roles and agents"""
+    """Return the display label and content color for a given agent/role.
+
+    Args:
+        name: Agent/role display name (e.g., "Chief Architect").
+
+    Returns:
+        Tuple of (role_display, content_color).
+    """
 
     # Role-based styling
     # Agent-specific styling
@@ -102,7 +119,18 @@ def get_role_style(name=None):
 
 
 def format_agent_message(name, content, timestamp, max_content_length=400):
-    """Format agent message with colors, icons and truncation"""
+    """Format a single agent message for terminal display.
+
+    Args:
+        name: Agent/role display name.
+        content: Message content (any type; will be stringified).
+        timestamp: Optional timestamp string appended to the line.
+        max_content_length: Max number of characters to display for content.
+
+    Returns:
+        A single formatted line including role label, colored content, and an
+        optional timestamp.
+    """
     role_display, content_color = get_role_style(name)
 
     if content is None:
