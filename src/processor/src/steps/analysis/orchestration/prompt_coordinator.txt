@@ -189,6 +189,15 @@ NO FALLBACK:
 
 If conditions are NOT met, continue the workflow by selecting the next appropriate agent. DO NOT set finish=true.
 
+COORDINATOR-ONLY TERMINATION CONTROL:
+- Never ask participants to "terminate the workflow" or to "set finish=true". Participants do not control `finish`.
+- Your job (Coordinator) is to decide when the workflow should stop based on the evidence rules above.
+- Avoid adding phrases like "Do NOT set finish=true yourself" inside instructions to participants; it is confusing and can cause endless routing.
+- When the workflow should stop, emit the termination JSON yourself with:
+  - `selected_participant: null`
+  - `instruction: "complete"` (success) OR `"hard_blocked"` (hard termination)
+  - `finish: true` (recommended)
+
 REQUIRED COMPLETION EVIDENCE (must appear in chat before finish=true):
 - Evidence that analysis_result.md exists via blob tools and is non-empty
 - Evidence of file-based sign-offs (paste or quote the `## Sign-off` section from `analysis_result.md`)

@@ -1,6 +1,30 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Migration workflow orchestration.
+
+This module wires together the end-to-end container migration workflow executed by the
+processor service.
+
+At a high level, :class:`MigrationProcessor` builds an ``agent_framework.Workflow`` and
+streams its events to:
+
+- Track process and step state via :class:`utils.agent_telemetry.TelemetryManager`.
+- Collect structured step outcomes and failures via
+    :class:`libs.reporting.MigrationReportCollector`.
+- Surface failures as rich exceptions that preserve the framework's
+    ``WorkflowErrorDetails`` payload.
+
+Workflow order (linear): ``analysis`` → ``design`` → ``yaml`` → ``documentation``.
+
+Notes:
+- Some steps may *hard terminate* (e.g., policy blockers). In that case this module
+    returns the hard-terminated output to the caller and records a failure outcome.
+- A missing workflow output is treated as an error and converted into a rich
+    :class:`WorkflowExecutorFailedException` so upstream workers can log a meaningful
+    reason.
+"""
+
 import json
 import time
 from datetime import datetime
@@ -103,11 +127,37 @@ class WorkflowOutputMissingException(Exception):
 
 
 class MigrationProcessor:
+    """Orchestrates the migration workflow and reports progress.
+
+    The processor is responsible for:
+
+    - Building the workflow graph (executor registration + edges).
+    - Executing the workflow as an async event stream.
+    - Recording step and final outcomes to telemetry.
+    - Collecting and emitting a structured migration report summary on success/failure.
+
+    Parameters
+    ----------
+    app_context:
+        Application DI container used to resolve services (e.g. telemetry).
+    """
+
     def __init__(self, app_context: AppContext):
         self.app_context = app_context
         self.workflow = self._init_workflow()
 
     def _init_workflow(self) -> Workflow:
+        """Create and return the configured workflow instance.
+
+        The workflow is a linear pipeline:
+
+        ``analysis`` → ``design`` → ``yaml`` → ``documentation``
+
+        Returns
+        -------
+        Workflow
+            The built workflow ready to execute.
+        """
         workflow = (
             WorkflowBuilder()
             .register_executor(
@@ -137,7 +187,35 @@ class MigrationProcessor:
 
         return workflow
 
-    async def run(self, input_data: Analysis_TaskParam):
+    async def run(self, input_data: Analysis_TaskParam) -> Any:
+        """Run the migration workflow.
+
+        The workflow is executed via ``run_stream`` and handled as a sequence of
+        framework events. This method:
+
+        - Initializes telemetry for the process.
+        - Records step transitions and step results.
+        - Captures a structured report summary for success/failure outcomes.
+        - Returns the final workflow output.
+
+        Parameters
+        ----------
+        input_data:
+            Input parameters for the analysis step. The same object is propagated
+            through the workflow and is expected to include a ``process_id``.
+
+        Returns
+        -------
+        Any
+            The final workflow output. If the workflow hard-terminates, the returned
+            object represents the hard-termination payload so upstream callers can
+            display blockers.
+
+        Raises
+        ------
+        WorkflowExecutorFailedException
+            If any executor fails or if the workflow produces no output.
+        """
         start_dt = datetime.now()
         start_perf = time.perf_counter()
 
@@ -152,6 +230,7 @@ class MigrationProcessor:
             )
 
             def _to_jsonable(val: Any) -> Any:
+                """Best-effort conversion of complex values to JSON-serializable data."""
                 if val is None:
                     return None
                 if isinstance(val, (str, int, float, bool)):
@@ -182,6 +261,7 @@ class MigrationProcessor:
             async def _generate_report_summary(
                 overall_status: ReportStatus,
             ) -> dict[str, Any]:
+                """Generate a compact report summary suitable for telemetry payloads."""
                 report = await report_generator.generate_failure_report(
                     overall_status=overall_status
                 )

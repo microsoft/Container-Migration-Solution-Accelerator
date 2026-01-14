@@ -192,7 +192,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         | Sequence[AgentProtocol | Executor],
         memory_client: AsyncMemory,
         coordinator_name: str = "Coordinator",
-        max_rounds: int = 150,
+        max_rounds: int = 100,
         max_seconds: float | None = None,
         result_output_format: type[TOutput] | None = None,
     ):
@@ -267,9 +267,21 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._coordinator_selection_streak: int = 0
         self._recent_coordinator_selections: deque[tuple[str, str]] = deque(maxlen=10)
 
+        # Progress counter used to avoid false-positive loop detection.
+        # Incremented whenever any non-Coordinator agent completes a response.
+        self._progress_counter: int = 0
+        # Snapshot of progress_counter at the time we last saw _last_coordinator_selection.
+        self._last_coordinator_selection_progress: int = 0
+
     def _request_forced_termination(
         self, *, reason: str, termination_type: str
     ) -> None:
+        """Request a forced termination (timeouts/loop breakers).
+
+        This is intended for safety stops (timeouts, repeated loops) rather than
+        normal completion. Once set, the streaming loop will break and a best-effort
+        hard-terminated result may be produced.
+        """
         if self._termination_requested or self._forced_termination_requested:
             return
         self._forced_termination_requested = True
@@ -279,6 +291,17 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
     def _try_build_forced_result(
         self, *, reason: str, termination_type: str
     ) -> TOutput | None:
+        """Build a best-effort hard-terminated output model.
+
+        Many step output models share common fields such as `is_hard_terminated`,
+        `termination_type`, and `blocking_issues`. This helper attempts to populate
+        whatever fields are present in the configured Pydantic `result_format`.
+
+        Returns
+        -------
+        TOutput | None
+            A validated output model if `result_format` is configured, otherwise None.
+        """
         result_format = self.result_format
         if result_format is None:
             return None
@@ -565,6 +588,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 logger.info(
                     f"[RESULT] Generating final result with {result_generator_name}"
                 )
+                # Need to generate Typed Output from conversation.
+                # This is the limitation of the current GroupChat workflow model,
+                # which cannot directly produce typed outputs.
                 final_analysis = await self._generate_final_result(
                     conversation, result_format, result_generator_name
                 )
@@ -590,7 +616,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 execution_time_seconds=execution_time,
             )
 
-            # Callback for completion
+            # Callback for completion with Typed Result
             if on_workflow_complete:
                 await on_workflow_complete(result)
 
@@ -952,6 +978,12 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         self.agent_responses.append(response)
 
+        # Mark progress on any non-Coordinator completion. This is used to ensure loop
+        # detection only triggers when the Coordinator is repeating itself *and* the
+        # rest of the conversation is not advancing.
+        if agent_name != self.coordinator_name:
+            self._progress_counter += 1
+
         # Detect manager termination signal (finish=true) from Coordinator.
         # NOTE: The underlying GroupChatBuilder does not automatically stop on finish,
         # so we enforce it here.
@@ -979,10 +1011,22 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     selection_key = (selected, str(manager_instruction or ""))
                     self._recent_coordinator_selections.append(selection_key)
                     if selection_key == self._last_coordinator_selection:
-                        self._coordinator_selection_streak += 1
+                        # If any other agent responded since the last identical selection,
+                        # treat that as progress and reset the streak.
+                        if (
+                            self._progress_counter
+                            != self._last_coordinator_selection_progress
+                        ):
+                            self._coordinator_selection_streak = 1
+                            self._last_coordinator_selection_progress = (
+                                self._progress_counter
+                            )
+                        else:
+                            self._coordinator_selection_streak += 1
                     else:
                         self._last_coordinator_selection = selection_key
                         self._coordinator_selection_streak = 1
+                        self._last_coordinator_selection_progress = self._progress_counter
 
                     # If the Coordinator repeats the exact same ask 3 times, break.
                     if self._coordinator_selection_streak >= 3:
@@ -994,9 +1038,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                         )
 
                 # Handle termination request
-                if manager_response.finish is True:
-                    # Only enforce PASS sign-offs when Coordinator explicitly claims success completion.
-                    instruction = str(manager_instruction or "").strip().lower()
+                instruction = str(manager_instruction or "").strip().lower()
+
+                # Some prompts instruct the Coordinator/agents to avoid setting finish=true.
+                # To keep the workflow robust, we also treat certain instructions as explicit
+                # termination requests even when finish=false.
+                selected_norm = (
+                    selected.strip().lower()
+                    if isinstance(selected, str)
+                    else "none"
+                )
+                coordinator_signaled_stop = (
+                    manager_response.finish is True
+                    or (selected_norm in ("", "none") and instruction in ("complete", "blocked", "fail", "failed"))
+                )
+
+                if coordinator_signaled_stop:
+                    # Only enforce PASS sign-offs when Coordinator claims success completion.
                     if instruction == "complete":
                         is_valid, reason = self._validate_sign_offs(self._conversation)
                         if not is_valid:
@@ -1010,8 +1068,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     self._termination_requested = True
                     self._termination_final_message = manager_response.final_message
                     logger.info(
-                        "Termination accepted (instruction=%s)",
+                        "Termination accepted (instruction=%s, finish=%s)",
                         instruction or "<empty>",
+                        bool(manager_response.finish),
                     )
                 elif (
                     isinstance(selected, str)
