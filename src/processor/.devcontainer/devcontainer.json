@@ -4,7 +4,11 @@
     "features": {
         "ghcr.io/dhoeric/features/hadolint:1": {},
         "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {},
-        "ghcr.io/azure/azure-dev/azd:latest": {}
+        "ghcr.io/azure/azure-dev/azd:latest": {},
+        "ghcr.io/devcontainers/features/azure-cli:1": {},
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "22"
+        }
     },
     "runArgs": [
         "--cpus=16",
@@ -35,10 +39,10 @@
     "containerEnv": {
         "DISPLAY": "dummy",
         "UV_LINK_MODE": "copy",
-        "UV_PROJECT_ENVIRONMENT": ".venv",
-        "VIRTUAL_ENV": "/workspaces/processor/.venv"
+        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv",
+        "VIRTUAL_ENV": "/home/vscode/.venv"
     },
-    "postCreateCommand": "uv sync --python 3.12 --prelease=allow --link-mode=copy --frozen",
+    "postCreateCommand": "uv sync --python 3.12 --prerelease=allow --link-mode=copy --frozen",
     "postStartCommand": "uv tool install pre-commit --with pre-commit-uv --force-reinstall",
     "remoteUser": "vscode"
 }

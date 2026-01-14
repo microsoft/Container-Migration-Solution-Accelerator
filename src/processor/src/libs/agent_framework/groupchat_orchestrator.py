@@ -192,7 +192,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         | Sequence[AgentProtocol | Executor],
         memory_client: AsyncMemory,
         coordinator_name: str = "Coordinator",
-        max_rounds: int = 50,
+        max_rounds: int = 150,
         max_seconds: float | None = None,
         result_output_format: type[TOutput] | None = None,
     ):

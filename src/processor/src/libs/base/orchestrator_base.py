@@ -107,7 +107,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
             # Only attach tools when provided. (Coordinator should typically have none.)
             if agent_info.tools is not None:
-                builder = builder.with_tools(agent_info.tools)
+                builder = builder.with_tools(agent_info.tools).with_temperature(0.8)
 
             if agent_info.agent_name == "Coordinator":
                 # Routing-only: keep deterministic and small.
@@ -145,7 +145,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 ).api_version,
                 thread_id=thread_id,
                 retry_config=RateLimitRetryConfig(
-                    max_retries=5, base_delay_seconds=1.0, max_delay_seconds=30.0
+                    max_retries=5, base_delay_seconds=3.0, max_delay_seconds=60.0
                 ),
             )
             self._client_cache[thread_id] = client

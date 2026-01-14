@@ -21,6 +21,15 @@ RUN tdnf update -y && tdnf install -y \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && mv /root/.local/bin/uv /usr/local/bin/uv
 
+# Install Node.js (required by some MCP tools)
+# Keep this at a modern LTS to satisfy common package "engines" constraints.
+ARG NODE_VERSION=22.12.0
+RUN curl -fsSLo /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" \
+    && tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
+    && rm -f /tmp/node.tar.gz \
+    && node --version \
+    && npm --version
+
 # Copy pyproject.toml and uv.lock first for better caching
 COPY pyproject.toml uv.lock ./
 

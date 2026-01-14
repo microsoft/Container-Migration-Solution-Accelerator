@@ -5,6 +5,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #   "fastmcp>=2.12.5",
+#   "httpx>=0.27.0,<1.0",
 #   "azure-core>=1.36.0",
 #   "azure-storage-blob>=12.27.1",
 #   "azure-identity>=1.23.0",

@@ -341,51 +341,46 @@ Each migration step is implemented as an Agent Framework workflow with explicit 
 flowchart TB
    %% Migration flow (step-oriented)
 
-   subgraph ROW[" "]
-      direction LR
-
-      subgraph A["Analysis Process"]
-         direction TB
-         A1["• Platform Detection<br/>• Technical Architecture Review<br/>• Source Configuration Analysis<br/>• Migration Complexity Assessment"]
-         A2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
-         A1 --> A2
-      end
-
-      subgraph D["Design Process"]
-         direction TB
-         D1["• Azure Well-Architected Framework<br/>• Target Architecture Design<br/>• Service Mapping Strategy<br/>• Security &amp; Compliance Review"]
-         D2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
-         D1 --> D2
-      end
-
-      subgraph C["Conversion Process"]
-         direction TB
-         C1["• YAML Transformation<br/>• Azure Service Configuration<br/>• Resource Optimization<br/>• Validation &amp; Testing"]
-         C2["Agents:<br/>• Chief Architect<br/>• Azure Expert<br/>• AKS Expert<br/>• YAML Expert<br/>• QA Engineer"]
-         C1 --> C2
-      end
-
-      subgraph DOC["Documentation Process"]
-         direction TB
-         DOC1["• Migration Report Generation<br/>• Expert Recommendations<br/>• Implementation Guide<br/>• Post-migration Checklist"]
-         DOC2["Agents:<br/>• Technical Writer<br/>• All Experts"]
-         DOC1 --> DOC2
-      end
-
-      A -->|Architecture Insights| D
-      D -->|Design Specifications| C
-      C -->|Converted Configurations| DOC
-   end
-
-   subgraph META[" "]
+   subgraph WF[" "]
       direction TB
-      NOTE["Each process step is executed as an Agent Framework workflow (WorkflowBuilder + executor chaining) with group-chat orchestration and MCP tools for intelligent automation.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"]
-      STACK["Technology Stack: Azure OpenAI • Process Framework • MCP Servers • GroupChat Orchestration"]
-      NOTE --> STACK
-   end
 
-   %% Make NOTE visually wider (renderer-dependent)
-   style NOTE width:600px
+      subgraph ROW[" "]
+         direction LR
+
+         subgraph A["Analysis Process"]
+            direction TB
+            A1["• Platform Detection<br/>• Technical Architecture Review<br/>• Source Configuration Analysis<br/>• Migration Complexity Assessment"]
+            A2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
+            A1 --> A2
+         end
+
+         subgraph D["Design Process"]
+            direction TB
+            D1["• Azure Well-Architected Framework<br/>• Target Architecture Design<br/>• Service Mapping Strategy<br/>• Security & Compliance Review"]
+            D2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
+            D1 --> D2
+         end
+
+         subgraph C["Conversion Process"]
+            direction TB
+            C1["• YAML Transformation<br/>• Azure Service Configuration<br/>• Resource Optimization<br/>• Validation & Testing"]
+            C2["Agents:<br/>• Chief Architect<br/>• Azure Expert<br/>• AKS Expert<br/>• YAML Expert<br/>• QA Engineer"]
+            C1 --> C2
+         end
+
+         subgraph DOC["Documentation Process"]
+            direction TB
+            DOC1["• Migration Report Generation<br/>• Expert Recommendations<br/>• Implementation Guide<br/>• Post-migration Checklist"]
+            DOC2["Agents:<br/>• Technical Writer<br/>• All Experts"]
+            DOC1 --> DOC2
+         end
+
+         A -->|Architecture Insights| D
+         D -->|Design Specifications| C
+         C -->|Converted Configurations| DOC
+      end
+
+   end
 ```
 
 **MCP Server Integration:**
