@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Pydantic models describing YAML conversion outputs and metrics."""
+
 from enum import Enum
 from pydantic import Field, BaseModel
 

@@ -1,6 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Orchestrator for the design step.
+
+This module renders the design prompt, prepares MCP tools (including Mermaid),
+and runs a `GroupChatOrchestrator` to produce `Design_ExtendedBooleanResult`.
+"""
+
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -35,11 +41,13 @@ class DesignOrchestrator(
     """
 
     def __init__(self, app_context=None):
+        """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
 
     async def execute(
         self, task_param: Analysis_BooleanExtendedResult = None
     ) -> OrchestrationResult[Design_ExtendedBooleanResult]:
+        """Execute the design step using the upstream analysis output."""
         if task_param is None:
             raise ValueError("task_param cannot be None")
         self.task_param = task_param
@@ -92,6 +100,7 @@ class DesignOrchestrator(
         | MutableMapping[str, Any]
         | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
     ):
+        """Create and return the MCP tools used by design agents."""
         # Create MCP tools (not connected yet)
         ms_doc_mcp_tool = MCPStreamableHTTPTool(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
@@ -113,7 +122,7 @@ class DesignOrchestrator(
         ]
 
     async def prepare_agent_infos(self) -> list[Any]:
-        """Prepare agent information list for workflow"""
+        """Build the list of agent descriptors participating in design."""
         agent_infos = []
 
         # Load platform experts from a registry (config-driven).
@@ -239,12 +248,14 @@ class DesignOrchestrator(
         return agent_infos
 
     async def on_agent_response(self, response: AgentResponse):
+        """Forward a completed agent response to base hooks (telemetry, logging)."""
         # print(f"[{response.timestamp}] :{response.agent_name}: {response.message} | Tool Calls: {response.tool_calls}")
         await super().on_agent_response(response)
 
     async def on_orchestration_complete(
         self, result: OrchestrationResult[Design_ExtendedBooleanResult]
     ):
+        """Handle orchestration completion (console summary)."""
         print("*" * 40)
         print("Design Orchestration complete.")
         print(f"Elapsed: {result.execution_time_seconds:.2f}s")
@@ -252,4 +263,5 @@ class DesignOrchestrator(
         print("*" * 40)
 
     async def on_agent_response_stream(self, response):
+        """Forward streaming agent output to base hooks."""
         await super().on_agent_response_stream(response)

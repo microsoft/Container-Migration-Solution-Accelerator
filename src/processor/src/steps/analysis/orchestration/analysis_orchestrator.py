@@ -1,6 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Orchestrator for the analysis step.
+
+This module builds the analysis prompt, prepares MCP tools, and runs a
+`GroupChatOrchestrator` to produce a structured `Analysis_BooleanExtendedResult`.
+"""
+
 import logging
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
@@ -28,12 +34,27 @@ class AnalysisOrchestrator(
         Analysis_TaskParam, OrchestrationResult[Analysis_BooleanExtendedResult]
     ]
 ):
+    """Run the analysis groupchat workflow for a given process.
+
+    The analysis step gathers platform-specific insights from multiple agents,
+    then emits a structured `Analysis_BooleanExtendedResult` for downstream steps.
+    """
+
     def __init__(self, app_context=None):
+        """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
 
     async def execute(
         self, task_param: Analysis_TaskParam = None
     ) -> OrchestrationResult[Analysis_BooleanExtendedResult]:
+        """Execute the analysis step.
+
+        Args:
+            task_param: Input parameters for the analysis step.
+
+        Returns:
+            An orchestration result containing the structured analysis output.
+        """
         if task_param is None:
             raise ValueError("task_param cannot be None")
         self.task_param = task_param
@@ -78,6 +99,11 @@ class AnalysisOrchestrator(
         | MutableMapping[str, Any]
         | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
     ):
+        """Create and return the MCP tools used by analysis agents.
+
+        Tools are returned in a consistent order and are not connected until
+        entered via the async context manager in `execute`.
+        """
         # Create MCP tools (not connected yet)
         ms_doc_mcp_tool = MCPStreamableHTTPTool(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
@@ -91,10 +117,19 @@ class AnalysisOrchestrator(
         return [ms_doc_mcp_tool, fetch_mcp_tool, blob_io_mcp_tool, datetime_mcp_tool]
 
     async def prepare_agent_infos(self) -> list[AgentInfo]:
+        """Build the list of agent descriptors participating in analysis.
+
+        This loads prompt templates from the step folder and platform registry,
+        renders them with the task parameters, and includes:
+        - platform experts (registry-driven)
+        - a dedicated AKS expert
+        - the Chief Architect
+        - the Coordinator (Blob IO tool only)
+        - a ResultGenerator to serialize final structured output
+        """
         if self.mcp_tools is None:
             raise ValueError("MCP tools must be prepared before agent infos.")
 
-        """Define all agents for analysis"""
         agent_infos = list[AgentInfo]()
 
         # steps\analysis
@@ -212,11 +247,13 @@ class AnalysisOrchestrator(
         return agent_infos
 
     async def on_agent_response(self, response: AgentResponse):
+        """Forward a completed agent response to base hooks (telemetry, logging)."""
         await super().on_agent_response(response)
 
     async def on_orchestration_complete(
         self, result: OrchestrationResult[Analysis_BooleanExtendedResult]
     ):
+        """Handle orchestration completion (logging and console summary)."""
         logging.info("Analysis Orchestration complete.")
         logging.info(f"Elapsed: {result.execution_time_seconds:.2f}s")
 
@@ -227,4 +264,5 @@ class AnalysisOrchestrator(
         print("*" * 40)
 
     async def on_agent_response_stream(self, response: AgentResponseStream):
+        """Forward streaming agent output to base hooks."""
         await super().on_agent_response_stream(response)

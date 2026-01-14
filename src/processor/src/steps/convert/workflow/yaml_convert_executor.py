@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Workflow executor for the YAML conversion step."""
+
 from agent_framework import Executor, WorkflowContext, handler
 
 from libs.application.application_context import AppContext
@@ -12,7 +14,10 @@ from ..orchestration.yaml_convert_orchestrator import YamlConvertOrchestrator
 
 
 class YamlConvertExecutor(Executor):
+    """Workflow executor that runs the YAML conversion orchestrator."""
+
     def __init__(self, id: str, app_context: AppContext):
+        """Create a new YAML conversion executor bound to an application context."""
         super().__init__(id=id)
         self.app_context = app_context
 
@@ -22,6 +27,7 @@ class YamlConvertExecutor(Executor):
         message: Design_ExtendedBooleanResult,
         ctx: WorkflowContext[Yaml_ExtendedBooleanResult],
     ) -> None:
+        """Execute YAML conversion for the given workflow message."""
         yaml_convert_orchestrator = YamlConvertOrchestrator(self.app_context)
 
         telemetry: TelemetryManager = await self.app_context.get_service_async(

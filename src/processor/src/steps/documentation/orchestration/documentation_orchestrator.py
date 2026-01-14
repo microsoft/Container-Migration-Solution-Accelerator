@@ -1,6 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Orchestrator for the documentation step.
+
+This module renders the documentation prompt, prepares MCP tools (blob IO,
+datetime, YAML inventory), and runs a `GroupChatOrchestrator` to produce a
+structured `Documentation_ExtendedBooleanResult`.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -34,11 +41,20 @@ class DocumentationOrchestrator(
     """Orchestrator for the Documentation step."""
 
     def __init__(self, app_context=None):
+        """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
 
     async def execute(
         self, task_param: Yaml_ExtendedBooleanResult | None = None
     ) -> OrchestrationResult[Documentation_ExtendedBooleanResult]:
+        """Execute the documentation step.
+
+        Args:
+            task_param: Upstream YAML conversion result carrying the `process_id`.
+
+        Returns:
+            An orchestration result containing the documentation output.
+        """
         if task_param is None:
             raise ValueError("task_param cannot be None")
         if not task_param.process_id:
@@ -95,6 +111,7 @@ class DocumentationOrchestrator(
         | MutableMapping[str, Any]
         | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
     ):
+        """Create and return the MCP tools used by documentation agents."""
         ms_doc_mcp_tool = MCPStreamableHTTPTool(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
@@ -114,6 +131,7 @@ class DocumentationOrchestrator(
         ]
 
     async def prepare_agent_infos(self) -> list[Any]:
+        """Build the list of agent descriptors participating in documentation."""
         if self.mcp_tools is None:
             raise ValueError("MCP tools must be prepared before agent infos.")
 
@@ -259,14 +277,17 @@ class DocumentationOrchestrator(
         return agent_infos
 
     async def on_agent_response(self, response: AgentResponse):
+        """Forward a completed agent response to base hooks (telemetry, logging)."""
         await super().on_agent_response(response)
 
     async def on_orchestration_complete(
         self, result: OrchestrationResult[Documentation_ExtendedBooleanResult]
     ):
+        """Handle orchestration completion (console summary)."""
         print("Orchestration complete.")
         print(f"Elapsed: {result.execution_time_seconds:.2f}s")
         print(f"Final Result: {result}")
 
     async def on_agent_response_stream(self, response):
+        """Forward streaming agent output to base hooks."""
         await super().on_agent_response_stream(response)

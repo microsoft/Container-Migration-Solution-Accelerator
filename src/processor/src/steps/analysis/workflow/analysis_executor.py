@@ -1,6 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Workflow executor for the analysis step.
+
+The executor adapts workflow messages into an `AnalysisOrchestrator` run and
+records step lifecycle events via `TelemetryManager`.
+"""
+
 from agent_framework import Executor, WorkflowContext, handler
 from art import text2art
 
@@ -13,7 +19,10 @@ from ..orchestration.analysis_orchestrator import AnalysisOrchestrator
 
 
 class AnalysisExecutor(Executor):
+    """Workflow executor that runs the analysis orchestrator."""
+
     def __init__(self, id: str, app_context: AppContext):
+        """Create a new analysis executor bound to an application context."""
         super().__init__(id=id)
         self.app_context = app_context
 
@@ -23,6 +32,13 @@ class AnalysisExecutor(Executor):
         message: Analysis_TaskParam,
         ctx: WorkflowContext[Analysis_BooleanExtendedResult],
     ) -> None:
+        """Execute analysis for the given workflow message.
+
+        This method:
+        - transitions telemetry into the analysis/start phase
+        - runs `AnalysisOrchestrator.execute`
+        - forwards the result to the next step or yields a hard-termination output
+        """
         analysis_orchestrator = AnalysisOrchestrator(self.app_context)
 
         #######################################################################################################

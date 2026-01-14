@@ -1,6 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Orchestrator for the YAML conversion step.
+
+This module renders the conversion prompt and runs a `GroupChatOrchestrator`
+to produce a structured `Yaml_ExtendedBooleanResult`.
+"""
+
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -30,11 +36,20 @@ class YamlConvertOrchestrator(
     """Orchestrator for the YAML Convert step."""
 
     def __init__(self, app_context=None):
+        """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
 
     async def execute(
         self, task_param: Design_ExtendedBooleanResult | None = None
     ) -> OrchestrationResult[Yaml_ExtendedBooleanResult]:
+        """Execute the YAML conversion step.
+
+        Args:
+            task_param: Upstream design step output, used to propagate `process_id`.
+
+        Returns:
+            An orchestration result containing the conversion output.
+        """
         if task_param is None:
             raise ValueError("task_param cannot be None")
         if not task_param.process_id:
@@ -91,6 +106,7 @@ class YamlConvertOrchestrator(
         | MutableMapping[str, Any]
         | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
     ):
+        """Create and return the MCP tools used by conversion agents."""
         ms_doc_mcp_tool = MCPStreamableHTTPTool(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
@@ -103,6 +119,7 @@ class YamlConvertOrchestrator(
         return [ms_doc_mcp_tool, fetch_mcp_tool, blob_io_mcp_tool, datetime_mcp_tool]
 
     async def prepare_agent_infos(self) -> list[Any]:
+        """Build the list of agent descriptors participating in YAML conversion."""
         if self.mcp_tools is None:
             raise ValueError("MCP tools must be prepared before agent infos.")
 
@@ -221,11 +238,13 @@ class YamlConvertOrchestrator(
         return agent_infos
 
     async def on_agent_response(self, response: AgentResponse):
+        """Forward a completed agent response to base hooks (telemetry, logging)."""
         await super().on_agent_response(response)
 
     async def on_orchestration_complete(
         self, result: OrchestrationResult[Yaml_ExtendedBooleanResult]
     ):
+        """Handle orchestration completion (console summary)."""
         print("*" * 40)
         print("Yaml Convert Orchestration complete.")
         print(f"Elapsed: {result.execution_time_seconds:.2f}s")
@@ -233,4 +252,5 @@ class YamlConvertOrchestrator(
         print("*" * 40)
 
     async def on_agent_response_stream(self, response):
+        """Forward streaming agent output to base hooks."""
         await super().on_agent_response_stream(response)

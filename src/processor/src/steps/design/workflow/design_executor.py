@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Workflow executor for the design step."""
+
 from agent_framework import Executor, WorkflowContext, handler
 
 from libs.application.application_context import AppContext
@@ -12,7 +14,10 @@ from ...analysis.models.step_output import Analysis_BooleanExtendedResult
 
 
 class DesignExecutor(Executor):
+    """Workflow executor that runs the design orchestrator."""
+
     def __init__(self, id: str, app_context: AppContext):
+        """Create a new design executor bound to an application context."""
         super().__init__(id=id)
         self.app_context = app_context
 
@@ -22,6 +27,7 @@ class DesignExecutor(Executor):
         message: Analysis_BooleanExtendedResult,
         ctx: WorkflowContext[Design_ExtendedBooleanResult],
     ) -> None:
+        """Execute design for the given workflow message."""
         design_orchestrator = DesignOrchestrator(self.app_context)
 
         telemetry: TelemetryManager = await self.app_context.get_service_async(

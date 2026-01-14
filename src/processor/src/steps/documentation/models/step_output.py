@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Pydantic models describing documentation outputs and generated artifacts."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -125,6 +127,8 @@ class ProcessMetrics(BaseModel):
 
 
 class DocumentationOutput(BaseModel):
+    """Aggregated documentation results and generated artifacts."""
+
     model_config = {"extra": "forbid"}
 
     aggregated_results: AggregatedResults = Field(description="Aggregated results")
@@ -139,6 +143,8 @@ class DocumentationOutput(BaseModel):
 
 
 class Documentation_ExtendedBooleanResult(BaseModel):
+    """Wrapper result for the documentation step, including termination metadata."""
+
     model_config = {"arbitrary_types_allowed": True, "extra": "forbid"}
 
     result: bool = Field(default=False, description="Whether the step completed")

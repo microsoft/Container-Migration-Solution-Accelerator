@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Workflow executor for the documentation step."""
+
 from typing_extensions import Never
 
 from agent_framework import Executor, WorkflowContext, handler
@@ -14,7 +16,10 @@ from utils.agent_telemetry import TelemetryManager
 
 
 class DocumentationExecutor(Executor):
+    """Workflow executor that runs documentation and yields the final output."""
+
     def __init__(self, id: str, app_context: AppContext):
+        """Create a new documentation executor bound to an application context."""
         super().__init__(id=id)
         self.app_context = app_context
 
@@ -24,6 +29,7 @@ class DocumentationExecutor(Executor):
         message: Yaml_ExtendedBooleanResult,
         ctx: WorkflowContext[Never, Documentation_ExtendedBooleanResult],
     ) -> Never:
+        """Execute documentation and yield the terminal workflow output."""
         documentation_orchestrator = DocumentationOrchestrator(self.app_context)
 
         telemetry: TelemetryManager = await self.app_context.get_service_async(

@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Pydantic models for design step outputs and termination metadata."""
+
 from enum import Enum
 from pydantic import BaseModel, Field
 
