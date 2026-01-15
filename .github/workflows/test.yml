@@ -1,0 +1,135 @@
+name: Test Workflow with Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - demo
+    paths:
+      - 'src/backend-api/**/*.py'
+      - 'src/processor/**/*.py'
+      - 'src/backend-api/src/tests/**/*.py'
+      - 'src/processor/src/tests/**/*.py'
+      - 'src/backend-api/pyproject.toml'
+      - 'src/processor/pyproject.toml'
+      - '.github/workflows/test.yml'
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - dev
+      - demo
+    paths:
+      - 'src/backend-api/**/*.py'
+      - 'src/processor/**/*.py'
+      - 'src/backend-api/src/tests/**/*.py'
+      - 'src/processor/src/tests/**/*.py'
+      - 'src/backend-api/pyproject.toml'
+      - 'src/processor/pyproject.toml'
+      - '.github/workflows/test.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  backend_api_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Backend API Dependencies
+        working-directory: src/backend-api
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install ".[dev]"
+
+      - name: Check if Backend API Test Files Exist
+        id: check_backend_api_tests
+        run: |
+          if [ -d "src/backend-api/src/tests" ] && [ -n "$(find src/backend-api/src/tests -type f -name 'test_*.py')" ]; then
+            echo "Backend API test files found, running tests."
+            echo "skip_tests=false" >> $GITHUB_ENV
+          else
+            echo "No backend API test files found, skipping tests."
+            echo "skip_tests=true" >> $GITHUB_ENV
+          fi
+
+      - name: Run Backend API Tests with Coverage
+        if: env.skip_tests == 'false'
+        working-directory: src/backend-api
+        run: |
+          pytest --cov=src --cov-report=term-missing --cov-report=xml src/tests
+
+      - name: Upload Backend API Coverage Report
+        if: env.skip_tests == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-api-coverage
+          path: src/backend-api/coverage.xml
+
+      - name: Skip Backend API Tests
+        if: env.skip_tests == 'true'
+        run: |
+          echo "Skipping backend API tests because no test files were found."
+
+  processor_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Processor Dependencies
+        working-directory: src/processor
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Check if Processor Test Files Exist
+        id: check_processor_tests
+        run: |
+          if [ -d "src/processor/src/tests" ] && [ -n "$(find src/processor/src/tests -type f -name 'test_*.py')" ]; then
+            echo "Processor test files found, running tests."
+            echo "skip_tests=false" >> $GITHUB_ENV
+          else
+            echo "No processor test files found, skipping tests."
+            echo "skip_tests=true" >> $GITHUB_ENV
+          fi
+
+      - name: Run Processor Tests with Coverage
+        if: env.skip_tests == 'false'
+        working-directory: src/processor
+        run: |
+          pytest --cov=src --cov-report=term-missing --cov-report=xml src/tests
+
+      - name: Upload Processor Coverage Report
+        if: env.skip_tests == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: processor-coverage
+          path: src/processor/coverage.xml
+
+      - name: Skip Processor Tests
+        if: env.skip_tests == 'true'
+        run: |
+          echo "Skipping processor tests because no test files were found."
