@@ -118,8 +118,8 @@ Discovery steps (in order):
 	- `folder_path = {{output_file_folder}}`
 	- `folder_path = {{output_file_folder}}/`
 2) If results are empty or only show a folder marker, list the process root and filter:
-	- Derive `process_id` from `{{output_file_folder}}` (it is the path segment before `/output`).
-	- Call `list_blobs_in_container(container_name={{container_name}}, folder_path="<process_id>")` and look for blobs under `<process_id>/output/`.
+	- Derive `process_id` from `{{output_file_folder}}` (it is the path segment before `/converted`).
+	- Call `list_blobs_in_container(container_name={{container_name}}, folder_path="<process_id>")` and look for blobs under `<process_id>/converted/`.
 3) Identify authoritative inputs by filename pattern (only if you can justify it from the listing):
 	- Analysis report: contains `analysis` and ends with `.md`
 	- Design report: contains `design` or `architecture` and ends with `.md`
@@ -138,7 +138,7 @@ Discovery steps (in order):
 - List: `list_blobs_in_container(container_name, folder_path)`
 - Read: `read_blob_content(blob_name, container_name, folder_path)`
 - Write: `save_content_to_blob(blob_name, content, container_name, folder_path)`
-- Timestamp: `datetime_service.get_current_datetime()`
+- Timestamp: use the provided `{{current_timestamp}}` (UTC)
 - Inventory (preferred for runbooks): `yaml_inventory_service.generate_converted_yaml_inventory(container_name, folder_path, output_blob_name)`
 - **REQUIRED for Azure migrations**: `microsoft_docs_search` and `microsoft_docs_fetch` (see AZURE REFERENCES REQUIREMENT below)
 

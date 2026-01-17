@@ -218,7 +218,7 @@ def generate_converted_yaml_inventory(
 
     Args:
         container_name: Azure blob container name (use None for default).
-        folder_path: Blob folder path to scan (typically '<process_id>/output').
+        folder_path: Blob folder path to scan (typically '<process_id>/converted').
         output_blob_name: Output inventory blob filename.
         output_folder_path: Folder path for output blob (defaults to folder_path).
         recursive: Whether to scan recursively under folder_path.

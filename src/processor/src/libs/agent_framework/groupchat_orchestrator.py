@@ -5,7 +5,7 @@
 GroupChat Orchestrator with Generic Type Support
 
 Provides a type-safe, reusable orchestrator for GroupChat workflows with:
-- Generic input/output types [TInput, TOutput]
+- Generic input/converted types [TInput, TOutput]
 - Streaming callbacks for agent responses
 - Tool usage tracking
 - Automatic termination handling
@@ -172,7 +172,7 @@ OnOrchestrationCompleteCallback = Callable[
 
 class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
     """
-    Generic GroupChat orchestrator with type-safe input/output.
+    Generic GroupChat orchestrator with type-safe input/converted.
 
     Type Parameters:
         TInput: Type of input passed to run_stream (str, dict, BaseModel, etc.)
@@ -1085,6 +1085,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     self._agent_invoked_at[selected] = completed_at
             except Exception:
                 # If the Coordinator didn't emit valid JSON, ignore.
+                print("Coordinator response JSON parsing failed")
                 pass
 
         # Invoke callback with complete response

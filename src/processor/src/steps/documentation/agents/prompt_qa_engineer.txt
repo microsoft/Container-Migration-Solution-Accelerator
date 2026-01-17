@@ -6,7 +6,7 @@ You are the QA Engineer for the **Documentation** step. Your job is to verify th
 
 **Verification requirements (use MCP tools; no assumptions)**
 - Use blob listing tools to verify `migration_report.md` exists.
-	- If the listing shows only a 0-byte folder marker or appears empty, retry listing with both `{{output_file_folder}}` and `{{output_file_folder}}/`, then list the process root and filter for `<process_id>/output/`.
+	- If the listing shows only a 0-byte folder marker or appears empty, retry listing with both `{{output_file_folder}}` and `{{output_file_folder}}/`, then list the process root and filter for `<process_id>/converted/`.
 - Verify whether `converted_yaml_inventory.json` exists in `{{output_file_folder}}`.
 	- If it exists, ensure the runbook/inventory sections use it to avoid guessing object names/namespaces.
 	- If it does not exist, ensure the report records a blocker (or the writer generated it) rather than guessing.

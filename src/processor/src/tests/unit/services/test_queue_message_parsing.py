@@ -34,7 +34,7 @@ def test_create_default_migration_request_formats_expected_folders():
     assert req["container_name"] == "processes"
     assert req["source_file_folder"] == "p1/source"
     assert req["workspace_file_folder"] == "p1/workspace"
-    assert req["output_file_folder"] == "p1/output"
+    assert req["output_file_folder"] == "p1/converted"
 
 
 def test_migration_queue_message_requires_mandatory_fields_in_request():
@@ -52,7 +52,7 @@ def test_from_queue_message_parses_plain_json():
             "container_name": "c1",
             "source_file_folder": "p1/source",
             "workspace_file_folder": "p1/workspace",
-            "output_file_folder": "p1/output",
+            "output_file_folder": "p1/converted",
         },
     }
     msg = _FakeQueueMessage(json.dumps(payload))
@@ -72,7 +72,7 @@ def test_from_queue_message_decodes_base64_json():
             "container_name": "c1",
             "source_file_folder": "p1/source",
             "workspace_file_folder": "p1/workspace",
-            "output_file_folder": "p1/output",
+            "output_file_folder": "p1/converted",
         },
     }
     encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
@@ -94,7 +94,7 @@ def test_from_queue_message_autocompletes_when_only_process_id_is_provided():
     assert req["container_name"] == "processes"
     assert req["source_file_folder"] == "p1/source"
     assert req["workspace_file_folder"] == "p1/workspace"
-    assert req["output_file_folder"] == "p1/output"
+    assert req["output_file_folder"] == "p1/converted"
     # Fields required by __post_init__ must be present
     assert req["process_id"] == "p1"
     assert req["user_id"] == "u1"

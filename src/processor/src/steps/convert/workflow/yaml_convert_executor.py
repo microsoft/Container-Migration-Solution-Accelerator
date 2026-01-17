@@ -34,7 +34,7 @@ class YamlConvertExecutor(Executor):
             TelemetryManager
         )
         await telemetry.transition_to_phase(
-            process_id=message.process_id, step="yaml_conversion", phase="start"
+            process_id=message.process_id, step=self.id, phase="start"
         )
 
         result = await yaml_convert_orchestrator.execute(task_param=message)

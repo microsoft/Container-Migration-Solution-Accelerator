@@ -47,7 +47,7 @@ def test_failed_no_retry_clears_output_folder_when_task_param_available(
                 container_name="c1",
                 source_file_folder="p1/source",
                 workspace_file_folder="p1/workspace",
-                output_file_folder="p1/output",
+                output_file_folder="p1/converted",
             )
             if pass_task_param
             else None
@@ -63,7 +63,7 @@ def test_failed_no_retry_clears_output_folder_when_task_param_available(
 
         assert service.main_queue.deleted == [("m1", "r1")]
         if pass_task_param:
-            assert called == ["p1/output"]
+            assert called == ["p1/converted"]
         else:
             assert called == []
 

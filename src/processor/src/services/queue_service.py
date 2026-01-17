@@ -65,7 +65,7 @@ def create_default_migration_request(
     container_name: str = "processes",
     source_file_folder: str = "source",
     workspace_file_folder: str = "workspace",
-    output_file_folder: str = "output",
+    output_file_folder: str = "converted",
 ) -> dict[str, Any]:
     """
     Create a default migration_request with all mandatory fields.
@@ -680,7 +680,7 @@ class QueueMigrationService:
             blobs = helper.list_blobs(container_name, prefix=process_prefix)
 
             # Storage accounts with hierarchical namespace (ADLS Gen2) can surface
-            # directory entries (e.g., '<pid>/output') which cannot be deleted via
+            # directory entries (e.g., '<pid>/converted') which cannot be deleted via
             # blob delete APIs.
             blob_names: list[str] = []
             for b in blobs:
@@ -693,7 +693,7 @@ class QueueMigrationService:
                 # doesn't expose directory metadata.
                 if name.rstrip("/") in {
                     task_param.process_id,
-                    f"{task_param.process_id}/output",
+                    f"{task_param.process_id}/converted",
                     f"{task_param.process_id}/source",
                 }:
                     continue
@@ -769,7 +769,7 @@ class QueueMigrationService:
         # Prefer the explicit output_file_folder passed in the queue payload.
         output_prefix = (getattr(task_param, "output_file_folder", None) or "").strip()
         if not output_prefix:
-            output_prefix = f"{task_param.process_id}/output"
+            output_prefix = f"{task_param.process_id}/converted"
 
         # Normalize to a folder-like prefix.
         output_prefix = output_prefix.strip("/") + "/"

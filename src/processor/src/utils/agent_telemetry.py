@@ -1280,7 +1280,7 @@ class TelemetryManager:
                 # Provide a compact, UI-friendly "finalized" section inside final_outcome.
                 # Keep it small: counts + pointers, not full file contents.
                 container = _get_process_blob_container_name()
-                output_folder = f"{process_id}/output"
+                output_folder = f"{process_id}/converted"
                 conversion_report_file = None
                 try:
                     yaml_step = (current_process.step_results or {}).get("yaml")
@@ -1384,7 +1384,7 @@ class TelemetryManager:
                             blob_name = f"debug/traceback_{failed_step}_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.txt"
                             artifact = await _upload_text_to_process_blob(
                                 process_id=process_id,
-                                folder_path=f"{process_id}/output",
+                                folder_path=f"{process_id}/converted",
                                 blob_name=blob_name,
                                 content=tb,
                             )

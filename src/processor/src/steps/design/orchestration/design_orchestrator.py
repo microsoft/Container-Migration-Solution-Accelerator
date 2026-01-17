@@ -23,8 +23,8 @@ from libs.agent_framework.groupchat_orchestrator import (
 )
 from libs.base.orchestrator_base import OrchestrationResult, OrchestratorBase
 from libs.mcp_server.MCPBlobIOTool import get_blob_file_mcp
-from libs.mcp_server.MCPDatetimeTool import get_datetime_mcp
 from libs.mcp_server.MCPMermaidTool import get_mermaid_mcp
+from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
 
 from ...analysis.models.step_output import Analysis_BooleanExtendedResult
@@ -43,6 +43,7 @@ class DesignOrchestrator(
     def __init__(self, app_context=None):
         """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
+        self.step_name = "Design"
 
     async def execute(
         self, task_param: Analysis_BooleanExtendedResult = None
@@ -63,8 +64,9 @@ class DesignOrchestrator(
         prompt = TemplateUtility.render_from_file(
             str(current_folder / "prompt_task.txt"),
             source_file_folder=f"{process_id}/source",
-            output_file_folder=f"{process_id}/output",
+            output_file_folder=f"{process_id}/converted",
             container_name="processes",
+            current_timestamp=get_current_timestamp_utc(),
         )
 
         async with (
@@ -72,12 +74,11 @@ class DesignOrchestrator(
             self.mcp_tools[1],
             self.mcp_tools[2],
             self.mcp_tools[3],
-            self.mcp_tools[4],
         ):
             orchestrator = GroupChatOrchestrator[
                 Analysis_BooleanExtendedResult, Design_ExtendedBooleanResult
             ](
-                name="AnalysisOrchestrator",
+                name="DesignOrchestrator",
                 process_id=task_param.output.process_id,
                 participants=self.agents,
                 memory_client=None,
@@ -110,14 +111,12 @@ class DesignOrchestrator(
         )
 
         blob_io_mcp_tool = get_blob_file_mcp()
-        datetime_mcp_tool = get_datetime_mcp()
         mermaid_mcp_tool = get_mermaid_mcp()
 
         return [
             ms_doc_mcp_tool,
             fetch_mcp_tool,
             blob_io_mcp_tool,
-            datetime_mcp_tool,
             mermaid_mcp_tool,
         ]
 
@@ -148,7 +147,7 @@ class DesignOrchestrator(
                 agent_instruction=instruction,
                 tools=self.mcp_tools,
             )
-            expert_info.render()
+            expert_info.render(current_timestamp=get_current_timestamp_utc())
             agent_infos.append(expert_info)
 
         # Azure-side specialist remains always available.
@@ -162,8 +161,9 @@ class DesignOrchestrator(
             process_id=self.task_param.output.process_id,
             container_name="processes",
             source_file_folder=f"{self.task_param.output.process_id}/source",
-            output_file_folder=f"{self.task_param.output.process_id}/output",
+            output_file_folder=f"{self.task_param.output.process_id}/converted",
             workspace_file_folder=f"{self.task_param.output.process_id}/workspace",
+            current_timestamp=get_current_timestamp_utc(),
         )
         agent_infos.append(aks_agent_info)
 
@@ -182,8 +182,9 @@ class DesignOrchestrator(
             process_id=self.task_param.output.process_id,
             container_name="processes",
             source_file_folder=f"{self.task_param.output.process_id}/source",
-            output_file_folder=f"{self.task_param.output.process_id}/output",
+            output_file_folder=f"{self.task_param.output.process_id}/converted",
             workspace_file_folder=f"{self.task_param.output.process_id}/workspace",
+            current_timestamp=get_current_timestamp_utc(),
         )
 
         agent_infos.append(chief_architect_agent_info)
@@ -194,7 +195,9 @@ class DesignOrchestrator(
         coordinator_agent_info = AgentInfo(
             agent_name="Coordinator",
             agent_instruction=coordinator_instruction,
-            tools=self.mcp_tools[2],  # Blob IO tool only
+            # Coordinator must be able to (1) read/verify the saved design_result.md from Blob
+            # and (2) validate Mermaid blocks in the saved markdown before terminating.
+            tools=[self.mcp_tools[2], self.mcp_tools[3]],  # Blob IO + Mermaid
         )
 
         # Render coordinator prompt with the current participant list.
@@ -207,8 +210,9 @@ class DesignOrchestrator(
             process_id=self.task_param.output.process_id,
             container_name="processes",
             source_file_folder=f"{self.task_param.output.process_id}/source",
-            output_file_folder=f"{self.task_param.output.process_id}/output",
+            output_file_folder=f"{self.task_param.output.process_id}/converted",
             workspace_file_folder=f"{self.task_param.output.process_id}/workspace",
+            current_timestamp=get_current_timestamp_utc(),
             step_name="Design",
             step_objective="Design Azure architecture and service mappings for migration based on analysis results",
             participants=", ".join(participant_names),

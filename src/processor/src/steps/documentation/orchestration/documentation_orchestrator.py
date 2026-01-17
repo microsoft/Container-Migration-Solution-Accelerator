@@ -26,12 +26,12 @@ from libs.agent_framework.groupchat_orchestrator import (
 )
 from libs.base.orchestrator_base import OrchestrationResult, OrchestratorBase
 from libs.mcp_server.MCPBlobIOTool import get_blob_file_mcp
-from libs.mcp_server.MCPDatetimeTool import get_datetime_mcp
 from libs.mcp_server.MCPYamlInventoryTool import get_yaml_inventory_mcp
 from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
 from steps.documentation.models.step_output import (
     Documentation_ExtendedBooleanResult,
 )
+from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
 
 
@@ -43,6 +43,7 @@ class DocumentationOrchestrator(
     def __init__(self, app_context=None):
         """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
+        self.step_name = "Documentation"
 
     async def execute(
         self, task_param: Yaml_ExtendedBooleanResult | None = None
@@ -73,9 +74,10 @@ class DocumentationOrchestrator(
         prompt = TemplateUtility.render_from_file(
             str(current_folder / "prompt_task.txt"),
             source_file_folder=f"{process_id}/source",
-            output_file_folder=f"{process_id}/output",
+            output_file_folder=f"{process_id}/converted",
             workspace_file_folder=f"{process_id}/workspace",
             container_name="processes",
+            current_timestamp=get_current_timestamp_utc(),
         )
 
         async with (
@@ -83,7 +85,6 @@ class DocumentationOrchestrator(
             self.mcp_tools[1],
             self.mcp_tools[2],
             self.mcp_tools[3],
-            self.mcp_tools[4],
         ):
             orchestrator = GroupChatOrchestrator[
                 Yaml_ExtendedBooleanResult, Documentation_ExtendedBooleanResult
@@ -119,14 +120,12 @@ class DocumentationOrchestrator(
             name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
         )
         blob_io_mcp_tool = get_blob_file_mcp()
-        datetime_mcp_tool = get_datetime_mcp()
         yaml_inventory_mcp_tool = get_yaml_inventory_mcp()
 
         return [
             ms_doc_mcp_tool,
             fetch_mcp_tool,
             blob_io_mcp_tool,
-            datetime_mcp_tool,
             yaml_inventory_mcp_tool,
         ]
 
@@ -151,8 +150,9 @@ class DocumentationOrchestrator(
             "process_id": self.task_param.process_id,
             "container_name": "processes",
             "source_file_folder": f"{self.task_param.process_id}/source",
-            "output_file_folder": f"{self.task_param.process_id}/output",
+            "output_file_folder": f"{self.task_param.process_id}/converted",
             "workspace_file_folder": f"{self.task_param.process_id}/workspace",
+            "current_timestamp": get_current_timestamp_utc(),
         }
 
         technical_writer_info = AgentInfo(

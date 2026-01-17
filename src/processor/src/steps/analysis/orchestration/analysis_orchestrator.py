@@ -22,7 +22,7 @@ from libs.agent_framework.groupchat_orchestrator import (
 )
 from libs.base.orchestrator_base import OrchestratorBase
 from libs.mcp_server.MCPBlobIOTool import get_blob_file_mcp
-from libs.mcp_server.MCPDatetimeTool import get_datetime_mcp
+from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
 
 from ..models.step_output import Analysis_BooleanExtendedResult
@@ -43,6 +43,7 @@ class AnalysisOrchestrator(
     def __init__(self, app_context=None):
         """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
+        self.step_name = "Analysis"
 
     async def execute(
         self, task_param: Analysis_TaskParam = None
@@ -66,14 +67,15 @@ class AnalysisOrchestrator(
         current_folder = Path(__file__).parent
 
         prompt = TemplateUtility.render_from_file(
-            str(current_folder / "prompt_task.txt"), **task_param.model_dump()
+            str(current_folder / "prompt_task.txt"),
+            current_timestamp=get_current_timestamp_utc(),
+            **task_param.model_dump(),
         )
 
         async with (
             self.mcp_tools[0],
             self.mcp_tools[1],
             self.mcp_tools[2],
-            self.mcp_tools[3],
         ):
             orchestrator = GroupChatOrchestrator[str, Analysis_BooleanExtendedResult](
                 name="AnalysisOrchestrator",
@@ -112,9 +114,8 @@ class AnalysisOrchestrator(
             name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
         )
         blob_io_mcp_tool = get_blob_file_mcp()
-        datetime_mcp_tool = get_datetime_mcp()
 
-        return [ms_doc_mcp_tool, fetch_mcp_tool, blob_io_mcp_tool, datetime_mcp_tool]
+        return [ms_doc_mcp_tool, fetch_mcp_tool, blob_io_mcp_tool]
 
     async def prepare_agent_infos(self) -> list[AgentInfo]:
         """Build the list of agent descriptors participating in analysis.
@@ -156,7 +157,10 @@ class AnalysisOrchestrator(
                 agent_instruction=instruction,
                 tools=self.mcp_tools,
             )
-            expert_info.render(**self.task_param.model_dump())
+            expert_info.render(
+                current_timestamp=get_current_timestamp_utc(),
+                **self.task_param.model_dump(),
+            )
             agent_infos.append(expert_info)
 
         # Azure-side specialist remains always available.
@@ -166,7 +170,10 @@ class AnalysisOrchestrator(
             agent_instruction=aks_instruction,
             tools=self.mcp_tools,
         )
-        aks_agent_info.render(**self.task_param.model_dump())
+        aks_agent_info.render(
+            current_timestamp=get_current_timestamp_utc(),
+            **self.task_param.model_dump(),
+        )
         agent_infos.append(aks_agent_info)
 
         # Read Chief Architect instructions from text file
@@ -180,7 +187,10 @@ class AnalysisOrchestrator(
             tools=self.mcp_tools,
         )
 
-        chief_architect_agent_info.render(**self.task_param.model_dump())
+        chief_architect_agent_info.render(
+            current_timestamp=get_current_timestamp_utc(),
+            **self.task_param.model_dump(),
+        )
 
         agent_infos.append(chief_architect_agent_info)
 
@@ -200,6 +210,7 @@ class AnalysisOrchestrator(
         )
         coordinator_agent_info.render(
             **self.task_param.model_dump(),
+            current_timestamp=get_current_timestamp_utc(),
             step_name="Analysis",
             step_objective="ChiefArchitect creates foundation analysis, platform experts enhance with specialization",
             participants=", ".join(participant_names),

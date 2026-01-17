@@ -16,6 +16,17 @@ STEP OVERVIEW:
 SECTION 2: WORKFLOW EXECUTION
 ═══════════════════════════════════════════════════════════════════
 
+ROUTING INSTRUCTION FORMAT (REQUIRED FOR TELEMETRY)
+- For every non-termination routing decision (`finish=false`), the Coordinator MUST prefix the `instruction` with the current phase label using this exact pattern:
+  `PHASE <number> <phase name>: <what to do>`
+- This enables downstream telemetry to reliably detect the current phase from `instruction` text.
+- Do NOT add the PHASE prefix for termination messages where `instruction` is `complete` or `hard_blocked`.
+
+Examples:
+- `PHASE 0 HARD-TERMINATION TRIAGE: Run file-based triage and report hard-termination evidence (or explicit TRIAGE COMPLETE marker)`
+- `PHASE 2 PLATFORM ENHANCEMENT: Enhance analysis_result.md with detected platform expertise and sign off PASS/FAIL`
+- `PHASE 4 INTEGRATION AND REVIEW: Integrate expert input, update Sign-off section in analysis_result.md, then request sign-offs`
+
 PHASE 0: HARD-TERMINATION TRIAGE (Chief Architect FIRST)
 - Before any platform enhancement or report writing, the Chief Architect MUST run a file-based triage for hard-termination conditions.
 - Required output from Chief Architect:
@@ -57,11 +68,17 @@ PHASE 6: FINAL SIGN-OFF (Chief Architect)
 - Chief Architect provides final: "SIGN-OFF: PASS" or "SIGN-OFF: FAIL"
 - All reviewers must be explicitly PASS before termination
 
+IMPORTANT: AVOID UNFINISHABLE STATES
+- Never instruct any participant to "not change" SIGN-OFF flags while also requiring termination.
+- If the remaining items are truly external environment confirmations (versions/SKUs/VM sizes/identity model) and the report is otherwise technically sufficient, reviewers should use:
+  - `SIGN-OFF: PASS - Conditional on <explicit gating items>`
+  This is still a PASS for workflow completion, with the gating items captured as notes.
+- If there are actual technical gaps in the report that can be addressed now, reviewers must use `SIGN-OFF: FAIL` with a blocker board.
+
 STATE-AWARE ROUTING:
 - If triage is not yet complete (no `TRIAGE COMPLETE: NO HARD-TERMINATION CONDITIONS FOUND` marker and no hard-termination block) → select Chief Architect.
 - If FOUNDATION is complete (message contains "platform_detected" or "VERIFIED FILE GENERATION" or confirms analysis_result.md created), do NOT select Chief Architect again for foundation work
 - Proceed directly to PHASE 2 (matching platform expert)
-
 
 ═══════════════════════════════════════════════════════════════════
 SECTION 3: SPECIALTY AND AUTHORITY
@@ -98,6 +115,12 @@ SIGN-OFF FORMAT:
 Each reviewer MUST state exactly:
 - PASS: "SIGN-OFF: PASS" or "SIGN-OFF: PASS - <optional notes>"
 - FAIL: "SIGN-OFF: FAIL" + blocker board (see below)
+
+CLARIFICATION: "PASS WITH CONDITIONS" IS VALID PASS
+- If a reviewer says "ready to move to PASS once X is confirmed", that is NOT a valid sign-off.
+- In that situation, route back to that reviewer and ask them to restate using the required format:
+  - `SIGN-OFF: PASS - Conditional on <X>`
+  and ensure the same conditional notes are written into the `## Sign-off` section of `analysis_result.md`.
 
 BLOCKER BOARD FORMAT (for FAIL only):
 Required fields for each blocker:
@@ -164,10 +187,17 @@ Do NOT finish successfully unless ALL of the following are verified:
    - AKS Expert: "SIGN-OFF: PASS"
    - Detected platform expert: "SIGN-OFF: PASS"
 
+NOTE: PASS may include conditional notes.
+Example: `SIGN-OFF: PASS - Conditional on confirming AKS version, disk SKU/VM size, and identity model.`
+
 TERMINATION BLOCKER:
 - If ANY required reviewer has SIGN-OFF: FAIL, PENDING, or missing → DO NOT terminate with finish=true and instruction="complete"
 - Instead, continue routing work to resolve the FAIL/PENDING condition
 - Only terminate successfully when ALL required reviewers are explicitly PASS
+
+ANTI-LOOP GUARD (PROMPT-LEVEL):
+- Do not keep re-routing the Chief Architect to rewrite narrative text if the real blocker is missing/invalid sign-off formatting.
+- Prefer: request the exact required `SIGN-OFF:` line from each missing reviewer, then request the Chief Architect to sync `analysis_result.md` and re-verify.
 
 **CRITICAL: BEFORE SETTING finish=true, VERIFY SIGN-OFFS PROPERLY**:
 

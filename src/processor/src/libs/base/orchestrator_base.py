@@ -29,6 +29,7 @@ ResultT = TypeVar("ResultT")
 class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
     def __init__(self, app_context=None):
         super().__init__(app_context)
+        self.step_name = "OrchestratorBase"
         self.initialized = False
 
     def is_console_summarization_enabled(self) -> bool:
@@ -93,6 +94,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         """Prepare agent information list for workflow"""
         pass
 
+
     async def create_agents(
         self, agent_infos: list[AgentInfo], process_id: str
     ) -> list[ChatAgent]:
@@ -110,7 +112,6 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 builder = (
                     builder.with_tools(agent_info.tools)
                     .with_temperature(0.0)
-                    .with_max_tokens(20_000)
                 )
 
             if agent_info.agent_name == "Coordinator":
@@ -118,14 +119,12 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 builder = (
                     builder.with_temperature(0.0)
                     .with_response_format(ManagerSelectionResponse)
-                    .with_max_tokens(1_500)
                     .with_tools(agent_info.tools)  # for checking file existence
                 )
             elif agent_info.agent_name == "ResultGenerator":
                 # Structured JSON generation; deterministic and bounded.
                 builder = (
                     builder.with_temperature(0.0)
-                    .with_max_tokens(12_000)
                     .with_tool_choice("none")
                 )
             agent = builder.build()
@@ -215,6 +214,40 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 coordinator_response = ManagerSelectionResponse.model_validate(
                     response_dict
                 )
+
+                # Hard Detect Phase Information from Coordinator's instruction - use regex ("PHASE X xxxx:")
+                # X is number and xxxx is description
+
+                if coordinator_response.instruction:
+                    import re
+
+                    # Parse phase number + optional description from instructions like:
+                    # "PHASE 4 INTEGRATION & SIGN-OFF UPDATE PREP: ..."
+                    # "PHASE 0 TRIAGE: ..."
+                    phase_match = re.search(
+                        r"\bPHASE\s+(?P<num>\d+)(?:\s+(?P<desc>[^:]+?))?(?:\s*:|$)",
+                        coordinator_response.instruction,
+                        flags=re.IGNORECASE,
+                    )
+                    if phase_match:
+                        phase_number = (phase_match.group("num") or "").strip()
+                        phase_desc = (phase_match.group("desc") or "").strip()
+
+                        phase_desc = re.sub(r"\s+", " ", phase_desc)
+                        if phase_desc:
+                            # Keep UI-friendly: avoid extremely long phase strings.
+                            if len(phase_desc) > 80:
+                                phase_desc = phase_desc[:77].rstrip() + "..."
+                            phase_label = f"PHASE {phase_number} - {phase_desc}"
+                        else:
+                            phase_label = f"PHASE {phase_number}"
+
+                        await telemetry.transition_to_phase(
+                            process_id=self.task_param.process_id,
+                            step=self.step_name,
+                            phase=phase_label if phase_label else "Processing...",
+                        )
+
                 if not coordinator_response.finish:
                     if self.is_console_summarization_enabled():
                         try:

@@ -22,7 +22,7 @@ def test_analysis_task_param_requires_fields():
         container_name="c1",
         source_file_folder="p1/source",
         workspace_file_folder="p1/workspace",
-        output_file_folder="p1/output",
+        output_file_folder="p1/converted",
     )
     assert task.process_id == "p1"
     assert task.container_name == "c1"

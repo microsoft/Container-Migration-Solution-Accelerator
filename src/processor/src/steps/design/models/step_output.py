@@ -83,5 +83,5 @@ class Design_ExtendedBooleanResult(BaseModel):
     # Workflow-carry field: lets downstream steps locate the correct process folders.
     process_id: str | None = Field(
         default=None,
-        description="Workflow process identifier propagated from analysis step. you can take it from output folder path. **Process Id**/output",
+        description="Workflow process identifier propagated from analysis step. you can take it from output folder path. **Process Id**/converted",
     )

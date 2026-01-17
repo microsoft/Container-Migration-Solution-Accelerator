@@ -83,7 +83,7 @@ def test_analysis_orchestrator_renders_prompt_with_task_param_fields(monkeypatch
             container_name="processes",
             source_file_folder="p1/source",
             workspace_file_folder="p1/workspace",
-            output_file_folder="p1/output",
+            output_file_folder="p1/converted",
         )
 
         result = await AnalysisOrchestrator.execute(orch, task_param=task)
@@ -93,6 +93,6 @@ def test_analysis_orchestrator_renders_prompt_with_task_param_fields(monkeypatch
         assert captured["kwargs"]["container_name"] == "processes"
         assert captured["kwargs"]["source_file_folder"] == "p1/source"
         assert captured["kwargs"]["workspace_file_folder"] == "p1/workspace"
-        assert captured["kwargs"]["output_file_folder"] == "p1/output"
+        assert captured["kwargs"]["output_file_folder"] == "p1/converted"
 
     asyncio.run(_run())

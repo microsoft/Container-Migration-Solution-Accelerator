@@ -77,7 +77,7 @@ def test_analysis_executor_sends_message_on_soft_completion(monkeypatch):
             container_name="c1",
             source_file_folder="p1/source",
             workspace_file_folder="p1/workspace",
-            output_file_folder="p1/output",
+            output_file_folder="p1/converted",
         )
 
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
@@ -128,7 +128,7 @@ def test_analysis_executor_yields_output_on_hard_termination(monkeypatch):
             container_name="c1",
             source_file_folder="p1/source",
             workspace_file_folder="p1/workspace",
-            output_file_folder="p1/output",
+            output_file_folder="p1/converted",
         )
 
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]

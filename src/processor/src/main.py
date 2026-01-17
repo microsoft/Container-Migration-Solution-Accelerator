@@ -112,7 +112,7 @@ class Application(ApplicationBase):
             process_id="e7fc15e2-13c9-4587-b8ed-6f3015990229",
             container_name="processes",
             source_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/source",
-            output_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/output",
+            output_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/converted",
             workspace_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/workspace",
         )
         await migration_processor.run(input_data=input_data)

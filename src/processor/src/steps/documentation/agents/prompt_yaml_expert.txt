@@ -11,7 +11,7 @@ You are the YAML Expert for the **Documentation** step. Your job is to ensure th
 
 **Verification (use tools; no assumptions)**
 - List blobs in output and confirm converted YAMLs exist.
-- If listing appears empty or shows only a folder marker, retry listing with both `{{output_file_folder}}` and `{{output_file_folder}}/`, then list the process root and filter for `<process_id>/output/`.
+- If listing appears empty or shows only a folder marker, retry listing with both `{{output_file_folder}}` and `{{output_file_folder}}/`, then list the process root and filter for `<process_id>/converted/`.
 - Read the verified conversion report and spot-check a few converted YAML blobs for completeness/non-empty.
 
 **What to contribute**

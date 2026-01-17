@@ -110,7 +110,7 @@ def test_design_orchestrator_renders_expected_folder_params(monkeypatch):
             ),
             summary="ok",
             expert_insights=[],
-            analysis_file="p1/output/analysis.json",
+            analysis_file="p1/converted/analysis.json",
         )
         msg = Analysis_BooleanExtendedResult(process_id="p1", output=output)
 
@@ -120,6 +120,6 @@ def test_design_orchestrator_renders_expected_folder_params(monkeypatch):
         kwargs = captured["kwargs"]
         assert kwargs["container_name"] == "processes"
         assert kwargs["source_file_folder"] == "p1/source"
-        assert kwargs["output_file_folder"] == "p1/output"
+        assert kwargs["output_file_folder"] == "p1/converted"
 
     asyncio.run(_run())

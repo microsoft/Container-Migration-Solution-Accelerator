@@ -17,6 +17,17 @@ STEP OVERVIEW:
 SECTION 2: WORKFLOW EXECUTION
 ═══════════════════════════════════════════════════════════════════
 
+ROUTING INSTRUCTION FORMAT (REQUIRED FOR TELEMETRY)
+- For every non-termination routing decision (`finish=false`), the Coordinator MUST prefix the `instruction` with the current phase label using this exact pattern:
+  `PHASE <number> <phase name>: <what to do>`
+- This enables downstream telemetry to reliably detect the current phase from `instruction` text.
+- Do NOT add the PHASE prefix for termination messages where `instruction` is `complete` or `hard_blocked`.
+
+Examples:
+- `PHASE 1 FOUNDATION DESIGN: Draft initial AKS architecture design based on analysis_result.md and save design_result.md`
+- `PHASE 2 AKS FEASIBILITY REVIEW: Validate identity/network/security choices and sign off PASS/FAIL`
+- `PHASE 3 INTEGRATION AND CONFLICT RESOLUTION: Reconcile blockers and update design_result.md`
+
 PHASE 1: FOUNDATION DESIGN (Chief Architect)
 - Reads analysis_result.md for platform identification and constraints
 - Establishes AKS-only target architecture direction
