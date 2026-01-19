@@ -1,9 +1,10 @@
 import io
 import zipfile
 from enum import Enum
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from libs.base.typed_fastapi import TypedFastAPI
@@ -37,6 +38,8 @@ class process_router_paths(str, Enum):
     START_PROCESSING = "/start-processing"
     DELETE_FILE = "/delete-file/{file_name}"
     DELETE_PROCESS = "/delete-process/{process_id}"
+    CANCEL_PROCESS = "/cancel/{process_id}"
+    CANCEL_STATUS = "/cancel/{process_id}/status"
     STATUS = "/status/{process_id}/"
     RENDER_STATUS = "/status/{process_id}/render/"
     PROCESS_AGENT_ACTIVITIES = "/status/{process_id}/activities"
@@ -577,4 +580,177 @@ async def get_file_content(
         logger_service.log_error(f"Error in get_file_content: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error retrieving file content: {str(e)}"
+        )
+
+
+@router.post(process_router_paths.CANCEL_PROCESS, status_code=202)
+async def cancel_process(
+    process_id: str,
+    request: Request,
+    reason: Optional[str] = None,
+):
+    """
+    Request cancellation of a running process.
+    This endpoint forwards the kill request to the Processor's Control API.
+    The processor will observe this request and terminate the running process.
+    """
+    app: TypedFastAPI = request.app
+    logger_service: ILoggerService = app.app_context.get_service(ILoggerService)
+
+    try:
+        logger_service.log_info(f"Cancel process request for process_id: {process_id}")
+
+        # Get authenticated user
+        authenticated_user = get_authenticated_user(request)
+        user_id = authenticated_user.user_principal_id
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Get processor control URL from configuration
+        config = app.app_context.configuration
+        processor_url = config.processor_control_url or "http://processor:8080"
+        processor_token = config.processor_control_token or ""
+
+        # Prepare headers for processor control API
+        headers = {}
+        if processor_token:
+            headers["Authorization"] = f"Bearer {processor_token}"
+
+        # Forward kill request to Processor Control API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{processor_url}/processes/{process_id}/kill",
+                json={"reason": reason or f"User {user_id} cancelled from UI"},
+                headers=headers,
+            )
+
+            if response.status_code == 401:
+                logger_service.log_error("Unauthorized access to processor control API")
+                raise HTTPException(
+                    status_code=502,
+                    detail="Failed to authenticate with processor control API",
+                )
+
+            if response.status_code >= 400:
+                logger_service.log_error(
+                    f"Processor control API error: {response.status_code} - {response.text}"
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Processor control API error: {response.text}",
+                )
+
+            result = response.json()
+
+        logger_service.log_info(
+            f"Cancel request sent for process {process_id}, state: {result.get('kill_state', 'unknown')}"
+        )
+
+        return {
+            "message": "Cancellation request submitted",
+            "process_id": process_id,
+            "kill_requested": result.get("kill_requested", True),
+            "kill_state": result.get("kill_state", "pending"),
+            "kill_requested_at": result.get("kill_requested_at", ""),
+        }
+
+    except httpx.TimeoutException:
+        logger_service.log_error(f"Timeout connecting to processor control API")
+        raise HTTPException(
+            status_code=504,
+            detail="Timeout connecting to processor control API",
+        )
+    except httpx.ConnectError:
+        logger_service.log_error(f"Failed to connect to processor control API")
+        raise HTTPException(
+            status_code=503,
+            detail="Processor control API is unavailable",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger_service.log_error(f"Error in cancel_process: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error cancelling process: {str(e)}"
+        )
+
+
+@router.get(process_router_paths.CANCEL_STATUS, status_code=200)
+async def get_cancel_status(
+    process_id: str,
+    request: Request,
+):
+    """
+    Get the cancellation status of a process.
+    Returns the current kill state from the Processor's Control API.
+    """
+    app: TypedFastAPI = request.app
+    logger_service: ILoggerService = app.app_context.get_service(ILoggerService)
+
+    try:
+        logger_service.log_info(f"Get cancel status for process_id: {process_id}")
+
+        # Get authenticated user
+        authenticated_user = get_authenticated_user(request)
+        user_id = authenticated_user.user_principal_id
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Get processor control URL from configuration
+        config = app.app_context.configuration
+        processor_url = config.processor_control_url or "http://processor:8080"
+        processor_token = config.processor_control_token or ""
+
+        # Prepare headers for processor control API
+        headers = {}
+        if processor_token:
+            headers["Authorization"] = f"Bearer {processor_token}"
+
+        # Get control status from Processor Control API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{processor_url}/processes/{process_id}/control",
+                headers=headers,
+            )
+
+            if response.status_code == 401:
+                logger_service.log_error("Unauthorized access to processor control API")
+                raise HTTPException(
+                    status_code=502,
+                    detail="Failed to authenticate with processor control API",
+                )
+
+            if response.status_code >= 400:
+                logger_service.log_error(
+                    f"Processor control API error: {response.status_code} - {response.text}"
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Processor control API error: {response.text}",
+                )
+
+            result = response.json()
+
+        return result
+
+    except httpx.TimeoutException:
+        logger_service.log_error(f"Timeout connecting to processor control API")
+        raise HTTPException(
+            status_code=504,
+            detail="Timeout connecting to processor control API",
+        )
+    except httpx.ConnectError:
+        logger_service.log_error(f"Failed to connect to processor control API")
+        raise HTTPException(
+            status_code=503,
+            detail="Processor control API is unavailable",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger_service.log_error(f"Error in get_cancel_status: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error getting cancel status: {str(e)}"
         )

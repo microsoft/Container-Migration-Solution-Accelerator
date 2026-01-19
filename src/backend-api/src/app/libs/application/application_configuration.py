@@ -69,6 +69,14 @@ class Configuration(_configuration_base, KernelBaseSettings):
         default=None, env="APPLICATIONINSIGHTS_CONNECTION_STRING"
     )
 
+    # Processor Control API configuration
+    processor_control_url: str | None = Field(
+        default="http://processor:8080", env="PROCESSOR_CONTROL_URL"
+    )
+    processor_control_token: str | None = Field(
+        default=None, env="PROCESSOR_CONTROL_TOKEN"
+    )
+
 
 class _envConfiguration(_configuration_base):
     """

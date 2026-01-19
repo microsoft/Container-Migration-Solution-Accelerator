@@ -292,12 +292,23 @@ const ProcessPage: React.FC = () => {
   */
 
   // Handle modal cancellation
-  const handleCancelProcessing = () => {
-    // TODO: Add API call to cancel processing if needed
+  const handleCancelProcessing = async () => {
     console.log('User cancelled processing');
+    
+    // Call API to cancel the process
+    if (batchId) {
+      try {
+        const result = await apiService.cancelProcess(batchId, 'User cancelled from UI');
+        console.log('Cancel request result:', result);
+      } catch (error) {
+        console.error('Failed to cancel process:', error);
+        // Continue with UI cleanup even if API call fails
+      }
+    }
+    
     setShowProgressModal(false);
     setProcessingState('IDLE');
-    // Optionally navigate back to landing or previous page
+    // Navigate back to landing page
     navigate('/');
   };
 
