@@ -1095,7 +1095,8 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
             }
             {
               name: 'PROCESSOR_CONTROL_URL'
-              value: 'http://${processorContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
+              // Internal ingress FQDN format: https://<app-name>.internal.<environment-default-domain>
+              value: 'https://${processorContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
             }
           ],
           enableMonitoring
@@ -1276,10 +1277,10 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
         }
       }
     ]
+    // Internal ingress required for container-to-container communication
     ingressTargetPort: 8080
-    ingressTransport: 'http'
-    disableIngress: false
     ingressExternal: false
+    ingressAllowInsecure: true  // Allow HTTP without SSL redirect for internal calls
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1

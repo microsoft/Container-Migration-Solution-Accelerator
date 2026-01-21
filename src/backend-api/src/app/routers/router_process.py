@@ -617,13 +617,19 @@ async def cancel_process(
         if processor_token:
             headers["Authorization"] = f"Bearer {processor_token}"
 
+        # Build the full URL for the kill endpoint
+        kill_url = f"{processor_url}/processes/{process_id}/kill"
+        logger_service.log_info(f"Calling processor kill API at: {kill_url}")
+
         # Forward kill request to Processor Control API
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Note: verify=False is needed for internal ACA communication (self-signed certs)
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(
-                f"{processor_url}/processes/{process_id}/kill",
+                kill_url,
                 json={"reason": reason or f"User {user_id} cancelled from UI"},
                 headers=headers,
             )
+            logger_service.log_info(f"Processor kill API response: {response.status_code}")
 
             if response.status_code == 401:
                 logger_service.log_error("Unauthorized access to processor control API")
@@ -708,12 +714,18 @@ async def get_cancel_status(
         if processor_token:
             headers["Authorization"] = f"Bearer {processor_token}"
 
+        # Build the full URL for the control status endpoint
+        control_url = f"{processor_url}/processes/{process_id}/control"
+        logger_service.log_info(f"Calling processor control API at: {control_url}")
+
         # Get control status from Processor Control API
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Note: verify=False is needed for internal ACA communication (self-signed certs)
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.get(
-                f"{processor_url}/processes/{process_id}/control",
+                control_url,
                 headers=headers,
             )
+            logger_service.log_info(f"Processor control API response: {response.status_code}")
 
             if response.status_code == 401:
                 logger_service.log_error("Unauthorized access to processor control API")
