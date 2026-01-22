@@ -32,11 +32,11 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.o3, 500'
+      'OpenAI.GlobalStandard.GPT5.1, 500'
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports GPT5.1 model deployment.')
 param azureAiServiceLocation string
 
 @allowed([
@@ -68,8 +68,8 @@ param imageTag string = 'latest'
 param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using o3. Defaults to o3.')
-param aiModelName string = 'o3'
+@description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
+param aiModelName string = 'GPT5.1'
 
 @minLength(1)
 @description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
@@ -586,6 +586,7 @@ var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().loca
 var cosmosDatabaseName = 'migration_db'
 var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
+var processControlCosmosContainerName = 'processcontrol'
 module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
@@ -605,6 +606,12 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
           }
           {
             name: agentTelemetryCosmosContainerName
+            paths: [
+              '/_partitionKey'
+            ]
+          }
+          {
+            name: processControlCosmosContainerName
             paths: [
               '/_partitionKey'
             ]
@@ -934,6 +941,11 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         name: 'COSMOS_DB_CONTAINER_NAME'
         value: agentTelemetryCosmosContainerName
       }
+      {
+        name: 'COSMOS_DB_CONTROL_CONTAINER_NAME'
+        value: processControlCosmosContainerName
+      }
+
       {
         name: 'COSMOS_DB_DATABASE_NAME'
         value: cosmosDatabaseName

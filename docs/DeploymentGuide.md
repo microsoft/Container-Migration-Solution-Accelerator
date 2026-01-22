@@ -12,12 +12,12 @@ This guide walks you through deploying the Container Migration Solution Accelera
 
 Ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the following permissions:
 
-| **Required Permission/Role** | **Scope** | **Purpose** |
-|------------------------------|-----------|-------------|
-| **Contributor** | Subscription level | Create and manage Azure resources |
-| **User Access Administrator** | Subscription level | Manage user access and role assignments |
-| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions |
-| **App Registration Creation** | Azure Active Directory | Create and configure authentication |
+| **Required Permission/Role**  | **Scope**                         | **Purpose**                             |
+| ----------------------------- | --------------------------------- | --------------------------------------- |
+| **Contributor**               | Subscription level                | Create and manage Azure resources       |
+| **User Access Administrator** | Subscription level                | Manage user access and role assignments |
+| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions              |
+| **App Registration Creation** | Azure Active Directory            | Create and configure authentication     |
 
 **🔍 How to Check Your Permissions:**
 
@@ -51,7 +51,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 - [Azure App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/)
 - [Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/)
 - [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues/)
-- [o3 Model Capacity](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure)
+- [GPT-5.1 Model Capacity](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure)
 
 **Recommended Regions:** East US, East US2, Australia East, UK South, France Central
 
@@ -77,12 +77,12 @@ Select one of the following options to deploy the Container Migration Solution A
 
 ### Environment Comparison
 
-| **Option** | **Best For** | **Prerequisites** | **Setup Time** |
-|------------|--------------|-------------------|----------------|
-| **GitHub Codespaces** | Quick deployment, no local setup required | GitHub account | ~3-5 minutes |
-| **VS Code Dev Containers** | Fast deployment with local tools | Docker Desktop, VS Code | ~5-10 minutes |
-| **VS Code Web** | Quick deployment, no local setup required | Azure account | ~2-4 minutes |
-| **Local Environment** | Enterprise environments, full control | All tools individually | ~15-30 minutes |
+| **Option**                 | **Best For**                              | **Prerequisites**       | **Setup Time** |
+| -------------------------- | ----------------------------------------- | ----------------------- | -------------- |
+| **GitHub Codespaces**      | Quick deployment, no local setup required | GitHub account          | ~3-5 minutes   |
+| **VS Code Dev Containers** | Fast deployment with local tools          | Docker Desktop, VS Code | ~5-10 minutes  |
+| **VS Code Web**            | Quick deployment, no local setup required | Azure account           | ~2-4 minutes   |
+| **Local Environment**      | Enterprise environments, full control     | All tools individually  | ~15-30 minutes |
 
 **💡 Recommendation:** For fastest deployment, start with **GitHub Codespaces** - no local installation required.
 
@@ -180,14 +180,14 @@ Review the configuration options below. You can customize any settings that meet
 
 ### 3.1 Choose Deployment Type (Optional)
 
-| **Aspect** | **Development/Testing (Default)** | **Production** |
-|------------|-----------------------------------|----------------|
-| **Configuration File** | `main.parameters.json` (sandbox) | Copy `main.waf.parameters.json` to `main.parameters.json` |
-| **Security Controls** | Minimal (for rapid iteration) | Enhanced (production best practices) |
-| **Cost** | Lower costs | Cost optimized |
-| **Use Case** | POCs, development, testing | Production workloads |
-| **Framework** | Basic configuration | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
-| **Features** | Core functionality | Reliability, security, operational excellence |
+| **Aspect**             | **Development/Testing (Default)** | **Production**                                                                          |
+| ---------------------- | --------------------------------- | --------------------------------------------------------------------------------------- |
+| **Configuration File** | `main.parameters.json` (sandbox)  | Copy `main.waf.parameters.json` to `main.parameters.json`                               |
+| **Security Controls**  | Minimal (for rapid iteration)     | Enhanced (production best practices)                                                    |
+| **Cost**               | Lower costs                       | Cost optimized                                                                          |
+| **Use Case**           | POCs, development, testing        | Production workloads                                                                    |
+| **Framework**          | Basic configuration               | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
+| **Features**           | Core functionality                | Reliability, security, operational excellence                                           |
 
 **To use production configuration:**
 
@@ -278,7 +278,7 @@ azd up
 **During deployment, you'll be prompted for:**
 1. **Environment name** (e.g., "conmig") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
-3. **Azure AI Foundry deployment region** - Select a region with available o3 model quota for AI operations
+3. **Azure AI Foundry deployment region** - Select a region with available GPT-5.1 model quota for AI operations
 4. **Primary location** - Select the region where your infrastructure resources will be deployed
 5. **Resource group** selection (create new or use existing)
 
@@ -316,7 +316,7 @@ After successful deployment:
 Follow the detailed workflow to test the migration functionality:
 
 **Quick Test Steps:**
-1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples)
+1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples). You can also upload manifests from other supported source platforms (e.g., OpenShift/Rancher/Tanzu/on-prem Kubernetes).
 2. Upload the files to the application
 3. Click **Start Processing** to begin the migration
 4. Monitor the batch processing status (typically takes 20-30 minutes)

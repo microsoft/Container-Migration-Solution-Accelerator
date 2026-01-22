@@ -32,11 +32,11 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.o3, 500'
+      'OpenAI.GlobalStandard.GPT5.1, 500'
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports GPT5.1 model deployment.')
 param azureAiServiceLocation string
 
 
@@ -61,8 +61,8 @@ param frontendImageName string = ''
 param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using o3. Defaults to o3.')
-param aiModelName string = 'o3'
+@description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
+param aiModelName string = 'GPT5.1'
 
 @minLength(1)
 @description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')

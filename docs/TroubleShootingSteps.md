@@ -317,18 +317,6 @@ The subscription 'xxxx-xxxx' cannot have more than 1 Container App Environments 
 
 </details>
 
-<details><summary><b>Conflict - Cannot use the SKU Basic with File Change Audit for site.</b></summary>
-
-- This error happens because File Change Audit logs aren’t supported on Basic SKU App Service Plans.
-
-- Upgrading to Premium/Isolated SKU (supports File Change Audit), or
-
-- Disabling File Change Audit in Diagnostic Settings if you must stay on Basic.
-- Always cross-check the [supported log types](https://aka.ms/supported-log-types)
-  before adding diagnostic logs to your Bicep templates.
-
-</details>
-
 <details>
 
 <summary><b>AccountPropertyCannotBeUpdated</b></summary>
@@ -351,7 +339,7 @@ The subscription 'xxxx-xxxx' cannot have more than 1 Container App Environments 
 This error occurs when your subscription does not have access to certain Azure OpenAI models.  
 
 **Example error message:**  
-`SpecialFeatureOrQuotaIdRequired: The current subscription does not have access to this model 'Format:OpenAI,Name:o3,Version:2025-04-16'.`  
+`SpecialFeatureOrQuotaIdRequired: The current subscription does not have access to this model 'Format:OpenAI,Name:gpt-5.1,Version:2025-04-16'.`  
 
 **Resolution:**  
 To gain access, submit a request using the official form:  
@@ -359,8 +347,7 @@ To gain access, submit a request using the official form:
 
 You’ll need to use this form if you require access to the following restricted models:  
 - gpt-5  
-- o3  
-- o3-pro  
+- gpt-5.1  
 - deep research  
 - reasoning summary  
 - gpt-image-1  

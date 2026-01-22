@@ -5,7 +5,7 @@ To help you get started, here’s a **sample process** you can follow in the app
 
 ## **Process**
 
-> Note: Download sample data files for **EKS & GKE** in data folder from [here](../data).
+> Note: Sample data files provided in the repo are for **EKS & GKE** and live in the data folder ([here](../data)). The solution also supports other source Kubernetes platforms (e.g., OpenShift/Rancher/Tanzu/on-prem), but sample data for those may not be included.
 
 ### **Upload**
 

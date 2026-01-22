@@ -21,11 +21,20 @@ RUN tdnf update -y && tdnf install -y \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && mv /root/.local/bin/uv /usr/local/bin/uv
 
+# Install Node.js (required by some MCP tools)
+# Keep this at a modern LTS to satisfy common package "engines" constraints.
+ARG NODE_VERSION=22.12.0
+RUN curl -fsSLo /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" \
+    && tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
+    && rm -f /tmp/node.tar.gz \
+    && node --version \
+    && npm --version
+
 # Copy pyproject.toml and uv.lock first for better caching
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using UV
-RUN uv sync --frozen --python 3.12
+RUN uv sync --frozen --python 3.12 --prerelease=allow
 
 # Copy the entire source code
 COPY src/ ./src/
@@ -43,12 +52,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 # Environment variables for queue service configuration (can be overridden)
 ENV APP_CONFIGURATION_URL=""
 
-# Health check for queue service using UV
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD uv run python -c "import sys; sys.path.append('src'); from main_service import QueueMigrationServiceApp; app = QueueMigrationServiceApp(); status = app.get_service_status(); exit(0 if status.get('docker_health') == 'healthy' else 1)" || exit 1
-
-# Expose port for health checks (optional)
+# Expose port for controller api
 EXPOSE 8080
 
 # Simple command - let Docker handle restarts
-CMD ["uv", "run", "python", "src/main_service.py"]
+CMD ["uv", "run", "--prerelease=allow", "python", "src/main_service.py"]

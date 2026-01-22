@@ -2,7 +2,7 @@
 
 Before deploying the accelerator, **ensure sufficient quota availability** for the required model.
 
-> **For Global Standard | o3 - the capacity to at least 500K tokens for optimal performance.**
+> **For Global Standard | gpt-5.1 - target at least 500K tokens for optimal performance.**
 
 ### Login if you have not done so already
 
@@ -17,7 +17,7 @@ az login --use-device-code
 ### 📌 Default Models & Capacities:
 
 ```
-o3:500
+gpt-5.1:500
 ```
 
 ### 📌 Default Regions:
@@ -53,7 +53,7 @@ eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southc
 ✔️ Check specific model(s) in default regions:
 
 ```
-./quota_check_params.sh --models o3:500
+./quota_check_params.sh --models gpt-5.1:500
 ```
 
 ✔️ Check default models in specific region(s):
@@ -65,13 +65,13 @@ eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southc
 ✔️ Passing Both models and regions:
 
 ```
-./quota_check_params.sh --models o3:500 --regions eastus,westus2
+./quota_check_params.sh --models gpt-5.1:500 --regions eastus,westus2
 ```
 
 ✔️ All parameters combined:
 
 ```
-./quota_check_params.sh --models o3:500 --regions eastus,westus --verbose
+./quota_check_params.sh --models gpt-5.1:500 --regions eastus,westus --verbose
 ```
 
 ### **Sample Output**

@@ -1,3 +1,17 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""Azure credential selection helpers.
+
+This module centralizes credential selection for Azure SDK clients.
+
+Operational behavior:
+        - In Azure-hosted environments, prefer managed identity (RBAC-based auth).
+        - In local development, prefer CLI-backed credentials ("az" / "azd").
+        - Provide both sync and async credential helpers for SDKs that require
+            async authentication.
+"""
+
 import logging
 import os
 from typing import Any
@@ -7,6 +21,9 @@ from azure.identity import (
     AzureDeveloperCliCredential,
     DefaultAzureCredential,
     ManagedIdentityCredential,
+)
+from azure.identity import (
+    get_bearer_token_provider as identity_get_bearer_token_provider,
 )
 from azure.identity.aio import (
     AzureCliCredential as AsyncAzureCliCredential,
@@ -20,22 +37,44 @@ from azure.identity.aio import (
 from azure.identity.aio import (
     ManagedIdentityCredential as AsyncManagedIdentityCredential,
 )
+from azure.identity.aio import (
+    get_bearer_token_provider as identity_get_async_bearer_token_provider,
+)
+
+
+async def get_async_bearer_token_provider():
+    """Return a bearer token provider for async Azure SDK clients.
+
+    Returns:
+        A callable suitable for SDK clients that accept a token provider.
+    """
+    credential = await get_async_azure_credential()
+    return identity_get_async_bearer_token_provider(
+        credential, "https://cognitiveservices.azure.com/.default"
+    )
+
+
+def get_bearer_token_provider():
+    """Return a bearer token provider for sync Azure SDK clients.
+
+    Returns:
+        A callable suitable for SDK clients that accept a token provider.
+    """
+    # credential = get_azure_credential()
+    # return identity_get_bearer_token_provider(credential)
+    credential = get_azure_credential()
+    return identity_get_bearer_token_provider(
+        credential, "https://cognitiveservices.azure.com/.default"
+    )
 
 
 def get_azure_credential():
-    """
-    Get the appropriate Azure credential based on environment.
+    """Return the best Azure credential for the current runtime environment.
 
-    Following Azure authentication best practices:
-    - Local Development: Use AzureCliCredential (requires 'az login')
-    - Azure Container/VM: Use ManagedIdentityCredential (role-based auth)
-    - Azure App Service/Functions: Use ManagedIdentityCredential
-    - Fallback: DefaultAzureCredential with explicit instantiation
-
-    This pattern ensures:
-    - Local dev uses 'az login' credentials
-    - Azure-hosted containers use assigned managed identity roles
-    - Production environments get proper RBAC-based authentication
+    Operational preference order:
+        1) Azure-hosted: managed identity (system- or user-assigned)
+        2) Local: Azure CLI and Azure Developer CLI credentials
+        3) Fallback: DefaultAzureCredential
     """
 
     # Check if running in Azure environment (container, app service, VM, etc.)
@@ -67,7 +106,15 @@ def get_azure_credential():
     # Local development - try multiple CLI credentials
     credential_attempts = []
 
-    # Try Azure Developer CLI first (newer, designed for development)
+    # Try Azure CLI as Default (traditional)
+    try:
+        logging.info("[AUTH] Trying AzureCliCredential (requires 'az login')")
+        credential = AzureCliCredential()
+        credential_attempts.append(("AzureCliCredential", credential))
+    except Exception as e:
+        logging.warning(f"[AUTH] AzureCliCredential failed: {e}")
+
+    # Try Azure Developer CLI Second (newer, designed for development)
     try:
         logging.info(
             "[AUTH] Local development detected - trying AzureDeveloperCliCredential (requires 'azd auth login')"
@@ -76,14 +123,6 @@ def get_azure_credential():
         credential_attempts.append(("AzureDeveloperCliCredential", credential))
     except Exception as e:
         logging.warning(f"[AUTH] AzureDeveloperCliCredential failed: {e}")
-
-    # Try Azure CLI as fallback (traditional)
-    try:
-        logging.info("[AUTH] Trying AzureCliCredential (requires 'az login')")
-        credential = AzureCliCredential()
-        credential_attempts.append(("AzureCliCredential", credential))
-    except Exception as e:
-        logging.warning(f"[AUTH] AzureCliCredential failed: {e}")
 
     # Return the first successful credential
     if credential_attempts:
@@ -99,10 +138,7 @@ def get_azure_credential():
 
 
 def get_async_azure_credential():
-    """
-    Get the appropriate async Azure credential based on environment.
-    Used for Azure services that require async credentials like AzureAIAgent.
-    """
+    """Return the best async Azure credential for the current runtime environment."""
     import os
 
     # Check if running in Azure environment (container, app service, VM, etc.)
@@ -136,7 +172,15 @@ def get_async_azure_credential():
     # Local development - try multiple CLI credentials
     credential_attempts = []
 
-    # Try Azure Developer CLI first (newer, designed for development)
+    # Try Azure CLI as default (traditional)
+    try:
+        logging.info("[AUTH] Trying async AzureCliCredential (requires 'az login')")
+        credential = AsyncAzureCliCredential()
+        credential_attempts.append(("AsyncAzureCliCredential", credential))
+    except Exception as e:
+        logging.warning(f"[AUTH] AsyncAzureCliCredential failed: {e}")
+
+    # Try Azure Developer CLI (newer, designed for development)
     try:
         logging.info(
             "[AUTH] Local development detected - trying async AzureDeveloperCliCredential (requires 'azd auth login')"
@@ -145,14 +189,6 @@ def get_async_azure_credential():
         credential_attempts.append(("AsyncAzureDeveloperCliCredential", credential))
     except Exception as e:
         logging.warning(f"[AUTH] AsyncAzureDeveloperCliCredential failed: {e}")
-
-    # Try Azure CLI as fallback (traditional)
-    try:
-        logging.info("[AUTH] Trying async AzureCliCredential (requires 'az login')")
-        credential = AsyncAzureCliCredential()
-        credential_attempts.append(("AsyncAzureCliCredential", credential))
-    except Exception as e:
-        logging.warning(f"[AUTH] AsyncAzureCliCredential failed: {e}")
 
     # Return the first successful credential
     if credential_attempts:
@@ -167,12 +203,12 @@ def get_async_azure_credential():
     return AsyncDefaultAzureCredential()
 
 
-def validate_azure_authentication(self) -> dict[str, Any]:
-    """
-    Validate Azure authentication setup and provide helpful diagnostics.
+def validate_azure_authentication() -> dict[str, Any]:
+    """Validate Azure authentication configuration and return diagnostics.
 
     Returns:
-        dict with authentication status, credential type, and recommendations
+        JSON-serializable diagnostic payload including environment indicators,
+        chosen credential type, and actionable recommendations.
     """
     import os
 
@@ -221,7 +257,7 @@ def validate_azure_authentication(self) -> dict[str, Any]:
         )
 
     try:
-        credential = self._get_azure_credential()
+        credential = get_azure_credential()
         auth_info["status"] = "configured"
         auth_info["credential_instance"] = type(credential).__name__
     except Exception as e:

@@ -4,7 +4,7 @@ This guide provides comprehensive information for implementing, configuring, and
 
 ## Overview
 
-Model Context Protocol (MCP) servers provide a standardized way to extend AI agent capabilities with external tools, resources, and services. The Container Migration Solution Accelerator uses MCP to integrate with Azure services, file systems, Kubernetes clusters, and other external systems.
+Model Context Protocol (MCP) servers provide a standardized way to extend AI agent capabilities with external tools, resources, and services. The Container Migration Solution Accelerator uses MCP to integrate with Azure services (for example: Blob Storage), Microsoft Learn documentation (HTTP), URL fetching, Mermaid validation, and YAML inventory generation.
 
 ## MCP Architecture
 
@@ -14,7 +14,7 @@ Model Context Protocol (MCP) servers provide a standardized way to extend AI age
 graph TB
     subgraph "MCP Architecture"
         subgraph "Client Layer"
-            A[AI Agents<br/>Semantic Kernel<br/>GroupChat]
+            A[AI Agents<br/>Agent Framework<br/>Orchestrations]
         end
 
         subgraph "Protocol Layer"
@@ -26,7 +26,7 @@ graph TB
         end
 
         subgraph "Integration Layer"
-            D[External Services<br/>• Azure APIs<br/>• File Systems<br/>• Kubernetes<br/>• Git Repositories]
+            D[External Services<br/>• Azure APIs<br/>• Blob Storage<br/>• HTTP Resources<br/>• Git Repositories]
         end
 
         A <--> B
@@ -47,212 +47,83 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant Agent as AI Agent
-    participant SK as Semantic Kernel
+    participant AF as Agent Framework
     participant MCP as MCP Server
     participant EXT as External Service
 
-    Agent->>SK: Request tool execution
-    SK->>MCP: JSON-RPC call
+    Agent->>AF: Request tool execution
+    AF->>MCP: JSON-RPC call
     MCP->>MCP: Validate request
     MCP->>EXT: Execute operation
     EXT-->>MCP: Return result
     MCP->>MCP: Process response
-    MCP-->>SK: JSON-RPC response
-    SK-->>Agent: Tool result
+    MCP-->>AF: JSON-RPC response
+    AF-->>Agent: Tool result
 ```
 
-## Base MCP Server Implementation
+## How MCP is implemented in this repo (v2)
 
-### Abstract Base Server
+In v2, MCP servers are exposed to agents as **Microsoft Agent Framework tools**:
 
-```python
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
-import json
-import asyncio
+- **HTTP MCP tool**: used for remote MCP servers (Microsoft Learn)
+- **Stdio MCP tool**: used for local MCP servers (spawned as subprocesses)
 
-class BaseMCPServer(ABC):
-    """Abstract base class for MCP servers"""
+Where to look:
 
-    def __init__(self, server_name: str, config: Dict[str, Any]):
-        self.server_name = server_name
-        self.config = config
-        self.tools = {}
-        self.resources = {}
-        self.prompts = {}
-        self.is_initialized = False
+- Tool wrappers (Agent Framework tools): [src/processor/src/libs/mcp_server/](../src/processor/src/libs/mcp_server/)
+- Local server implementations (FastMCP): `src/processor/src/libs/mcp_server/**/mcp_*.py` (under [src/processor/src/libs/mcp_server/](../src/processor/src/libs/mcp_server/))
+- Tool registration per step: `src/processor/src/steps/*/orchestration/*_orchestrator.py` (under [src/processor/src/steps/](../src/processor/src/steps/))
 
-    @abstractmethod
-    async def initialize(self) -> bool:
-        """Initialize the MCP server"""
-        pass
+Notes:
 
-    @abstractmethod
-    async def cleanup(self) -> None:
-        """Cleanup server resources"""
-        pass
+- Local servers in this repo are implemented using **FastMCP** and are started via `uv run --prerelease=allow ...`.
+- The Fetch server is an external MCP server started via `uvx mcp-server-fetch`.
+- The v2 orchestrators use the wrappers under [src/processor/src/libs/mcp_server/](../src/processor/src/libs/mcp_server/).
 
-    # Tool Management
-    async def list_tools(self) -> List[Dict[str, Any]]:
-        """List available tools"""
-        return [
-            {
-                "name": name,
-                "description": tool.description,
-                "inputSchema": tool.input_schema
-            }
-            for name, tool in self.tools.items()
-        ]
+## Current MCP tools/servers in v2
 
-    async def call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Call a specific tool"""
-        if name not in self.tools:
-            raise ValueError(f"Tool '{name}' not found")
+These are the MCP tools actually prepared by the v2 orchestrators:
 
-        tool = self.tools[name]
-        return await tool.execute(arguments)
+### Microsoft Learn (HTTP)
 
-    # Resource Management
-    async def list_resources(self) -> List[Dict[str, Any]]:
-        """List available resources"""
-        return [
-            {
-                "uri": resource.uri,
-                "name": resource.name,
-                "description": resource.description,
-                "mimeType": resource.mime_type
-            }
-            for resource in self.resources.values()
-        ]
+- **Tool name**: `Microsoft Learn MCP`
+- **Endpoint**: `https://learn.microsoft.com/api/mcp`
+- **Used in**: Analysis, Design, Convert, Documentation
+- **Wrapper**: [src/processor/src/libs/mcp_server/MCPMicrosoftDocs.py](../src/processor/src/libs/mcp_server/MCPMicrosoftDocs.py)
 
-    async def read_resource(self, uri: str) -> Dict[str, Any]:
-        """Read a specific resource"""
-        if uri not in self.resources:
-            raise ValueError(f"Resource '{uri}' not found")
+### Fetch (stdio, external)
 
-        resource = self.resources[uri]
-        return await resource.read()
+- **Tool name**: `Fetch MCP Tool`
+- **Executable**: `uvx mcp-server-fetch`
+- **Used in**: Analysis, Design, Convert, Documentation
 
-    # Prompt Management
-    async def list_prompts(self) -> List[Dict[str, Any]]:
-        """List available prompts"""
-        return [
-            {
-                "name": name,
-                "description": prompt.description,
-                "arguments": prompt.arguments
-            }
-            for name, prompt in self.prompts.items()
-        ]
+### Azure Blob Storage (stdio)
 
-    async def get_prompt(self, name: str, arguments: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Get a specific prompt"""
-        if name not in self.prompts:
-            raise ValueError(f"Prompt '{name}' not found")
+- **Tool name**: `azure_blob_io_service`
+- **Used in**: Analysis, Design, Convert, Documentation
+- **Wrapper**: [src/processor/src/libs/mcp_server/MCPBlobIOTool.py](../src/processor/src/libs/mcp_server/MCPBlobIOTool.py)
+- **Server**: [src/processor/src/libs/mcp_server/blob_io_operation/mcp_blob_io_operation.py](../src/processor/src/libs/mcp_server/blob_io_operation/mcp_blob_io_operation.py)
 
-        prompt = self.prompts[name]
-        return await prompt.render(arguments or {})
-```
+### Datetime utilities (stdio)
 
-### Tool Implementation
+- **Tool name**: `datetime_service`
+- **Used in**: Analysis, Design, Convert, Documentation
+- **Wrapper**: [src/processor/src/libs/mcp_server/MCPDatetimeTool.py](../src/processor/src/libs/mcp_server/MCPDatetimeTool.py)
+- **Server**: [src/processor/src/libs/mcp_server/datetime/mcp_datetime.py](../src/processor/src/libs/mcp_server/datetime/mcp_datetime.py)
 
-```python
-class MCPTool:
-    """Represents an MCP tool"""
+### Mermaid validation/fix (stdio)
 
-    def __init__(self, name: str, description: str, input_schema: Dict[str, Any],
-                 executor: callable):
-        self.name = name
-        self.description = description
-        self.input_schema = input_schema
-        self.executor = executor
+- **Tool name**: `mermaid_service`
+- **Used in**: Design
+- **Wrapper**: [src/processor/src/libs/mcp_server/MCPMermaidTool.py](../src/processor/src/libs/mcp_server/MCPMermaidTool.py)
+- **Server**: [src/processor/src/libs/mcp_server/mermaid/mcp_mermaid.py](../src/processor/src/libs/mcp_server/mermaid/mcp_mermaid.py)
 
-    async def execute(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the tool with given arguments"""
-        try:
-            # Validate arguments against schema
-            self._validate_arguments(arguments)
+### YAML inventory (stdio)
 
-            # Execute tool function
-            result = await self.executor(arguments)
-
-            return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": str(result)
-                    }
-                ]
-            }
-
-        except Exception as e:
-            return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": f"Error executing tool {self.name}: {str(e)}"
-                    }
-                ],
-                "isError": True
-            }
-
-    def _validate_arguments(self, arguments: Dict[str, Any]):
-        """Validate arguments against input schema"""
-        # Implement JSON schema validation
-        pass
-```
-
-### Resource Implementation
-
-```python
-class MCPResource:
-    """Represents an MCP resource"""
-
-    def __init__(self, uri: str, name: str, description: str,
-                 mime_type: str, reader: callable):
-        self.uri = uri
-        self.name = name
-        self.description = description
-        self.mime_type = mime_type
-        self.reader = reader
-
-    async def read(self) -> Dict[str, Any]:
-        """Read the resource content"""
-        try:
-            content = await self.reader()
-
-            return {
-                "contents": [
-                    {
-                        "uri": self.uri,
-                        "mimeType": self.mime_type,
-                        "text": content if isinstance(content, str) else json.dumps(content)
-                    }
-                ]
-            }
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to read resource {self.uri}: {str(e)}")
-```
-
-## Current MCP Server Implementation
-
-The Container Migration Solution Accelerator includes the following MCP servers:
-
-### MCPBlobIOPlugin.py
-- **Purpose**: Azure Blob Storage operations
-- **Capabilities**: Blob upload/download, container management, file operations
-- **Usage**: Stores migration results, configuration backups, temporary files
-
-### MCPMicrosoftDocs.py
-- **Purpose**: Microsoft documentation integration
-- **Capabilities**: Documentation search, content retrieval, reference lookup
-- **Usage**: Access Azure documentation, best practices, configuration examples
-
-### MCPDatetimePlugin.py
-- **Purpose**: Date and time utilities
-- **Capabilities**: Timestamp generation, date formatting, duration calculations
-- **Usage**: Migration tracking, log timestamping, scheduling operations
+- **Tool name**: `yaml_inventory_service`
+- **Used in**: Documentation
+- **Wrapper**: [src/processor/src/libs/mcp_server/MCPYamlInventoryTool.py](../src/processor/src/libs/mcp_server/MCPYamlInventoryTool.py)
+- **Server**: [src/processor/src/libs/mcp_server/yaml_inventory/mcp_yaml_inventory.py](../src/processor/src/libs/mcp_server/yaml_inventory/mcp_yaml_inventory.py)
 
 
 ## Best Practices

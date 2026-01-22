@@ -1,0 +1,259 @@
+**DOCUMENTATION STEP OBJECTIVE**:
+- Generate the final end-to-end migration documentation for an AKS-target migration.
+- Consume analysis/design/conversion reports from {{output_file_folder}} as authoritative inputs.
+  - Prefer canonical filenames: `analysis_result.md`, `design_result.md`, `file_converting_result.md`.
+  - If canonical names are not listed due to blob listing/path or naming variations, the Technical Writer must perform evidence-based discovery (no guessing) and use the best-matching verified reports.
+- Save the primary human-readable artifact as `migration_report.md` in {{output_file_folder}}.
+
+**ROLE OWNERSHIP (NON-NEGOTIABLE)**:
+- **Technical Writer is the ONLY participant allowed to create/update `migration_report.md`** via `save_content_to_blob()`.
+- All other participants (AKS Expert, Azure Architect, Chief Architect, and any platform experts) must:
+  - Read inputs and the current `migration_report.md` (if present)
+  - Provide review feedback, blockers, and PASS/FAIL in their chat response
+  - **NOT write or update `migration_report.md` directly**
+
+**CHIEF ARCHITECT VISIBILITY**:
+- The Chief Architect must be able to read all discussion/history, but does not edit the report directly.
+
+**IMPORTANT RESPONSE RULE (prevents workflow deadlocks)**:
+- Participants MUST NOT respond with the final `Documentation_ExtendedBooleanResult` JSON during normal turns.
+- Participants must use tools to read inputs and provide review feedback.
+- The Technical Writer must use tools to draft/iterate the markdown report.
+- The final `Documentation_ExtendedBooleanResult` JSON is produced only at the very end by the Result Generator / termination logic.
+
+**ANTI-HALLUCINATION / EVIDENCE RULE**:
+- Do not reference files unless verified via `list_blobs_in_container()` and read via `read_blob_content()`.
+- If a required file is missing, report it as a blocker (do not invent content).
+
+**SCOPE**:
+- Container: {{container_name}}
+- Source folder: {{source_file_folder}}
+- Output folder: {{output_file_folder}}
+
+**AKS-ONLY TARGET RULE (NON-NEGOTIABLE)**:
+- Target Kubernetes runtime is Azure Kubernetes Service (AKS).
+
+**MANDATORY WORKFLOW**:
+1) Verify authoritative inputs exist in output.
+  - First try listing with BOTH `{{output_file_folder}}` and `{{output_file_folder}}/`.
+  - If listing shows only a 0-byte folder marker or appears empty, list the process root (the segment before `/converted`) and filter for `<process_id>/converted/`.
+  - Prefer canonical filenames, but if names differ, select the best-matching verified reports by pattern (analysis/design/conversion) and record the exact filenames/paths under `## Inputs Used`.
+2) Read each input report using MCP tools (no assumptions).
+3) Technical Writer drafts `migration_report.md` with required structure.
+4) Technical Writer saves `migration_report.md` to {{output_file_folder}}.
+5) Platform expert (if applicable) provides source-platform caveats in chat.
+6) AKS Expert + Azure Architect + Chief Architect review and sign off in chat (PASS/FAIL + notes + blockers).
+7) If anyone is FAIL, Chief Architect merges blockers into one fix plan; Technical Writer updates the report; failing reviewer(s) re-check.
+
+**COLLABORATIVE QUALITY GATE (NON-NEGOTIABLE)**:
+- SUCCESS termination is allowed ONLY when:
+  - `## Blockers (Must be empty to finish)` contains no Open items
+  - `## Sign-off` includes PASS from: AKS Expert, Azure Architect, Chief Architect
+
+**IMPORTANT: BLOCKERS vs ENVIRONMENT PREREQUISITES (prevents workflow deadlocks)**
+- Use `## Blockers (Must be empty to finish)` ONLY for true report defects or migration defects that can be fixed/decided within this workflow.
+- Do NOT put environment-specific provisioning tasks or external decisions into the Blockers section.
+  - Examples: ACR name selection/attachment, managed identity client ID, VNet/VPN/ExpressRoute connectivity, DNS/private endpoints, final data platform choice.
+  - These must be captured under `## Assumptions / Needs Confirmation` and/or `## Environment Prerequisites (Non-blocking)`.
+- If only environment prerequisites remain, reviewers should sign off PASS with notes, and the report should reflect readiness as "Ready (environment setup required)" (or similar), not "Blocked".
+
+**REQUIRED REPORT STRUCTURE** (`migration_report.md`):
+# AKS Migration Report
+
+## Executive Summary
+- Process Id : [grab this value from 'Source folder' path **Process Id**/source]
+- Source platform: [from analysis_result.md]
+- Target platform: AKS
+- Files processed: [counts]
+- Overall status: [Ready/Partially Ready/Blocked]
+- Migration overview and outcomes
+- Key success metrics and completion status
+- Overall recommendations
+
+## Inputs Used
+- analysis_result.md: [path]
+- design_result.md: [path]
+- file_converting_result.md: [path]
+
+## Platform Analysis Summary
+[Condensed highlights from analysis_result.md]
+- Target Azure architecture decisions
+
+## Target Architecture Summary (AKS)
+[Condensed highlights from design_result.md]
+- Selected Azure services and rationale
+- Architecture decisions and trade-offs
+
+## Conversion Summary
+- Converted artifacts overview
+- Notable conversion decisions
+- Manual follow-ups
+- Detailed conversion statistics and quality metrics
+- Per-file conversion status and accuracy
+- For any unresolved conversion issues from `file_converting_result.md`: explain why it is an issue on AKS/Azure and provide remediation guidance (how to convert/fix, what to confirm, and who owns the fix). Do NOT claim the Documentation step fixed YAML.
+
+### Unresolved Conversion Issues (AKS/Azure Remediation)
+- If and only if unresolved conversion issues exist, include a table with these columns:
+  - id
+  - source_file
+  - converted_file (if available)
+  - issue
+  - why_it_breaks_on_aks_or_azure
+  - recommended_aks_or_azure_fix
+  - required_inputs_or_decisions
+  - owner
+  - validation_steps
+  - status (Open/Resolved)
+
+## Converted YAML Inventory (AKS)
+
+### Source-to-Target Mapping
+[Table with columns: source_file | converted_file | implementation_difficulty (1-5) | namespace | workload_type | notes]
+- implementation_difficulty scoring:
+  - 1: Simple apply (no dependencies, minimal config)
+  - 2: Standard deployment (basic secrets/config needed)
+  - 3: Moderate complexity (identity binding, storage config)
+  - 4: Complex orchestration (multi-step dependencies, DNS/TLS)
+  - 5: High-risk deployment (GPU scheduling, performance tuning, cross-service dependencies)
+
+### Required Apply Order
+- Environment-specific values that must be set before apply (image registry, secrets, identities, storage account/container, ingress/DNS)
+
+## Implementation Roadmap
+- Phased plan (prep → cluster add-ons/node pools → storage/data migration → workload deploy → validation/cutover)
+- Dependencies and acceptance criteria per phase
+
+## Deployment Runbook (AKS)
+### Prerequisites
+- Subscription/permissions, region/quota constraints
+- Required tools (Azure CLI, kubectl, helm if needed)
+- Required Azure resources (RG/VNet/AKS/ACR/Key Vault/Storage) as applicable
+
+### Pre-Deployment Steps
+- AKS cluster creation/config (or “existing cluster assumed” with explicit assumptions)
+- Node pools (including GPU if applicable)
+- Add-ons/drivers required by the workloads (CSI, monitoring, ingress)
+
+### Deploy Converted Manifests
+- Apply commands explicitly referencing the converted YAML files (e.g., `kubectl apply -f <converted-yaml>.yaml`)
+- Verification commands after each major apply (pods/jobs/services/ingress)
+
+### Post-Deployment Validation
+- Functional validation checklist tied to workloads (readiness, job completion, endpoints)
+- Observability checks (logs/metrics) and where to look in Azure
+
+### Rollback and Recovery
+- App rollback steps (what to delete/re-apply)
+- Cluster rollback steps (node pool scale-down, addon disablement if relevant)
+- Data recovery steps (snapshots/restore) if persistent data involved
+
+### Troubleshooting Quick Runs
+- Common failure modes and first 3 diagnostic commands per mode
+
+## Day-2 Operations (AKS)
+- Scaling guidance (HPA/VPA considerations) and capacity planning
+- Upgrade/maintenance runbook (AKS upgrades, node image upgrades, disruption windows)
+- Backup/restore and DR approach
+- Security operations (RBAC, workload identity/secrets rotation, image scanning)
+
+## Deployment and Operations Guidance
+- Pre-reqs
+- Deployment order
+- Observability and monitoring
+- Security hardening checklist
+- Rollback guidance
+
+## Expert Insights
+[Multi-paragraph consensus narrative from the migration team]
+- Explain the end-to-end migration approach and philosophy (lift-and-shift vs. re-architecture)
+- Highlight key architectural decisions and trade-offs across analysis, design, and conversion
+- Discuss confidence level in the migration plan and deployment readiness
+- Address areas of complexity or uncertainty requiring attention
+- Summarize how experts collaborated to resolve conflicts and reach consensus
+- Note any deviations from standard AKS patterns and the rationale
+
+## Assumptions / Needs Confirmation
+[Table format for clarity]
+| Assumption | Rationale | Impact if Incorrect | What to Confirm | Owner |
+|------------|-----------|---------------------|-----------------|--------|
+| [Assumption text] | [Why we made this assumption] | [Risk/rework if wrong] | [Specific verification needed] | [Team/role] |
+
+[If no assumptions: write "None"]
+
+## Environment Prerequisites (Non-blocking)
+- List environment provisioning tasks and external decisions required before deployment.
+- These are NOT blockers for documentation completion; they are prerequisites for deployment/go-live.
+- If none: write "None".
+
+## Quality Validation Results
+- Validation findings and validation status
+- Enterprise readiness assessment
+
+## Next Steps and Recommendations
+[Prioritized list with P0/P1/P2/P3 prefix]
+- P0: Critical blockers preventing any deployment (must resolve immediately)
+- P1: Required for production readiness (must resolve before go-live)
+- P2: Important optimizations (should complete within sprint cycles)
+- P3: Nice-to-have improvements (can defer to post-migration backlog)
+
+[Format each item as: **P0:** Item description | **P1:** Item description | etc.]
+
+## Risks and Mitigations
+[Table format with priority classification]
+| Risk | Priority (P0-P3) | Likelihood (H/M/L) | Impact (H/M/L) | Mitigation Strategy | Owner |
+|------|------------------|--------------------|-----------------|--------------------|--------|
+| [Risk description] | [P0/P1/P2/P3] | [H/M/L] | [H/M/L] | [Mitigation approach] | [Team/role] |
+
+## Blockers (Must be empty to finish)
+[If any: list blockers with id, section, symptom, owner, status(Open/Resolved). If none: write "None".]
+
+**Blocker detail requirement (when conversion-related)**
+- If a blocker originates from YAML conversion, include remediation guidance: why it matters on AKS/Azure, recommended fix approach, required inputs/decisions, and validation steps.
+
+## Sign-off
+Each reviewer must provide sign-off in this exact format:
+
+**[Role]:** SIGN-OFF: PASS
+[Optional notes on separate lines]
+
+OR
+
+**[Role]:** SIGN-OFF: FAIL
+[Required: specific blockers with evidence]
+
+Required sign-offs (with examples):
+
+**Technical Writer:** SIGN-OFF: PASS
+Report created for Process Id X, incorporating all inputs with operator-ready runbook and documented assumptions.
+
+**AKS Expert:** SIGN-OFF: PASS
+Documentation correctly targets AKS and is technically sound across deployment and operations sections.
+
+**Azure Architect:** SIGN-OFF: PASS
+Architecture, security, governance guidance match approved design; remaining items are env-specific and documented.
+
+**Chief Architect:** SIGN-OFF: PASS
+Documentation aligns with all prior reports; no blockers, only environment-specific tasks remain.
+
+## References
+[List any Microsoft Learn links actually used]
+
+**URL VALIDATION REQUIREMENT (MANDATORY FOR ALL URLS)**:
+- **EVERY** URL in the References section MUST be validated with `fetch_webpage` before inclusion
+- This includes ALL `learn.microsoft.com` URLs - they can be outdated, moved, or deprecated
+- If any URL returns 404, 403, or error, use `microsoft_docs_search` to find the current correct URL
+- Verify the replacement URL with `fetch_webpage` before including it
+- Do NOT include any unverified or broken URLs in the final report
+
+---
+*Generated by AI AKS migration agent team*
+*Report generated on: {{current_timestamp}}*
+
+**TIMESTAMP REQUIREMENT**:
+The Technical Writer must use the provided UTC timestamp: {{current_timestamp}}.
+
+##final_response
+NOTE: This `##final_response` section is for the Result Generator / termination decision only.
+Participants should NOT output this JSON in their normal turns.
+
+When documentation is complete, return JSON that matches the `Documentation_ExtendedBooleanResult` schema.

@@ -1,6 +1,6 @@
 # Container Migration Solution Accelerator
 
-Extract, analyze, and migrate Kubernetes configurations from other cloud providers to Azure Kubernetes Service (AKS) using intelligent multi-agent orchestration powered by Azure OpenAI o3, Semantic Kernel, and MCP (Model Context Protocol) servers. This solution provides automated platform detection, multi-dimensional analysis, and expert-guided configuration transformation with comprehensive migration reporting.
+Extract, analyze, and migrate Kubernetes configurations from other cloud providers to Azure Kubernetes Service (AKS) using intelligent multi-agent orchestration powered by Azure OpenAI GPT-5.1, Microsoft Agent Framework, and MCP (Model Context Protocol) servers. This solution provides automated platform detection, multi-dimensional analysis, and expert-guided configuration transformation with comprehensive migration reporting.
 
 Transform your Kubernetes workloads with confidence through AI-driven analysis covering security, networking, storage, and Azure Well-Architected Framework principles. Expert agents collaborate to ensure your migrated configurations are production-ready and optimized for Azure.
 
@@ -8,9 +8,9 @@ Transform your Kubernetes workloads with confidence through AI-driven analysis c
 
 ## <img src="docs/images/readme/solution-overview.png" width="48" alt="Solution Overview" />[Solution overview](#solution-overview)
 
-This accelerator provides a complete enterprise migration platform leveraging Azure OpenAI o3 model, Semantic Kernel Process Framework, Azure Container Apps, Azure Blob Storage, Azure Storage Queue, and MCP (Model Context Protocol) servers. The solution consists of a React-based web application for file upload and validation, coupled with an intelligent multi-agent processing engine that analyzes and transforms Kubernetes configurations through event-driven batch processing pipelines.
+This accelerator provides a complete enterprise migration platform leveraging Azure OpenAI GPT-5.1, Microsoft Agent Framework workflows, Azure Container Apps, Azure Blob Storage, Azure Storage Queue, and MCP (Model Context Protocol) servers. The solution consists of a React-based web application for file upload and validation, coupled with an intelligent multi-agent processing engine that analyzes and transforms Kubernetes configurations through event-driven batch processing pipelines.
 
-The architecture follows enterprise-grade batch processing patterns with loosely coupled components, enabling organizations to migrate from GKE and EKS to Azure Kubernetes Service at scale while maintaining comprehensive audit trails and expert-level analysis quality.
+The architecture follows enterprise-grade batch processing patterns with loosely coupled components, enabling organizations to migrate from managed cloud, enterprise distribution, and self-managed/on-prem Kubernetes platforms (for example: EKS, GKE/Anthos, OpenShift, Rancher/RKE/K3s, Tanzu, and upstream/on-prem Kubernetes) to Azure Kubernetes Service at scale while maintaining comprehensive audit trails and expert-level analysis quality.
 
 ### Solution architecture
 
@@ -32,13 +32,13 @@ This solution enables enterprise-grade Kubernetes migration with the following c
    Complete solution including React web application for file upload, validation, and queue management coupled with intelligent multi-agent processing engine
 
    - **Intelligent Platform Detection** <br/>
-   Automatically identifies source Kubernetes platform (GKE/EKS) through configuration analysis and applies platform-specific migration strategies
+   Automatically identifies source Kubernetes platform/distribution (for example: EKS, GKE/Anthos, OpenShift, Rancher/RKE/K3s, Tanzu, and self-managed/on-prem Kubernetes) through configuration analysis and applies platform-aware migration strategies
 
    - **Multi-Agent Expert Orchestration** <br/>
-   Specialized agents (Technical Architect, Azure Expert, Platform Experts, QA Engineer) collaborate through Semantic Kernel GroupChat orchestration patterns
+   Specialized agents (Chief Architect, AKS Expert, platform experts, QA Engineer, Technical Writer, YAML Expert) collaborate using Microsoft Agent Framework group chat orchestration
 
-   - **Process Framework Integration** <br/>
-   Each migration step (analysis, design, conversion, documentation) is built using Semantic Kernel Process Framework with event routing and step orchestration
+   - **Workflow Engine** <br/>
+   Each migration step (analysis, design, conversion, documentation) is executed as a step-based Agent Framework workflow with explicit executor chaining
 
    - **MCP Server Tool Integration** <br/>
    Agents access intelligent tools through Model Context Protocol servers for file operations, knowledge search, and specialized functions without direct model training
@@ -51,22 +51,61 @@ This solution enables enterprise-grade Kubernetes migration with the following c
 
 ### Agentic Architecture
 
-## <img src="docs/images/readme/agentic_architecture.png">
+Orchestration flow: 4 workflow executors coordinate group chats and tools.
+
+```mermaid
+flowchart LR
+   %% Top-level orchestration + telemetry
+   TELEM["Agent & Process Status<br/>(telemetry)"]
+   COSMOS[("Cosmos DB<br/>telemetry/state")]
+   PROC["Process Orchestration<br/>Agent Framework WorkflowBuilder"]
+
+   TELEM --> COSMOS
+   PROC --- TELEM
+
+   %% Step lanes
+   subgraph S1["Step 1: Analysis"]
+      direction TB
+      S1EXEC["Analysis Executor"] --> S1ORCH["Analysis Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S1AGENTS["Agents:<br/>Chief Architect<br/>AKS Expert<br/>Platform experts (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)"]
+   end
+
+   subgraph S2["Step 2: Design"]
+      direction TB
+      S2EXEC["Design Executor"] --> S2ORCH["Design Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S2AGENTS["Agents:<br/>Chief Architect<br/>AKS Expert<br/>Platform experts (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)"]
+   end
+
+   subgraph S3["Step 3: YAML Conversion"]
+      direction TB
+      S3EXEC["Convert Executor"] --> S3ORCH["YAML Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S3AGENTS["Agents:<br/>YAML Expert<br/>Azure Architect<br/>AKS Expert<br/>QA Engineer<br/>Chief Architect"]
+   end
+
+   subgraph S4["Step 4: Documentation"]
+      direction TB
+      S4EXEC["Documentation Executor"] --> S4ORCH["Documentation Chat Orchestrator<br/>(GroupChatOrchestrator)"] --> S4AGENTS["Agents:<br/>Technical Writer<br/>Azure Architect<br/>AKS Expert<br/>Chief Architect<br/>Platform experts (EKS/GKE/OpenShift/Rancher/Tanzu/OnPremK8s)"]
+   end
+
+   PROC --> S1
+   S1 -->|Analysis Result| S2
+   S2 -->|Design Result| S3
+   S3 -->|YAML Converting Result| S4
+
+```
+
 If you want to get know more detail about Agentic Architecture, please take a look at this document: [Agentic Architecture](docs/AgenticArchitecture.md)
 
 ### Technical implementation highlights
 **Advanced AI Orchestration Patterns:**
 
-- **Model**: Azure OpenAI o3 reasoning model for advanced reasoning and analysis capabilities
-- **Framework**: Semantic Kernel multi-agent orchestration with GroupChat patterns
-- **Process Management**: Semantic Kernel Process Framework for step-by-step workflow orchestration
+- **Model**: Azure OpenAI GPT-5.1 for advanced reasoning and analysis capabilities
+- **Framework**: Microsoft Agent Framework for multi-agent orchestration and workflow execution
+- **Workflow Management**: Agent Framework `WorkflowBuilder` with step executors (analysis → design → yaml → documentation)
 - **Tool Access**: MCP (Model Context Protocol) servers enabling intelligent tool selection and usage
 
 **MCP Server Integration:**
 
-- **Internal MCP Servers**: Blob I/O Operations (FastMCP), DateTime Operations (FastMCP)
-- **Microsoft MCP Server**: Document search and knowledge retrieval
-- **Intelligent Tool Selection**: Agents autonomously choose appropriate tools based on context
+- **Internal MCP Servers (FastMCP)**: Blob I/O, DateTime, Mermaid validation, YAML inventory
+- **External MCP Servers**: Microsoft Learn Docs (HTTP) and Fetch (`uvx mcp-server-fetch`)
+- **Intelligent Tool Selection**: Agents choose tools based on context
 
 ## Resources
 
@@ -88,7 +127,7 @@ If you'd like to customize the solution accelerator, here are some common areas 
 
 [Multi-Agent Orchestration Approach](docs/MultiAgentOrchestration.md)
 
-[Process Framework Implementation](docs/ProcessFrameworkGuide.md)
+[Workflow Implementation Guide](docs/ProcessFrameworkGuide.md)
 
 [MCP Server Integration Guide](docs/MCPServerGuide.md)
 
@@ -107,10 +146,94 @@ The Container Migration Solution Accelerator supports development and deployment
 - [Local Development Setup Guide](docs/LocalDevelopmentSetup.md) - Comprehensive setup instructions for Windows, Linux, and macOS
 - Includes native Windows setup, WSL2 configuration, and cross-platform development tools
 
-![Deployment Architecture](docs/images/readme/deployment-architecture.png)
+```mermaid
+flowchart TB
+   %% --- Themed deployment view (v2) ---
+   %% Palette intentionally reuses colors already present in repo diagrams.
 
-> ⚠️ **Important: Check Azure OpenAI o3 Model Availability**
-> To ensure o3 model access is available in your subscription, please check [Azure OpenAI model availability](https://learn.microsoft.com/azure/ai-services/openai/concepts/models#o3-models) before you deploy the solution.
+   subgraph CLIENT["Client"]
+      direction TB
+      U["User / Browser"]
+   end
+
+   subgraph RUNTIME["Runtime"]
+      direction TB
+
+      subgraph APPS["Azure Container Apps"]
+         direction TB
+         FE["Frontend"]
+         API["Backend API"]
+         PROC["Processor (Queue Worker)"]
+      end
+
+      subgraph DATA["Data & Configuration"]
+         direction TB
+         Q[("Azure Storage Queue")]
+         BLOB[("Azure Blob Storage")]
+         COSMOS[("Azure Cosmos DB")]
+         APP_CFG[("Azure App Configuration")]
+      end
+   end
+
+   subgraph AI["AI"]
+      direction TB
+      AOAI[("Azure OpenAI<br/>Azure AI Foundry<br/>GPT-5.1")]
+   end
+
+   subgraph BUILD["Images & Identity"]
+      direction TB
+      ACR[("Azure Container Registry")]
+      ID["User Assigned Managed Identity"]
+   end
+
+   %% User flow
+   U -->|HTTPS request| FE
+   FE -->|HTTPS request| API
+
+   %% Job intake + processing
+   API -->|Enqueue job| Q
+   Q -->|Dequeue job| PROC
+
+   %% Artifacts + state
+   PROC -->|Write artifacts| BLOB
+   PROC -->|Write state| COSMOS
+
+   %% Configuration
+   API -->|Read config| APP_CFG
+   PROC -->|Read config| APP_CFG
+
+   %% LLM usage
+   PROC -->|LLM call| AOAI
+
+   %% Image pulls
+   ACR -->|Pull image| FE
+   ACR -->|Pull image| API
+   ACR -->|Pull image| PROC
+
+   %% Identity usage
+   ID -.-> FE
+   ID -.-> API
+   ID -.-> PROC
+
+   %% Theme styling (monotone + subtle accents)
+   classDef core fill:#ffffff,stroke:#111827,color:#111827,stroke-width:1px;
+   classDef store fill:#e0f2fe,stroke:#0284c7,color:#111827,stroke-width:1px;
+   classDef frame fill:#f8fafc,stroke:#94a3b8,color:#111827,stroke-width:1px;
+
+   class U,FE,API,PROC core;
+   class Q,BLOB,COSMOS,APP_CFG,AOAI,ACR store;
+   class ID core;
+
+   style CLIENT fill:#f8fafc,stroke:#94a3b8,color:#111827;
+   style RUNTIME fill:#f8fafc,stroke:#94a3b8,color:#111827;
+   style APPS fill:#ffffff,stroke:#94a3b8,color:#111827;
+   style DATA fill:#ffffff,stroke:#94a3b8,color:#111827;
+   style AI fill:#e0f2fe,stroke:#0284c7,color:#111827;
+   style BUILD fill:#e0f2fe,stroke:#0284c7,color:#111827;
+```
+
+> ⚠️ **Important: Check Azure OpenAI GPT-5.1 Availability**
+> Model availability and quotas vary by region and subscription. Check the Azure OpenAI models catalog before deploying: https://learn.microsoft.com/azure/ai-services/openai/concepts/models
 
 ### Prerequisites and costs
 
@@ -118,13 +241,13 @@ To deploy this solution accelerator, ensure you have access to an [Azure subscri
 
 **Required Azure Services:**
 
-| Service                 | Description                                                                                 | Pricing                                                                                   |
-| ----------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Azure OpenAI Service    | Provides REST API access to OpenAI's o3 reasoning model for advanced reasoning and analysis | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
-| Azure Container Apps    | Runs containerized migration processor without managing infrastructure                      | [Pricing](https://azure.microsoft.com/pricing/details/container-apps/)                    |
-| Azure Blob Storage      | Stores source configurations, processed files, and migration reports                        | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)                     |
-| Azure App Configuration | Manages application settings and agent configurations                                       | [Pricing](https://azure.microsoft.com/pricing/details/app-configuration/)                 |
-| Azure Queue Storage     | Handles event-driven processing and agent communication                                     | [Pricing](https://azure.microsoft.com/pricing/details/storage/queues/)                    |
+| Service                 | Description                                                                       | Pricing                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Azure OpenAI Service    | Provides REST API access to the GPT-5.1 model for advanced reasoning and analysis | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
+| Azure Container Apps    | Runs containerized migration processor without managing infrastructure            | [Pricing](https://azure.microsoft.com/pricing/details/container-apps/)                    |
+| Azure Blob Storage      | Stores source configurations, processed files, and migration reports              | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/)                     |
+| Azure App Configuration | Manages application settings and agent configurations                             | [Pricing](https://azure.microsoft.com/pricing/details/app-configuration/)                 |
+| Azure Queue Storage     | Handles event-driven processing and agent communication                           | [Pricing](https://azure.microsoft.com/pricing/details/storage/queues/)                    |
 
 Pricing varies per region and usage, so it isn't possible to predict exact costs for your usage. The majority of the Azure resources used in this infrastructure are on usage-based pricing tiers.
 
@@ -132,15 +255,15 @@ Use the [Azure pricing calculator](https://azure.microsoft.com/pricing/calculato
 
 **Model Access Requirements:**
 
-- **o3 Model**: Available across **20+ Azure regions** including Australia East, Brazil South, Canada East, East US, East US2, France Central, Germany West Central, Italy North, Japan East, Korea Central, North Central US, Norway East, Poland Central, South Africa North, South Central US, South India, Spain Central, Sweden Central, Switzerland North, UAE North, UK South, West Europe, West US, and West US3
-- **Registration Requirements**: Some models may require registration for access
-- **Quota Management**: Ensure sufficient TPM (tokens per minute) quota for batch processing
+- **Availability varies**: GPT-5.1 availability may vary by region and subscription.
+- **Registration requirements**: Registration is required for access to `gpt-5.1`, `gpt-5.1-codex`, and `gpt-5.1-codex-max`. Request access here: [https://aka.ms/oai/gpt5access](https://aka.ms/oai/gpt5access). For region availability details, see [Model summary table and region availability](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure?view=foundry-classic&tabs=global-standard-aoai%2Cstandard-chat-completions%2Cglobal-standard&pivots=azure-openai#model-summary-table-and-region-availability).
+- **Quota management**: Ensure sufficient quota for batch processing.
 
 ## Guidance
 
 ## <img src="docs/images/readme/business_scenario.png" width="48">[Migration Scenario](#migration-scenario)
 
-A DevOps engineer at a multi-cloud enterprise manages Kubernetes workloads across GKE, EKS, and needs to migrate critical applications to Azure Kubernetes Service (AKS) following company cloud consolidation strategy.
+A DevOps engineer at a multi-platform enterprise manages Kubernetes workloads across managed cloud and self-managed/on-prem clusters (for example: GKE, EKS, and on-prem Kubernetes) and needs to migrate critical applications to Azure Kubernetes Service (AKS) following company cloud consolidation strategy.
 
 The engineer has dozens of complex Kubernetes configurations with intricate networking, storage, and security requirements. Manual migration analysis would take weeks and risk configuration errors that could impact production workloads.
 
@@ -152,18 +275,18 @@ Using the Migration Solution Accelerator, the complete processing flow works as 
 2. **Automated File Inspection**: Web application performs comprehensive validation:
    - File format and content-type verification
    - YAML syntax validation
-   - Platform consistency checks (prevents GKE/EKS mixing)
+   - Platform consistency checks (prevents mixing incompatible source platforms in a single batch)
 3. **Queue Generation**: After successful inspection, the system generates processing jobs with unique identifiers and submits them to Azure Storage Queue
 4. **Migration Processor Activation**: The multi-agent migration processor (this solution) monitors the queue, picks up processing jobs, and begins intelligent analysis
 
->  ⚠️ **Important Note on Processing**: This is a **synchronous system**. Users can upload either a single file or multiple files for processing, but only one migration batch runs at a time. Once a batch has started, users must wait for it to complete before the next upload begins. If additional files are uploaded while a migration is in progress, they will automatically queue and start only after the current batch finishes.
+>  ⚠️ **Important Note on Processing**: Processing is **queue-driven**. Concurrency is configurable (default is a single worker), so uploads may run sequentially or in parallel depending on deployment settings.
 
 ### **AI-Powered Migration Process**
 
 Once the migration processor receives a queue message, expert AI agents automatically:
 
-1. **Platform Detection**: Identify whether configurations are from GKE or EKS based on analyzed content
-2. **Multi-Expert Analysis**: Technical Architect analyzes overall architecture, while platform-specific experts (GKE/EKS) identify migration challenges and Azure Expert applies Well-Architected Framework principles
+1. **Platform Detection**: Identify the most likely source Kubernetes platform/distribution (e.g., EKS/GKE/OpenShift/Rancher/Tanzu/On-prem) based on analyzed content
+2. **Multi-Expert Analysis**: Technical Architect analyzes overall architecture, while the matching platform expert(s) identify migration challenges and Azure Expert applies Well-Architected Framework principles
 3. **Quality Validation**: QA Engineer validates transformation logic and identifies potential issues
 4. **YAML Transformation**: Expert YAML agent converts configurations with security, networking, and storage optimizations
 5. **Comprehensive Documentation**: Generate detailed migration reports capturing all expert insights and transformation decisions
@@ -179,7 +302,7 @@ The solution provides enterprise-grade capabilities:
 
 Thanks to this enterprise batch processing architecture and AI-powered multi-agent orchestration, migrations that previously took weeks are completed in hours with higher accuracy, comprehensive documentation, and full audit trails.
 
-> ⚠️ **Note**: This solution uses Azure OpenAI o3 reasoning model for advanced reasoning. The model is available across 20+ Azure regions globally. Registration may be required for certain models. Sample configurations in this repository are for demonstration purposes.
+> ⚠️ **Note**: This solution uses Azure OpenAI GPT-5.1 for advanced reasoning. Model availability and access requirements vary by region and subscription. Sample configurations in this repository are for demonstration purposes.
 
 ### Business value
 
@@ -196,28 +319,79 @@ This solution provides significant value through intelligent automation:
 
 ### Multi-agent orchestration architecture
 
-This solution implements advanced multi-agent patterns using Semantic Kernel GroupChat orchestration:
+This solution implements advanced multi-agent patterns using Microsoft Agent Framework group chat orchestration:
 
 **Expert Agent Specializations:**
 
 - **Technical Architect**: Overall architecture analysis and design decisions
 - **Azure Expert**: Azure-specific optimizations and Well-Architected Framework compliance
-- **GKE Expert**: Google Kubernetes Engine specific knowledge and migration patterns
+- **GKE Expert**: Google Kubernetes Engine (GKE/Anthos) specific knowledge and migration patterns
 - **EKS Expert**: Amazon Elastic Kubernetes Service expertise and AWS-to-Azure translations
+- **OpenShift Expert**: Red Hat OpenShift specific patterns and transformations
+- **Rancher Expert**: Rancher/RKE/RKE2/K3s patterns and migration considerations
+- **Tanzu Expert**: VMware Tanzu/TKG patterns and migration considerations
+- **OnPremK8s Expert**: Upstream/self-managed/on-prem Kubernetes patterns and common on-prem dependencies
 - **QA Engineer**: Validation, testing strategies, and quality assurance
 - **YAML Expert**: Configuration transformation and syntax optimization
 
-**Process Framework Integration:**
-Each migration phase is implemented as Semantic Kernel Process Framework steps with event routing:
+**Workflow Integration:**
+Each migration step is implemented as an Agent Framework workflow with explicit executor chaining:
 
-![Process Flow](docs/images/readme/process_flow.png)
+```mermaid
+flowchart TB
+   %% Migration flow (step-oriented)
+
+   subgraph WF[" "]
+      direction TB
+
+      subgraph ROW[" "]
+         direction LR
+
+         subgraph A["Analysis Process"]
+            direction TB
+            A1["• Platform Detection<br/>• Technical Architecture Review<br/>• Source Configuration Analysis<br/>• Migration Complexity Assessment"]
+            A2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
+            A1 --> A2
+         end
+
+         subgraph D["Design Process"]
+            direction TB
+            D1["• Azure Well-Architected Framework<br/>• Target Architecture Design<br/>• Service Mapping Strategy<br/>• Security & Compliance Review"]
+            D2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
+            D1 --> D2
+         end
+
+         subgraph C["Conversion Process"]
+            direction TB
+            C1["• YAML Transformation<br/>• Azure Service Configuration<br/>• Resource Optimization<br/>• Validation & Testing"]
+            C2["Agents:<br/>• Chief Architect<br/>• Azure Expert<br/>• AKS Expert<br/>• YAML Expert<br/>• QA Engineer"]
+            C1 --> C2
+         end
+
+         subgraph DOC["Documentation Process"]
+            direction TB
+            DOC1["• Migration Report Generation<br/>• Expert Recommendations<br/>• Implementation Guide<br/>• Post-migration Checklist"]
+            DOC2["Agents:<br/>• Technical Writer<br/>• All Experts"]
+            DOC1 --> DOC2
+         end
+
+         A -->|Architecture Insights| D
+         D -->|Design Specifications| C
+         C -->|Converted Configurations| DOC
+      end
+
+   end
+```
 
 **MCP Server Integration:**
 Agents access tools through Model Context Protocol servers for intelligent capability extension:
 
-- **Blob Operations MCP**: File reading, writing, and management operations
-- **DateTime MCP**: Time-based operations and scheduling
-- **Microsoft Docs MCP**: Azure documentation and best practices knowledge
+- **Blob Operations MCP**: File reading/writing and artifact management (Azure Blob Storage)
+- **Microsoft Learn Docs MCP (HTTP)**: Documentation search/retrieval and best-practices lookup
+- **DateTime MCP**: Timestamp generation and time-based operations
+- **Fetch MCP**: URL fetching for validation (for example: verifying references)
+- **Mermaid Validation MCP**: Validate Mermaid diagrams generated during design/docs steps
+- **YAML Inventory MCP**: Enumerate converted YAML objects for runbooks and reports
 
 ### Cross references
 
@@ -227,7 +401,6 @@ Check out related Microsoft solution accelerators:
 | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | [Content Processing Solution Accelerator](https://github.com/microsoft/content-processing-solution-accelerator) | Process and extract data from unstructured documents using AI |
 | [Document Knowledge Mining](https://github.com/microsoft/Document-Knowledge-Mining-Solution-Accelerator)        | Extract insights from documents with AI-powered search        |
-| [Semantic Kernel Multi-Agent Samples](https://github.com/microsoft/semantic-kernel/tree/main/dotnet/samples)    | Additional multi-agent orchestration patterns                 |
 
 ## Provide feedback
 Have questions, find a bug, or want to request a feature? [Submit a new issue](https://github.com/microsoft/container-migration-solution-accelerator/issues) on this repo and we'll connect.
