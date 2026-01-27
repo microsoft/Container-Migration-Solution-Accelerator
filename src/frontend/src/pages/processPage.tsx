@@ -302,18 +302,67 @@ const ProcessPage: React.FC = () => {
         console.log('Calling apiService.cancelProcess with batchId:', batchId);
         const result = await apiService.cancelProcess(batchId, 'User cancelled from UI');
         console.log('Cancel request result:', result);
+        
+        // Poll for cancel status every 3 seconds until kill_state is "executed"
+        const pollCancelStatus = async () => {
+          const maxAttempts = 60; // Max 3 minutes of polling (60 * 3 seconds)
+          let attempts = 0;
+          
+          const poll = async (): Promise<void> => {
+            attempts++;
+            console.log(`Polling cancel status, attempt ${attempts}...`);
+            
+            try {
+              const status = await apiService.getCancelStatus(batchId);
+              console.log('Cancel status response:', status);
+              
+              if (status.kill_state === 'executed') {
+                console.log('Process cancellation completed successfully');
+                return;
+              }
+              
+              if (status.kill_state === 'failed') {
+                console.error('Process cancellation failed');
+                return;
+              }
+              
+              // Continue polling if not completed and under max attempts
+              if (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+                return poll();
+              } else {
+                console.warn('Max polling attempts reached for cancel status');
+              }
+            } catch (error) {
+              console.error('Error polling cancel status:', error);
+              // Don't throw, just stop polling on error
+            }
+          };
+          
+          await poll();
+        };
+        
+        // Start polling in the background (don't await to avoid blocking navigation)
+        pollCancelStatus();
+        
+        // Navigate to home page immediately after kill is requested
+        setShowProgressModal(false);
+        setProcessingState('IDLE');
+        navigate('/');
+        
       } catch (error) {
         console.error('Failed to cancel process:', error);
-        // Continue with UI cleanup even if API call fails
+        // Still navigate to home page even if API call fails
+        setShowProgressModal(false);
+        setProcessingState('IDLE');
+        navigate('/');
       }
     } else {
       console.warn('No batchId available, skipping cancel API call');
+      setShowProgressModal(false);
+      setProcessingState('IDLE');
+      navigate('/');
     }
-    
-    setShowProgressModal(false);
-    setProcessingState('IDLE');
-    // Navigate back to landing page
-    navigate('/');
   };
 
   // Effect to show modal automatically when processing is detected
