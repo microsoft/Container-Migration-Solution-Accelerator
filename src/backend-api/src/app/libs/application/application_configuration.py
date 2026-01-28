@@ -69,6 +69,16 @@ class Configuration(_configuration_base, KernelBaseSettings):
         default=None, env="APPLICATIONINSIGHTS_CONNECTION_STRING"
     )
 
+    # Processor Control API configuration
+    # In Azure Container Apps, apps call each other by name: http://<container-app-name>
+    # The actual URL is set via PROCESSOR_CONTROL_URL env var from Bicep
+    processor_control_url: str | None = Field(
+        default="http://localhost:8080", env="PROCESSOR_CONTROL_URL"
+    )
+    processor_control_token: str | None = Field(
+        default=None, env="PROCESSOR_CONTROL_TOKEN"
+    )
+
 
 class _envConfiguration(_configuration_base):
     """

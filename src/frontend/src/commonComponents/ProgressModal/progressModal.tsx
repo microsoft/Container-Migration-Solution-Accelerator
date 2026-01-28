@@ -66,10 +66,15 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
     setOpen(false);
   };
 
-  const handleCancel = () => {
-    // Trigger onCancel (navigate to landing page) and close modal
+  const handleCancel = async () => {
+    console.log('=== ProgressModal handleCancel called ===');
+    // Trigger onCancel (calls cancel API and navigates to landing page) and close modal
     if (onCancel) {
-      onCancel();
+      console.log('Calling onCancel callback...');
+      await onCancel();
+      console.log('onCancel callback completed');
+    } else {
+      console.warn('No onCancel callback provided');
     }
     setOpen(false);
   };

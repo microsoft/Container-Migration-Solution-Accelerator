@@ -40,23 +40,20 @@ class Application(ApplicationBase):
 
     def register_services(self):
         # Additional initialization logic can be added here
-        ############################################################################
-        ## Initialize AgentFrameworkHelper and add it to the application context  ##
-        ############################################################################
+        # Initialize AgentFrameworkHelper and add it to the application context
         self.application_context.add_singleton(
             AgentFrameworkHelper, AgentFrameworkHelper()
         )
-        ## Initialize AgentFrameworkHelper with LLM settings from application context
+        # Initialize AgentFrameworkHelper with LLM settings from application context
         self.application_context.get_service(AgentFrameworkHelper).initialize(
             self.application_context.llm_settings
         )
 
-        ##################################################################################
-        ## Initialize middlewares - All Middlewares below are registered as a singleton ##
-        ##################################################################################
-        ### InputObserverMiddleware(Agent Level)
-        ### LoggingFunctionMiddleware(Agent Level)
-        ### DebuggingMiddleware(Run Level)
+        # Initialize middlewares - All Middlewares below are registered as a singleton
+        # -------------------------------------------------------------------------
+        # InputObserverMiddleware(Agent Level)
+        # LoggingFunctionMiddleware(Agent Level)
+        # DebuggingMiddleware(Run Level)
         (
             # Register DebuggingMiddleware as a singleton
             self.application_context.add_singleton(

@@ -1036,6 +1036,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 
 var backendContainerPort = 80
 var backendContainerAppName = take('ca-backend-api-${solutionSuffix}', 32)
+var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1069,6 +1070,11 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
             {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.outputs.clientId
+            }
+            {
+              name: 'PROCESSOR_CONTROL_URL'
+              // Internal ingress FQDN format: https://<app-name>.internal.<environment-default-domain>
+              value: 'https://${processorContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
             }
           ],
           enableMonitoring
@@ -1186,7 +1192,6 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
   }
 }
 
-var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1229,6 +1234,14 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
               name: 'STORAGE_ACCOUNT_NAME' // TODO - verify name and if needed 
               value: storageAccount.outputs.name
             }
+            {
+              name: 'CONTROL_API_ENABLED'
+              value: '1'
+            }
+            {
+              name: 'CONTROL_API_PORT'
+              value: '8080'
+            }
           ],
           enableMonitoring
             ? [
@@ -1246,9 +1259,10 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
         }
       }
     ]
-    ingressTransport: null
-    disableIngress: true
+    // Internal ingress required for container-to-container communication
+    ingressTargetPort: 8080
     ingressExternal: false
+    ingressAllowInsecure: true  // Allow HTTP without SSL redirect for internal calls
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1

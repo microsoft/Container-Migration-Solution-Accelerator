@@ -52,4 +52,3 @@ None
         "Azure Architect",
         "Chief Architect",
     }
-

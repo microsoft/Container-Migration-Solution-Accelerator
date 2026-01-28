@@ -120,23 +120,23 @@ class QueueMigrationServiceApp(ApplicationBase):
         """
 
         # Additional initialization logic can be added here
-        ############################################################################
-        ## Initialize AgentFrameworkHelper and add it to the application context  ##
-        ############################################################################
+        # -------------------------------------------------------------------------
+        # Initialize AgentFrameworkHelper and add it to the application context
+        # -------------------------------------------------------------------------
         self.application_context.add_singleton(
             AgentFrameworkHelper, AgentFrameworkHelper()
         )
-        ## Initialize AgentFrameworkHelper with LLM settings from application context
+        # Initialize AgentFrameworkHelper with LLM settings from application context
         self.application_context.get_service(AgentFrameworkHelper).initialize(
             self.application_context.llm_settings
         )
 
-        ##################################################################################
-        ## Initialize middlewares - All Middlewares below are registered as a singleton ##
-        ##################################################################################
-        ### InputObserverMiddleware(Agent Level)
-        ### LoggingFunctionMiddleware(Agent Level)
-        ### DebuggingMiddleware(Run Level)
+        # -------------------------------------------------------------------------
+        # Initialize middlewares - All Middlewares below are registered as a singleton
+        # -------------------------------------------------------------------------
+        # InputObserverMiddleware(Agent Level)
+        # LoggingFunctionMiddleware(Agent Level)
+        # DebuggingMiddleware(Run Level)
         (
             # Register DebuggingMiddleware as a singleton
             self.application_context.add_singleton(
@@ -347,12 +347,22 @@ class QueueMigrationServiceApp(ApplicationBase):
             if self.control_api is None:
                 try:
                     self.control_api = await self._build_control_api()
+                    if self.control_api:
+                        logger.info("Control API built successfully")
+                    else:
+                        logger.info("Control API is disabled")
                 except Exception as e:
                     logger.warning(f"Failed to build control API: {e}")
                     self.control_api = None
 
             if self.control_api:
                 await self.control_api.start()
+                logger.info(
+                    "Control API is now listening - endpoints: /health, "
+                    "/processes/{id}/control, /processes/{id}/kill"
+                )
+            else:
+                logger.warning("Control API not started - kill requests will not work")
 
             # Start the service (this will run until stopped)
             await self.queue_service.start_service()
