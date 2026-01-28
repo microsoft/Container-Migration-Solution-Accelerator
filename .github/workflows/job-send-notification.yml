@@ -1,0 +1,257 @@
+name: Send Notification Job
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+    inputs:
+      trigger_type:
+        description: 'Trigger type (workflow_dispatch, pull_request, schedule)'
+        required: true
+        type: string
+      waf_enabled:
+        description: 'Enable WAF'
+        required: false
+        default: false
+        type: boolean
+      EXP:
+        description: 'Enable EXP'
+        required: false
+        default: false
+        type: boolean
+      existing_webapp_url:
+        description: 'Existing Container WebApp URL (Skips Deployment)'
+        required: false
+        default: ''
+        type: string
+      deploy_result:
+        description: 'Deploy job result (success, failure, skipped)'
+        required: true
+        type: string
+      WEB_APPURL:
+        description: 'Container Web App URL'
+        required: false
+        default: ''
+        type: string
+      RESOURCE_GROUP_NAME:
+        description: 'Resource Group Name'
+        required: false
+        default: ''
+        type: string
+      QUOTA_FAILED:
+        description: 'Quota Check Failed Flag'
+        required: false
+        default: 'false'
+        type: string
+
+env:
+  GPT_MIN_CAPACITY: 100
+  BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
+  WAF_ENABLED: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.waf_enabled || false) || false }}
+  EXP: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.EXP || false) || false }}
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      accelerator_name: "Container Migration"
+    steps:
+      - name: Validate Workflow Input Parameters
+        shell: bash
+        env:
+          INPUT_TRIGGER_TYPE: ${{ inputs.trigger_type }}
+          INPUT_WAF_ENABLED: ${{ inputs.waf_enabled }}
+          INPUT_EXP: ${{ inputs.EXP }}
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          INPUT_WEB_APPURL: ${{ inputs.WEB_APPURL }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          INPUT_QUOTA_FAILED: ${{ inputs.QUOTA_FAILED }}
+        run: |
+          echo "🔍 Validating workflow input parameters..."
+          VALIDATION_FAILED=false
+          
+          # Validate trigger_type (required - alphanumeric with underscores)
+          if [[ -z "$INPUT_TRIGGER_TYPE" ]]; then
+            echo "❌ ERROR: trigger_type is required but was not provided"
+            VALIDATION_FAILED=true
+          elif [[ ! "$INPUT_TRIGGER_TYPE" =~ ^[a-zA-Z0-9_]+$ ]]; then
+            echo "❌ ERROR: trigger_type '$INPUT_TRIGGER_TYPE' is invalid. Must contain only alphanumeric characters and underscores"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ trigger_type: '$INPUT_TRIGGER_TYPE' is valid"
+          fi
+          
+          # Validate waf_enabled (boolean)
+          if [[ "$INPUT_WAF_ENABLED" != "true" && "$INPUT_WAF_ENABLED" != "false" ]]; then
+            echo "❌ ERROR: waf_enabled must be 'true' or 'false', got: '$INPUT_WAF_ENABLED'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ waf_enabled: '$INPUT_WAF_ENABLED' is valid"
+          fi
+          
+          # Validate EXP (boolean)
+          if [[ "$INPUT_EXP" != "true" && "$INPUT_EXP" != "false" ]]; then
+            echo "❌ ERROR: EXP must be 'true' or 'false', got: '$INPUT_EXP'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ EXP: '$INPUT_EXP' is valid"
+          fi
+          
+          # Validate existing_webapp_url (must start with https if provided)
+          if [[ -n "$INPUT_EXISTING_WEBAPP_URL" ]]; then
+            if [[ ! "$INPUT_EXISTING_WEBAPP_URL" =~ ^https:// ]]; then
+              echo "❌ ERROR: existing_webapp_url must start with 'https://', got: '$INPUT_EXISTING_WEBAPP_URL'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ existing_webapp_url: '$INPUT_EXISTING_WEBAPP_URL' is valid"
+            fi
+          fi
+          
+          # Validate deploy_result (required, must be specific values)
+          if [[ -z "$INPUT_DEPLOY_RESULT" ]]; then
+            echo "❌ ERROR: deploy_result is required but not provided"
+            VALIDATION_FAILED=true
+          else
+            ALLOWED_DEPLOY_RESULTS=("success" "failure" "skipped")
+            if [[ ! " ${ALLOWED_DEPLOY_RESULTS[@]} " =~ " ${INPUT_DEPLOY_RESULT} " ]]; then
+              echo "❌ ERROR: deploy_result '$INPUT_DEPLOY_RESULT' is invalid. Allowed values: ${ALLOWED_DEPLOY_RESULTS[*]}"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ deploy_result: '$INPUT_DEPLOY_RESULT' is valid"
+            fi
+          fi
+          
+          # Validate WEB_APPURL (must start with https if provided)
+          if [[ -n "$INPUT_WEB_APPURL" ]]; then
+            if [[ ! "$INPUT_WEB_APPURL" =~ ^https:// ]]; then
+              echo "❌ ERROR: WEB_APPURL must start with 'https://', got: '$INPUT_WEB_APPURL'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ WEB_APPURL: '$INPUT_WEB_APPURL' is valid"
+            fi
+          fi
+          
+          # Validate RESOURCE_GROUP_NAME (Azure resource group naming convention if provided)
+          if [[ -n "$INPUT_RESOURCE_GROUP_NAME" ]]; then
+            if [[ ! "$INPUT_RESOURCE_GROUP_NAME" =~ ^[a-zA-Z0-9._\(\)-]+$ ]] || [[ "$INPUT_RESOURCE_GROUP_NAME" =~ \.$ ]]; then
+              echo "❌ ERROR: RESOURCE_GROUP_NAME '$INPUT_RESOURCE_GROUP_NAME' is invalid. Must contain only alphanumerics, periods, underscores, hyphens, and parentheses. Cannot end with period."
+              VALIDATION_FAILED=true
+            elif [[ ${#INPUT_RESOURCE_GROUP_NAME} -gt 90 ]]; then
+              echo "❌ ERROR: RESOURCE_GROUP_NAME '$INPUT_RESOURCE_GROUP_NAME' exceeds 90 characters"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ RESOURCE_GROUP_NAME: '$INPUT_RESOURCE_GROUP_NAME' is valid"
+            fi
+          fi
+          
+          # Validate QUOTA_FAILED (must be 'true', 'false', or empty string)
+          if [[ "$INPUT_QUOTA_FAILED" != "true" && "$INPUT_QUOTA_FAILED" != "false" && "$INPUT_QUOTA_FAILED" != "" ]]; then
+            echo "❌ ERROR: QUOTA_FAILED must be 'true', 'false', or empty string, got: '$INPUT_QUOTA_FAILED'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ QUOTA_FAILED: '$INPUT_QUOTA_FAILED' is valid"
+          fi
+          
+          # Fail workflow if any validation failed
+          if [[ "$VALIDATION_FAILED" == "true" ]]; then
+            echo ""
+            echo "❌ Parameter validation failed. Please correct the errors above and try again."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All input parameters validated successfully!"
+
+      - name: Send Quota Failure Notification
+        if: inputs.deploy_result == 'failure' && inputs.QUOTA_FAILED == 'true'
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          QUOTA_FAILED: ${{ inputs.QUOTA_FAILED }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          EMAIL_BODY=$(cat <<EOF
+          {
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment has failed due to insufficient quota in the requested regions.</p><p><strong>Issue Details:</strong><br>• Quota check failed for GPT model<br>• Required GPT Capacity: ${{ env.GPT_MIN_CAPACITY }}<br>• Checked Regions: ${{ vars.AZURE_REGIONS }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please resolve the quota issue and retry the deployment.</p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "${{ env.accelerator_name }} Pipeline - Failed (Insufficient Quota)"
+          }
+          EOF
+          )
+
+          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send quota failure notification"
+
+      - name: Send Deployment Failure Notification
+        if: inputs.deploy_result == 'failure' && inputs.QUOTA_FAILED != 'true'
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          QUOTA_FAILED: ${{ inputs.QUOTA_FAILED }}
+          RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RESOURCE_GROUP="${RESOURCE_GROUP_NAME}"
+          
+          EMAIL_BODY=$(cat <<EOF
+          {
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment process has encountered an issue and has failed to complete successfully.</p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• WAF Enabled: ${{ env.WAF_ENABLED }}<br>• EXP Enabled: ${{ env.EXP }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please investigate the deployment failure at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "${{ env.accelerator_name }} Pipeline - Failed"
+          }
+          EOF
+          )
+          
+          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send deployment failure notification"
+
+      - name: Send Success Notification
+        if: inputs.deploy_result == 'success'
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          WEB_APPURL: ${{ inputs.WEB_APPURL }}
+          EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          WEBAPP_URL="${WEB_APPURL:-$EXISTING_WEBAPP_URL}"
+          RESOURCE_GROUP="${RESOURCE_GROUP_NAME}"
+          
+          EMAIL_BODY=$(cat <<EOF
+          {
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment has completed successfully.</p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• Web App URL: <a href='${WEBAPP_URL}'>${WEBAPP_URL}</a></p><p><strong>Configuration:</strong><br>• WAF Enabled: ${{ env.WAF_ENABLED }}<br>• EXP Enabled: ${{ env.EXP }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "${{ env.accelerator_name }} Pipeline - Deployment Success"
+          }
+          EOF
+          )
+          
+          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send success notification"
+
+      - name: Send Existing URL Test Failure Notification
+        if: inputs.deploy_result == 'skipped' && inputs.existing_webapp_url != ''
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          EXISTING_URL="${EXISTING_WEBAPP_URL}"
+          
+          EMAIL_BODY=$(cat <<EOF
+          {
+            "body": "<p>Dear Team,</p><p>The ${{ env.accelerator_name }} pipeline executed against the <strong>existing WebApp URL</strong>.</p><p><strong>Details:</strong><br>• Target URL: <a href='${EXISTING_URL}'>${EXISTING_URL}</a><br>• Deployment: Skipped</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "${{ env.accelerator_name }} Pipeline - Existing URL Notification"
+          }
+          EOF
+          )
+
+          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send existing URL test failure notification"

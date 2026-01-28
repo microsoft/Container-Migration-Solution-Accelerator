@@ -1,6 +1,8 @@
 {
     "name": "DevContainer for Container Migration Solution Accelerator",
-    "image": "mcr.microsoft.com/devcontainers/python:3.12-bullseye",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
     "features": {
         "ghcr.io/dhoeric/features/hadolint:1": {},
         "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {},

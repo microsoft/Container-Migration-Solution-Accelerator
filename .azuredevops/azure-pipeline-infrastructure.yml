@@ -29,8 +29,7 @@ parameters:
 - name: tags
   displayName: Resource Tags
   type: object
-  default:
-    SecurityControl: 'Ignore'
+  default: {}
 - name: enableMonitoring
   displayName: Enable Monitoring
   type: boolean

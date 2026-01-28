@@ -59,6 +59,9 @@ param aiDeploymentLocation string = azureAiServiceLocation
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
 
+@description('Optional. The image tag to use for container images. Defaults to "latest".')
+param imageTag string = 'latest'
+
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
 @description('Optional. Model deployment type. Defaults to GlobalStandard.')
@@ -1066,7 +1069,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
     containers: [
       {
         name: 'backend-api'
-        image: '${containerRegistryHost}/backend-api:latest'
+        image: '${containerRegistryHost}/backend-api:${imageTag}'
         env: concat(
           [
             {
@@ -1148,7 +1151,7 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
     containers: [
       {
         name: 'frontend'
-        image: '${containerRegistryHost}/frontend:latest'
+        image: '${containerRegistryHost}/frontend:${imageTag}'
         env: [
           {
             name: 'API_URL'
@@ -1213,7 +1216,7 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
     containers: [
       {
         name: 'processor'
-        image: '${containerRegistryHost}/processor:latest'
+        image: '${containerRegistryHost}/processor:${imageTag}'
         env: concat(
           [
             {
