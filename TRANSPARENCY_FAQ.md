@@ -2,7 +2,7 @@
 
 ## What is the Container Migration Solution Accelerator?
 
-This solution accelerator is an open-source GitHub Repository designed to streamline the migration of Kubernetes workloads from various container platforms (EKS, GKE, etc.) to Azure Kubernetes Service (AKS). It automates the analysis, design, configuration transformation, and documentation generation processes to enhance the speed and accuracy of container platform migrations. The solution is built using Azure OpenAI Service, Semantic Kernel Process Framework, Model Context Protocol (MCP) servers, and Azure services integration.
+This solution accelerator is an open-source GitHub Repository designed to streamline the migration of Kubernetes workloads from various container platforms (EKS, GKE, etc.) to Azure Kubernetes Service (AKS). It automates the analysis, design, configuration transformation, and documentation generation processes to enhance the speed and accuracy of container platform migrations. The solution is built using Azure OpenAI Service, Microsoft Agent Framework (workflow + group chat orchestration), Model Context Protocol (MCP) servers, and Azure services integration.
 
 ## What can the Container Migration Solution Accelerator do?
 
@@ -40,7 +40,7 @@ The solution was evaluated using multiple approaches:
 
 3. **Migration Coverage**: Testing across different source platforms (EKS, GKE) and various workload types (stateless applications, databases, monitoring systems, etc.).
 
-4. **Process Framework Reliability**: Evaluation of the Semantic Kernel Process Framework's error handling, retry mechanisms, and failure recovery capabilities.
+4. **Process Framework Reliability**: Evaluation of the Agent Framework workflow's error handling, retry mechanisms, and failure recovery capabilities.
 
 5. **Documentation Quality**: Assessment of generated documentation for completeness, accuracy, and actionability.
 

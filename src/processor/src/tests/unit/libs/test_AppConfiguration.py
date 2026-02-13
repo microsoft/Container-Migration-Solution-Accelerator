@@ -1,5 +1,10 @@
-from src.libs.base.AppConfiguration import semantic_kernel_settings
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+from libs.application.application_configuration import Configuration
 
 
-def test_semantic_kernel_settings():
-    assert semantic_kernel_settings.global_llm_service == "AzureOpenAI"
+def test_configuration_defaults():
+    cfg = Configuration()
+    assert cfg.app_logging_enable is False
+    assert cfg.storage_queue_name == "processes-queue"

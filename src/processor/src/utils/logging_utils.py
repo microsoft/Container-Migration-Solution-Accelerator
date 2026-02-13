@@ -1,12 +1,17 @@
-"""
-Unified logging utilities for migration system.
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
 
-Consolidates functionality from:
-- quiet_logging.py (third-party suppression)
-- safe_logger.py (safe string formatting)
-- error_logging.py (enhanced error analysis)
+"""Logging helpers for the migration processor.
 
-Provides consistent logging interface across the migration system.
+This module provides:
+        - A single place to configure global logging levels and suppress noisy
+            third-party libraries.
+        - A small set of safe formatting helpers for structured context logging.
+        - Standardized message templates for common success/failure patterns.
+
+Design goals:
+        - Prefer predictable runtime logging over verbose debug traces.
+        - Make error logs actionable by including relevant context and tracebacks.
 """
 
 import logging
@@ -15,10 +20,9 @@ import traceback
 from typing import Any
 
 from azure.core.exceptions import HttpResponseError
-from semantic_kernel.exceptions import ServiceException
 
 
-def configure_application_logging(debug_mode: bool = False, config=None):
+def configure_application_logging(debug_mode: bool = False):
     """
     Comprehensive logging configuration with third-party suppression.
 
@@ -26,18 +30,15 @@ def configure_application_logging(debug_mode: bool = False, config=None):
 
     Args:
         debug_mode: If True, allows some debug logging. If False, suppresses all debug output.
-        config: Configuration object with logging settings. If None, uses default settings.
     """
-    # Set root logger level
+    # IMPORTANT: basicConfig() is a no-op if any handlers are already configured.
+    # In VS Code / debugpy / some libraries, logging may be configured before we run.
+    # Use force=True to ensure our settings actually apply.
     if debug_mode:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, force=True)
         print("🐛 Debug logging enabled")
     else:
-        # Use configuration if available, otherwise default to INFO
-        basic_level = logging.INFO
-        if config and hasattr(config, 'app_logging_level'):
-            basic_level = getattr(logging, config.app_logging_level.upper(), logging.INFO)
-        logging.basicConfig(level=basic_level)
+        logging.basicConfig(level=logging.INFO, force=True)
 
     # Comprehensive list of verbose loggers to suppress
     verbose_loggers = [
@@ -51,6 +52,18 @@ def configure_application_logging(debug_mode: bool = False, config=None):
         "azure.core.pipeline",
         "azure.core.pipeline.policies",
         "azure.core.pipeline.transport",
+        # Cosmos DB / sas-cosmosdb
+        "azure.cosmos",
+        "azure.cosmos.http_logging_policy",
+        "sas.cosmosdb",
+        "sas.cosmosdb.sql",
+        # Agent Framework
+        "agent_framework",
+        "agent_framework.azure",
+        "agent_framework.observability",
+        "agent_framework._workflows",
+        "agent_framework._threads",
+        "agent_framework._memory",
         # OpenAI and HTTP client loggers
         "openai",
         "openai._client",
@@ -64,16 +77,6 @@ def configure_application_logging(debug_mode: bool = False, config=None):
         "httpcore.connection_pool",
         "httpcore.http11",
         "httpcore.http2",
-        # Semantic Kernel loggers
-        "semantic_kernel",
-        "semantic_kernel.connectors",
-        "semantic_kernel.connectors.ai",
-        "semantic_kernel.connectors.ai.open_ai",
-        "semantic_kernel.connectors.ai.open_ai.services",
-        "semantic_kernel.connectors.ai.azure_ai_inference",
-        "semantic_kernel.agents",
-        "semantic_kernel.agents.runtime",
-        "semantic_kernel.functions",
         # Other HTTP/network libraries
         "urllib3",
         "urllib3.connectionpool",
@@ -88,43 +91,34 @@ def configure_application_logging(debug_mode: bool = False, config=None):
         "charset_normalizer",
     ]
 
-    # Configure Azure package logging levels from configuration only if packages are specified
-    if config and hasattr(config, 'azure_logging_packages') and hasattr(config, 'azure_package_logging_level') and config.azure_logging_packages:
-        # Use configuration-based approach
-        azure_level = getattr(logging, config.azure_package_logging_level.upper(), logging.WARNING)
-        package_list = [pkg.strip() for pkg in config.azure_logging_packages.split(',')]
-        for logger_name in package_list:
-            if logger_name:  # Skip empty strings
-                logging.getLogger(logger_name).setLevel(azure_level)
-    else:
-        # Fallback to existing logic for backward compatibility
-        # Set levels for all verbose loggers
-        for logger_name in verbose_loggers:
-            logger = logging.getLogger(logger_name)
-            if debug_mode:
-                # In debug mode, still reduce verbosity to INFO for most, WARNING for HTTP
-                if any(
-                    http_term in logger_name.lower()
-                    for http_term in ["http", "client", "connection", "pipeline"]
-                ):
-                    logger.setLevel(logging.WARNING)
-                else:
-                    logger.setLevel(logging.INFO)
-            else:
-                # In production, suppress to WARNING for all
+    # Set levels for all verbose loggers
+    for logger_name in verbose_loggers:
+        logger = logging.getLogger(logger_name)
+        if debug_mode:
+            # In debug mode, still reduce verbosity to INFO for most, WARNING for HTTP
+            if any(
+                http_term in logger_name.lower()
+                for http_term in ["http", "client", "connection", "pipeline"]
+            ):
                 logger.setLevel(logging.WARNING)
+            else:
+                logger.setLevel(logging.INFO)
+        else:
+            # In production, suppress to WARNING for all
+            logger.setLevel(logging.WARNING)
 
-        # Special cases: These are ALWAYS set to WARNING due to extreme verbosity
-        always_warning_loggers = [
-            "azure.core.pipeline.policies.http_logging_policy",
-            "httpx",
-            "httpcore",
-            "openai._client",
-            "urllib3.connectionpool",
-        ]
+    # Special cases: These are ALWAYS set to WARNING due to extreme verbosity
+    always_warning_loggers = [
+        "azure.core.pipeline.policies.http_logging_policy",
+        "azure.cosmos",
+        "httpx",
+        "httpcore",
+        "openai._client",
+        "urllib3.connectionpool",
+    ]
 
-        for logger_name in always_warning_loggers:
-            logging.getLogger(logger_name).setLevel(logging.WARNING)
+    for logger_name in always_warning_loggers:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     # Set environment variables to suppress verbose output at the source
     os.environ.setdefault("HTTPX_LOG_LEVEL", "WARNING")
@@ -222,7 +216,9 @@ def get_error_details(exception: Exception) -> dict[str, Any]:
         "full_traceback": traceback.format_exc(),
         "exception_args": getattr(exception, "args", []),
         "exception_cause": str(exception.__cause__) if exception.__cause__ else None,
-        "exception_context": str(exception.__context__) if exception.__context__ else None,
+        "exception_context": str(exception.__context__)
+        if exception.__context__
+        else None,
     }
 
     # Add specific details for Azure HTTP errors
@@ -232,13 +228,6 @@ def get_error_details(exception: Exception) -> dict[str, Any]:
             "http_reason": getattr(exception, "reason", None),
             "http_response": getattr(exception, "response", None),
             "http_model": getattr(exception, "model", None),
-        })
-
-    # Add specific details for Semantic Kernel Service exceptions
-    if isinstance(exception, ServiceException):
-        details.update({
-            "service_error_code": getattr(exception, "error_code", None),
-            "service_inner_exception": getattr(exception, "inner_exception", None),
         })
 
     # Add details for AzureChatCompletion specific errors
@@ -253,10 +242,7 @@ def get_error_details(exception: Exception) -> dict[str, Any]:
 
 
 def log_error_with_context(
-    logger: logging.Logger,
-    exception: Exception,
-    context: str = "Operation",
-    **kwargs
+    logger: logging.Logger, exception: Exception, context: str = "Operation", **kwargs
 ):
     """
     Enhanced error logging with context and exception analysis.
@@ -309,12 +295,16 @@ def _format_specific_error_details(error_details: dict[str, Any]) -> str:
         specific_info.append(f"HTTP Reason: {error_details['http_reason']}")
 
     if "service_error_code" in error_details:
-        specific_info.append(f"Service Error Code: {error_details['service_error_code']}")
+        specific_info.append(
+            f"Service Error Code: {error_details['service_error_code']}"
+        )
 
     if error_details.get("azure_chat_completion_error"):
         specific_info.append("Azure ChatCompletion Error Detected")
         if error_details.get("model_deployment"):
-            specific_info.append(f"Model Deployment: {error_details['model_deployment']}")
+            specific_info.append(
+                f"Model Deployment: {error_details['model_deployment']}"
+            )
         if error_details.get("endpoint"):
             specific_info.append(f"Endpoint: {error_details['endpoint']}")
 
