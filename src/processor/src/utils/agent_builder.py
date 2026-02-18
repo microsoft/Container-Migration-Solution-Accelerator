@@ -121,7 +121,12 @@ class AgentBuilder(SKLogicBase):
         if hasattr(self.settings, "temperature"):
             self.settings.temperature = 1.0  # O3 model only supports temperature=1.0
 
-        self.settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
+        # SECURITY: Limit auto-invocations per turn to prevent runaway tool execution.
+        # Default SK behavior is unlimited; cap at 5 to mitigate prompt-injection-driven
+        # tool invocation chains while still supporting normal multi-step agent workflows.
+        self.settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
+            maximum_auto_invoke_attempts=5
+        )
 
     async def _init_agent_async(self, service_id):
         """Async initialization if needed"""

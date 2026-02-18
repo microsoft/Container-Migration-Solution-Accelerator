@@ -27,10 +27,12 @@ from semantic_kernel.exceptions.service_exceptions import ServiceInitializationE
 from semantic_kernel.functions import KernelArguments, KernelFunction, KernelPlugin
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.prompt_template import PromptTemplateConfig
+from semantic_kernel.filters.filter_types import FilterTypes
 
 from libs.base.AppConfiguration import semantic_kernel_settings
 from libs.base.SKBase import SKBaseModel
 from utils.credential_util import get_async_azure_credential, get_azure_credential
+from utils.tool_invocation_filter import ToolInvocationFilter
 
 
 class service_type(Enum):
@@ -60,6 +62,13 @@ class semantic_kernel_agent(SKBaseModel):
         self._use_entra_id = use_entra_id
         self._environment_file_path = env_file_path
         self._custom_service_prefixes = custom_service_prefixes
+
+        # SECURITY: Register auto-function-invocation filter to validate every
+        # tool call against the approved allow-list before execution.
+        self.kernel.add_filter(
+            FilterTypes.AUTO_FUNCTION_INVOCATION,
+            ToolInvocationFilter(),
+        )
 
         # self._initialize_settings(
         #     env_file_path=env_file_path,
@@ -573,7 +582,10 @@ class semantic_kernel_agent(SKBaseModel):
                 extra_parameters={
                     "reasoning_effort": "high"
                 },  # Increased from medium to improve JSON return rate
-                function_choice_behavior=FunctionChoiceBehavior.Auto(),
+                # SECURITY: Limit auto-invocations per turn to prevent runaway tool execution
+                function_choice_behavior=FunctionChoiceBehavior.Auto(
+                    maximum_auto_invoke_attempts=5
+                ),
             )
 
         agent = ChatCompletionAgent(

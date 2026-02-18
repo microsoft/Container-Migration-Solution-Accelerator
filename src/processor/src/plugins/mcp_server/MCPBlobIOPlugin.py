@@ -25,7 +25,13 @@ def get_blob_file_operation_plugin():
             "run",
             "mcp_blob_io_operation.py",
         ],
-        env=dict(
-            os.environ
-        ),  # passing all env vars so the separated MCP instance has access to same environment values, particularly for Azure
+        env={
+            # SECURITY: Pass only the specific env vars needed for Azure Blob
+            # operations instead of the full environment. This limits the blast
+            # radius if the MCP subprocess is compromised.
+            k: v
+            for k, v in os.environ.items()
+            if k.startswith(("AZURE_", "STORAGE_", "IDENTITY_", "MSI_"))
+            or k in ("PATH", "HOME", "USERPROFILE", "TEMP", "TMP", "SystemRoot", "APPDATA")
+        },
     )
