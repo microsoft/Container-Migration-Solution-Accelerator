@@ -153,16 +153,20 @@ var allTags = union(
   tags
 )
 
+var existingTags = resourceGroup().tags ?? {}
+
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
-    tags: {
-      ...resourceGroup().tags
-      ...tags
-      TemplateName: 'Container Migration'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
-    }
+    tags: union(
+      existingTags,
+      tags,
+      {
+        TemplateName: 'Container Migration'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+        CreatedBy: createdBy
+      }
+    )
   }
 }
 
