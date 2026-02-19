@@ -174,11 +174,13 @@ var allTags = union(
   tags
 )
 
+var existingTags = resourceGroup().tags ?? {}
+
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
     tags: union(
-      resourceGroup().tags ?? {},
+      existingTags,
       tags,
       {
         TemplateName: 'Container Migration'
