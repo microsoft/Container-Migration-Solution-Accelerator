@@ -5,21 +5,21 @@ description = "This code it used to migrate Google GKE or Amazon EKS clusters to
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aiofiles==24.1.0",
-    "azure-ai-agents==1.2.0b3",
-    "azure-appconfiguration==1.7.1",
-    "azure-identity==1.24.0",
-    "azure-monitor-opentelemetry==1.7.0",
-    "azure-search-documents==11.6.0b12",
-    "azure-storage-blob==12.26.0",
-    "azure-storage-queue==12.13.0",
-    "fastapi[standard]==0.116.1",
+    "aiofiles==25.1.0",
+    "azure-ai-agents==1.2.0b6",
+    "azure-appconfiguration==1.8.0",
+    "azure-identity==1.25.2",
+    "azure-monitor-opentelemetry==1.8.6",
+    "azure-search-documents==11.7.0b2",
+    "azure-storage-blob==12.28.0",
+    "azure-storage-queue==12.15.0",
+    "fastapi[standard]==0.135.0",
     "httpx==0.28.1",
-    "pydantic-settings==2.10.1",
+    "pydantic-settings==2.13.1",
     "python-dotenv",
-    "sas-cosmosdb==0.1.4",
-    "semantic-kernel[azure]==1.35.3",
-    "uvicorn==0.35.0",
+    "sas-cosmosdb==0.1.5",
+    "semantic-kernel[azure]==1.39.4",
+    "uvicorn==0.41.0",
 ]
 
 [dependency-groups]
