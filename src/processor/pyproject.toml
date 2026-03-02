@@ -21,7 +21,7 @@ dependencies = [
     "psutil==7.0.0",
     "pytz==2025.2",
     "sas-cosmosdb==0.1.4",
-    "semantic-kernel==1.36.2",
+    "semantic-kernel==1.39.3",
 ]
 
 [dependency-groups]
