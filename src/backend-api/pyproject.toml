@@ -13,7 +13,7 @@ dependencies = [
     "azure-search-documents==11.6.0b12",
     "azure-storage-blob==12.26.0",
     "azure-storage-queue==12.13.0",
-    "fastapi[standard]==0.116.1",
+    "fastapi[standard]==0.121.3",
     "httpx==0.28.1",
     "pydantic-settings==2.10.1",
     "python-dotenv",
