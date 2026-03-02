@@ -229,6 +229,14 @@ Check out related Microsoft solution accelerators:
 | [Document Knowledge Mining](https://github.com/microsoft/Document-Knowledge-Mining-Solution-Accelerator)        | Extract insights from documents with AI-powered search        |
 | [Semantic Kernel Multi-Agent Samples](https://github.com/microsoft/semantic-kernel/tree/main/dotnet/samples)    | Additional multi-agent orchestration patterns                 |
 
+💡 Want to get familiar with Microsoft's AI Engineering best practices? Check out our playbook to learn more
+
+| Playbook | Description |
+|:---|:---|
+| [AI&nbsp;playbook](https://learn.microsoft.com/en-us/ai/playbook/) | The Artificial Intelligence (AI) Playbook provides enterprise software engineers with solutions, capabilities, and code developed to solve real-world AI problems. |
+
+<br/>
+
 ## Provide feedback
 Have questions, find a bug, or want to request a feature? [Submit a new issue](https://github.com/microsoft/container-migration-solution-accelerator/issues) on this repo and we'll connect.
 

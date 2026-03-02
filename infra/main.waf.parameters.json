@@ -20,6 +20,9 @@
       "aiDeploymentLocation": {
         "value": "${AZURE_AI_DEPLOYMENT_LOCATION}"
       },
+      "azureAiServiceLocation": {
+        "value": "${AZURE_AI_SERVICE_LOCATION}"
+      },
       "aiDeploymentType": {
         "value": "${AZURE_AI_DEPLOYMENT_TYPE}"
       },
