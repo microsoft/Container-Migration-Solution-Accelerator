@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Azure OpenAI Responses client wrapper with rate-limit-aware retry logic."""
+
 from __future__ import annotations
 
 import asyncio

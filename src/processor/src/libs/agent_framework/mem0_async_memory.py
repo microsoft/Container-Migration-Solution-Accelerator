@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Lazy-initialized async wrapper around the Mem0 vector-store memory backend."""
+
 from mem0 import AsyncMemory
 
 

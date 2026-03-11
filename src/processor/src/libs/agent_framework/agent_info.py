@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Pydantic model describing an agent participant with Jinja2 template rendering."""
+
 from typing import Any, Callable, MutableMapping, Sequence
 from agent_framework import ToolProtocol
 from jinja2 import Template

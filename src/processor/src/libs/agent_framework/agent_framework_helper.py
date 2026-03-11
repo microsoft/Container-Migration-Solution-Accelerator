@@ -20,14 +20,11 @@ from typing import TYPE_CHECKING, Any, overload
 
 from utils.credential_util import get_bearer_token_provider
 
-# from .agent_framework_compat import ensure_agent_framework_exports
 from .agent_framework_settings import AgentFrameworkSettings
 from .azure_openai_response_retry import (
     AzureOpenAIResponseClientWithRetry,
     RateLimitRetryConfig,
 )
-
-# ensure_agent_framework_exports()
 
 if TYPE_CHECKING:
     from agent_framework.azure import (

@@ -908,9 +908,6 @@ class QueueMigrationService:
                 process_id,
             )
 
-    ######################################################
-    # Queue message processing (Migration Process Start)
-    ######################################################
     async def process_message(self):
         """Backward-compatible entrypoint: process messages with a single worker."""
 

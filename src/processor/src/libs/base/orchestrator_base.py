@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Abstract base class for step orchestrators managing GroupChat agent workflows."""
+
 import json
 import logging
 from abc import abstractmethod
@@ -17,8 +19,6 @@ from libs.agent_framework.groupchat_orchestrator import (
     AgentResponseStream,
     OrchestrationResult,
 )
-
-# from libs.agent_framework.manager_selection_response import ManagerSelectionResponse
 from utils.agent_telemetry import TelemetryManager
 from utils.console_util import format_agent_message
 

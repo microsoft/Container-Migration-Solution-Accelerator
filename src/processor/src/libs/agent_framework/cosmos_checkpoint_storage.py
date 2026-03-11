@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Cosmos DB-backed checkpoint storage for GroupChat workflow state."""
+
 from agent_framework import WorkflowCheckpoint, CheckpointStorage
 from sas.cosmosdb.sql import RootEntityBase, RepositoryBase
 from typing import Any

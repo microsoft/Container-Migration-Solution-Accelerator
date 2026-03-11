@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Middleware that captures agent name and response text per invocation."""
+
 from datetime import datetime
 from typing import Any, Callable, Optional
 from agent_framework import AgentRunContext, AgentMiddleware

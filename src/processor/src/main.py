@@ -1,6 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Direct-execution entry point for the migration processor.
+
+Used for local development and debugging. For production queue-based
+processing see ``main_service.py``.
+"""
+
 import asyncio
 import os
 
@@ -39,32 +45,18 @@ class Application(ApplicationBase):
         self.register_services()
 
     def register_services(self):
-        # Additional initialization logic can be added here
-        # ---------------------------------------------------------------------------
-        # Initialize AgentFrameworkHelper and add it to the application context
-        # ---------------------------------------------------------------------------
         self.application_context.add_singleton(
             AgentFrameworkHelper, AgentFrameworkHelper()
         )
-        # Initialize AgentFrameworkHelper with LLM settings from application context
         self.application_context.get_service(AgentFrameworkHelper).initialize(
             self.application_context.llm_settings
         )
 
-        # ------------------------------------------------------------------------------
-        # Initialize middlewares - all middlewares below are registered as a singleton
-        # ------------------------------------------------------------------------------
-        # - InputObserverMiddleware (Agent level)
-        # - LoggingFunctionMiddleware (Agent level)
-        # - DebuggingMiddleware (Run level)
         (
-            # Register DebuggingMiddleware as a singleton
             self.application_context.add_singleton(
                 DebuggingMiddleware, DebuggingMiddleware
             )
-            # Register LoggingFunctionMiddleware as a singleton
             .add_singleton(LoggingFunctionMiddleware, LoggingFunctionMiddleware)
-            # Register InputObserverMiddleware as a singleton
             .add_singleton(InputObserverMiddleware, InputObserverMiddleware)
             .add_singleton(Mem0AsyncMemoryManager, Mem0AsyncMemoryManager)
             .add_async_singleton(

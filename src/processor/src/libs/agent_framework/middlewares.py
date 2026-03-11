@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Agent Framework middleware classes for debugging, logging, and input observation."""
+
 import time
 from collections.abc import Awaitable, Callable
 

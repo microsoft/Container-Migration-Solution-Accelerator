@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Helper for fetching Azure App Configuration settings and injecting them as env vars."""
+
 import os
 
 from azure.appconfiguration import AzureAppConfigurationClient

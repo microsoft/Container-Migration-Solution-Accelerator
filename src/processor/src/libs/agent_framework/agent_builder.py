@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Fluent builder for constructing ChatAgent instances with chainable configuration."""
+
 from collections.abc import Callable, MutableMapping, Sequence
 from typing import Any, Literal
 

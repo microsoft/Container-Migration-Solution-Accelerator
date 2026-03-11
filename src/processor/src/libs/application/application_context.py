@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Dependency injection container and application context for service registration."""
+
 import asyncio
 import uuid
 import weakref
