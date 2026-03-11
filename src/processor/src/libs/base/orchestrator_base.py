@@ -94,7 +94,6 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         """Prepare agent information list for workflow"""
         pass
 
-
     async def create_agents(
         self, agent_infos: list[AgentInfo], process_id: str
     ) -> list[ChatAgent]:
