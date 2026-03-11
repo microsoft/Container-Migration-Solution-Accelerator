@@ -11,7 +11,7 @@ to CLI credentials for local development.
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "fastmcp>=2.12.5"
+#   "fastmcp~=3.1.0"
 # ]
 # ///
 import logging
@@ -83,7 +83,15 @@ def get_azure_credential():
     # Local development - try multiple CLI credentials
     credential_attempts = []
 
-    # Try Azure Developer CLI first (newer, designed for development)
+    # Try Azure CLI first (traditional, most common for local development)
+    try:
+        logging.info("[AUTH] Trying AzureCliCredential (requires 'az login')")
+        credential = AzureCliCredential()
+        credential_attempts.append(("AzureCliCredential", credential))
+    except Exception as e:
+        logging.warning(f"[AUTH] AzureCliCredential failed: {e}")
+
+    # Try Azure Developer CLI as fallback (newer, requires 'azd auth login')
     try:
         logging.info(
             "[AUTH] Local development detected - trying AzureDeveloperCliCredential (requires 'azd auth login')"
@@ -92,14 +100,6 @@ def get_azure_credential():
         credential_attempts.append(("AzureDeveloperCliCredential", credential))
     except Exception as e:
         logging.warning(f"[AUTH] AzureDeveloperCliCredential failed: {e}")
-
-    # Try Azure CLI as fallback (traditional)
-    try:
-        logging.info("[AUTH] Trying AzureCliCredential (requires 'az login')")
-        credential = AzureCliCredential()
-        credential_attempts.append(("AzureCliCredential", credential))
-    except Exception as e:
-        logging.warning(f"[AUTH] AzureCliCredential failed: {e}")
 
     # Return the first successful credential
     if credential_attempts:
@@ -152,7 +152,15 @@ def get_async_azure_credential():
     # Local development - try multiple CLI credentials
     credential_attempts = []
 
-    # Try Azure Developer CLI first (newer, designed for development)
+    # Try Azure CLI first (traditional, most common for local development)
+    try:
+        logging.info("[AUTH] Trying async AzureCliCredential (requires 'az login')")
+        credential = AsyncAzureCliCredential()
+        credential_attempts.append(("AsyncAzureCliCredential", credential))
+    except Exception as e:
+        logging.warning(f"[AUTH] AsyncAzureCliCredential failed: {e}")
+
+    # Try Azure Developer CLI as fallback (newer, requires 'azd auth login')
     try:
         logging.info(
             "[AUTH] Local development detected - trying async AzureDeveloperCliCredential (requires 'azd auth login')"
@@ -161,14 +169,6 @@ def get_async_azure_credential():
         credential_attempts.append(("AsyncAzureDeveloperCliCredential", credential))
     except Exception as e:
         logging.warning(f"[AUTH] AsyncAzureDeveloperCliCredential failed: {e}")
-
-    # Try Azure CLI as fallback (traditional)
-    try:
-        logging.info("[AUTH] Trying async AzureCliCredential (requires 'az login')")
-        credential = AsyncAzureCliCredential()
-        credential_attempts.append(("AsyncAzureCliCredential", credential))
-    except Exception as e:
-        logging.warning(f"[AUTH] AsyncAzureCliCredential failed: {e}")
 
     # Return the first successful credential
     if credential_attempts:

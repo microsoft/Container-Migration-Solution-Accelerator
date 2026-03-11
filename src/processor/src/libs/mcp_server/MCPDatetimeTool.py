@@ -110,10 +110,6 @@ def get_datetime_mcp() -> MCPStdioTool:
     # The MCP datetime server is implemented as a small Python module under
     # `libs/mcp_server/datetime`. We set `uv --directory` to that folder so that
     # running `mcp_datetime.py` resolves local imports and dependencies correctly.
-    #
-    # We also allow pre-release dependency resolution (some dependencies in this
-    # repo are versioned as betas) to keep behavior consistent with `uv sync
-    # --prerelease=allow`.
     datetime_dir = Path(os.path.dirname(__file__)).joinpath("datetime")
 
     return MCPStdioTool(
@@ -124,8 +120,8 @@ def get_datetime_mcp() -> MCPStdioTool:
             # Run the MCP server from its own folder.
             f"--directory={str(datetime_dir)}",
             "run",
-            "--prerelease=allow",
             # Entry point for the local MCP datetime server.
             "mcp_datetime.py",
         ],
+        env={**os.environ, "UV_NO_PROGRESS": "1"},
     )

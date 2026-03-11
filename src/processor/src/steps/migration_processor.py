@@ -344,12 +344,14 @@ class MigrationProcessor:
                         )
 
                         # Raise a rich exception so the queue worker reports a meaningful reason.
-                        raise WorkflowExecutorFailedException({
-                            "executor_id": event.source_executor_id or "unknown",
-                            "error_type": "WorkflowOutputMissing",
-                            "message": "Workflow output is None",
-                            "traceback": None,
-                        })
+                        raise WorkflowExecutorFailedException(
+                            {
+                                "executor_id": event.source_executor_id or "unknown",
+                                "error_type": "WorkflowOutputMissing",
+                                "message": "Workflow output is None",
+                                "traceback": None,
+                            }
+                        )
 
                     is_hard_terminated = bool(
                         getattr(event.data, "is_hard_terminated", False)
@@ -569,10 +571,18 @@ class MigrationProcessor:
                         telemetry: TelemetryManager = (
                             await self.app_context.get_service_async(TelemetryManager)
                         )
+                        # Map executor IDs to human-readable phase names
+                        phase_names = {
+                            "design": "Design",
+                            "yaml_conversion": "YAML",
+                            "documentation": "Documentation",
+                        }
                         await telemetry.transition_to_phase(
                             process_id=event.data.process_id,
                             step=event.executor_id,
-                            phase="start",
+                            phase=phase_names.get(
+                                event.executor_id, event.executor_id.capitalize()
+                            ),
                         )
                         print(f"Executor invoked ({event.executor_id})")
                         print(text2art(event.executor_id.capitalize()))

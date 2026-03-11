@@ -36,7 +36,7 @@ class DocumentationExecutor(Executor):
             TelemetryManager
         )
         await telemetry.transition_to_phase(
-            process_id=message.process_id, step="documentation", phase="start"
+            process_id=message.process_id, step="documentation", phase="Documentation"
         )
 
         result = await documentation_orchestrator.execute(task_param=message)

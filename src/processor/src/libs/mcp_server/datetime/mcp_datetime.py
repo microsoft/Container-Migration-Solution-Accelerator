@@ -4,8 +4,8 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "fastmcp>=2.12.5",
-#   "httpx>=0.27.0,<1.0",
+#   "fastmcp~=2.14.5",
+#   "httpx~=0.28.1",
 #   "pytz>=2024.1",
 # ]
 # ///

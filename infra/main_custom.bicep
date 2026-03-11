@@ -877,7 +877,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_API_VERSION'
-        value: '2025-01-01-preview'
+        value: '2025-03-01-preview'
       }
       {
         name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME'

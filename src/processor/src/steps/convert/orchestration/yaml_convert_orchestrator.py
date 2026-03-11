@@ -7,8 +7,8 @@ This module renders the conversion prompt and runs a `GroupChatOrchestrator`
 to produce a structured `Yaml_ExtendedBooleanResult`.
 """
 
+import os
 import re
-
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -25,9 +25,9 @@ from libs.agent_framework.groupchat_orchestrator import (
 )
 from libs.base.orchestrator_base import OrchestrationResult, OrchestratorBase
 from libs.mcp_server.MCPBlobIOTool import get_blob_file_mcp
-from libs.mcp_server.MCPDatetimeTool import get_datetime_mcp
 from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
 from steps.design.models.step_output import Design_ExtendedBooleanResult
+from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
 
 
@@ -39,6 +39,7 @@ class YamlConvertOrchestrator(
     def __init__(self, app_context=None):
         """Create a new orchestrator bound to an application context."""
         super().__init__(app_context)
+        self.step_name = "Convert"
 
     async def execute(
         self, task_param: Design_ExtendedBooleanResult | None = None
@@ -69,16 +70,16 @@ class YamlConvertOrchestrator(
         prompt = TemplateUtility.render_from_file(
             str(current_folder / "prompt_task.txt"),
             source_file_folder=f"{process_id}/source",
-            output_file_folder=f"{process_id}/output",
+            output_file_folder=f"{process_id}/converted",
             workspace_file_folder=f"{process_id}/workspace",
             container_name="processes",
+            current_timestamp=get_current_timestamp_utc(),
         )
 
         async with (
             self.mcp_tools[0],
             self.mcp_tools[1],
             self.mcp_tools[2],
-            self.mcp_tools[3],
         ):
             orchestrator = GroupChatOrchestrator[
                 Design_ExtendedBooleanResult, Yaml_ExtendedBooleanResult
@@ -112,12 +113,14 @@ class YamlConvertOrchestrator(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
         fetch_mcp_tool = MCPStdioTool(
-            name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
+            name="Fetch MCP Tool",
+            command="uvx",
+            args=["mcp-server-fetch"],
+            env={**os.environ, "UV_NO_PROGRESS": "1"},
         )
         blob_io_mcp_tool = get_blob_file_mcp()
-        datetime_mcp_tool = get_datetime_mcp()
 
-        return [ms_doc_mcp_tool, fetch_mcp_tool, blob_io_mcp_tool, datetime_mcp_tool]
+        return [ms_doc_mcp_tool, fetch_mcp_tool, blob_io_mcp_tool]
 
     async def prepare_agent_infos(self) -> list[Any]:
         """Build the list of agent descriptors participating in YAML conversion."""
@@ -141,8 +144,9 @@ class YamlConvertOrchestrator(
             "process_id": self.task_param.process_id,
             "container_name": "processes",
             "source_file_folder": f"{self.task_param.process_id}/source",
-            "output_file_folder": f"{self.task_param.process_id}/output",
+            "output_file_folder": f"{self.task_param.process_id}/converted",
             "workspace_file_folder": f"{self.task_param.process_id}/workspace",
+            "current_timestamp": get_current_timestamp_utc(),
         }
 
         yaml_expert_info = AgentInfo(
@@ -153,21 +157,21 @@ class YamlConvertOrchestrator(
         yaml_expert_info.render(**render_params)
         agent_infos.append(yaml_expert_info)
 
-        # aks_agent_info = AgentInfo(
-        #     agent_name="AKS Expert",
-        #     agent_instruction=self.read_prompt_file(str(aks_prompt)),
-        #     tools=self.mcp_tools,
-        # )
-        # aks_agent_info.render(**render_params)
-        # agent_infos.append(aks_agent_info)
+        aks_agent_info = AgentInfo(
+            agent_name="AKS Expert",
+            agent_instruction=self.read_prompt_file(str(aks_prompt)),
+            tools=self.mcp_tools,
+        )
+        aks_agent_info.render(**render_params)
+        agent_infos.append(aks_agent_info)
 
-        # azure_architect_info = AgentInfo(
-        #     agent_name="Azure Architect",
-        #     agent_instruction=self.read_prompt_file(str(azure_architect_prompt)),
-        #     tools=self.mcp_tools,
-        # )
-        # azure_architect_info.render(**render_params)
-        # agent_infos.append(azure_architect_info)
+        azure_architect_info = AgentInfo(
+            agent_name="Azure Architect",
+            agent_instruction=self.read_prompt_file(str(azure_architect_prompt)),
+            tools=self.mcp_tools,
+        )
+        azure_architect_info.render(**render_params)
+        agent_infos.append(azure_architect_info)
 
         qa_agent_info = AgentInfo(
             agent_name="QA Engineer",
@@ -195,9 +199,9 @@ class YamlConvertOrchestrator(
             tools=self.mcp_tools[2],  # Blob IO tool only
         )
         participant_names = [ai.agent_name for ai in agent_infos]
-        valid_participants_block = "\n".join([
-            f'- "{name}"' for name in participant_names
-        ])
+        valid_participants_block = "\n".join(
+            [f'- "{name}"' for name in participant_names]
+        )
         coordinator_agent_info.render(
             **render_params,
             step_name="Convert",
@@ -257,12 +261,15 @@ class YamlConvertOrchestrator(
         await super().on_agent_response_stream(response)
 
 
-def _parse_conversion_report_quality_gates(markdown: str) -> tuple[dict[str, str], bool]:
-    """Parse sign-offs and open-blocker status from a conversion report markdown.
+def _parse_conversion_report_quality_gates(
+    markdown: str,
+) -> tuple[dict[str, str], bool]:
+    """Parse sign-offs and open-blocker status from the conversion report markdown.
 
     Note:
-        This helper is used by unit tests to validate the expected parsing behavior.
-        It is not currently wired into the runtime convert workflow.
+        This helper is currently used by unit tests (see
+        `src/tests/unit/steps/convert/test_conversion_report_quality_gates.py`) to validate
+        the expected parsing behavior. It is not wired into the runtime convert workflow yet.
 
     Returns:
         (signoffs, has_open_blockers)
@@ -291,7 +298,7 @@ def _parse_conversion_report_quality_gates(markdown: str) -> tuple[dict[str, str
 
     signoffs: dict[str, str] = {}
     for match in re.finditer(
-        r"^\*\*(?P<role>.+?)\*\*: ?\s*SIGN-OFF:\s*(?P<status>PASS|FAIL)\b",
+        r"^\*\*(?P<role>.+?)\*\*:?\s*SIGN-OFF:\s*(?P<status>PASS|FAIL)\b",
         signoff_section,
         flags=re.IGNORECASE | re.MULTILINE,
     ):

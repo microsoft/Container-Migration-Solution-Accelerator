@@ -4,11 +4,11 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "fastmcp>=2.12.5",
-#   "httpx>=0.27.0,<1.0",
-#   "azure-core>=1.36.0",
-#   "azure-storage-blob>=12.27.1",
-#   "azure-identity>=1.23.0",
+#   "fastmcp~=2.14.5",
+#   "httpx~=0.28.1",
+#   "azure-core~=1.38.0",
+#   "azure-storage-blob~=12.28.0",
+#   "azure-identity~=1.25.0",
 #   "pyyaml>=6.0.2"
 # ]
 # ///
@@ -184,22 +184,48 @@ def _apply_group_for_kinds(kinds: set[str]) -> tuple[int, str, str]:
         return (0, "00-foundation", "Namespaces / Storage")
 
     if kinds.intersection(
-        {"ServiceAccount", "Role", "RoleBinding", "ClusterRole", "ClusterRoleBinding"}
+        {
+            "ServiceAccount",
+            "Role",
+            "RoleBinding",
+            "ClusterRole",
+            "ClusterRoleBinding",
+        }
     ):
         return (10, "10-rbac", "RBAC")
 
     if kinds.intersection(
-        {"ConfigMap", "Secret", "Service", "Endpoints", "EndpointSlice"}
+        {
+            "ConfigMap",
+            "Secret",
+            "Service",
+            "Endpoints",
+            "EndpointSlice",
+        }
     ):
         return (20, "20-core", "Config / Service")
 
     if kinds.intersection(
-        {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob", "ReplicaSet"}
+        {
+            "Deployment",
+            "StatefulSet",
+            "DaemonSet",
+            "Job",
+            "CronJob",
+            "ReplicaSet",
+        }
     ):
         return (30, "30-workloads", "Workloads")
 
     if kinds.intersection(
-        {"Ingress", "IngressClass", "Gateway", "HTTPRoute", "GRPCRoute", "TLSRoute"}
+        {
+            "Ingress",
+            "IngressClass",
+            "Gateway",
+            "HTTPRoute",
+            "GRPCRoute",
+            "TLSRoute",
+        }
     ):
         return (40, "40-ingress", "Ingress / Gateway")
 

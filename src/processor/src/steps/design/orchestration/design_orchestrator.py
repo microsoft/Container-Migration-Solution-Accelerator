@@ -7,6 +7,7 @@ This module renders the design prompt, prepares MCP tools (including Mermaid),
 and runs a `GroupChatOrchestrator` to produce `Design_ExtendedBooleanResult`.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -107,7 +108,10 @@ class DesignOrchestrator(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
         fetch_mcp_tool = MCPStdioTool(
-            name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
+            name="Fetch MCP Tool",
+            command="uvx",
+            args=["mcp-server-fetch"],
+            env={**os.environ, "UV_NO_PROGRESS": "1"},
         )
 
         blob_io_mcp_tool = get_blob_file_mcp()

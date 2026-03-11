@@ -40,5 +40,5 @@ def get_mermaid_mcp() -> MCPStdioTool:
             "run",
             "mcp_mermaid.py",
         ],
-        env=dict(os.environ),
+        env={**os.environ, "UV_NO_PROGRESS": "1"},
     )

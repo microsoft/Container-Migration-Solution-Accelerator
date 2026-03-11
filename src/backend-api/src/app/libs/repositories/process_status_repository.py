@@ -1,15 +1,13 @@
 import asyncio
+from datetime import UTC, datetime
 from typing import Any
-
-from sas.cosmosdb.sql.repository import RepositoryBase
 
 from routers.models.process_agent_activities import (
     AgentStatus,
     ProcessStatus,
     ProcessStatusSnapshot,
 )
-
-from datetime import datetime, UTC
+from sas.cosmosdb.sql.repository import RepositoryBase
 
 
 def calculate_activity_duration(activity_start: str) -> tuple[int, str]:
@@ -142,7 +140,7 @@ class ProcessStatusRepository(RepositoryBase[ProcessStatus, str]):
             )
 
             status = await self.get_async(process_id)
-            if status != None:
+            if status is not None:
                 return ProcessStatusSnapshot(
                     process_id=status.id,  # Fix: use process_id instead of id
                     step=status.step,
@@ -305,26 +303,7 @@ class ProcessStatusRepository(RepositoryBase[ProcessStatus, str]):
             formatted_lines = []
             agent_metrics = {}
 
-            # Check if process failed early (before agents really started working)
             process_failed = getattr(process_data, "status", "") == "failed"
-            process_duration_seconds = 0
-            if hasattr(process_data, "started_at_time") and hasattr(
-                process_data, "last_update_time"
-            ):
-                try:
-                    start = datetime.fromisoformat(
-                        process_data.started_at_time.replace(" UTC", "+00:00")
-                    )
-                    end = datetime.fromisoformat(
-                        process_data.last_update_time.replace(" UTC", "+00:00")
-                    )
-                    process_duration_seconds = int((end - start).total_seconds())
-                except Exception:
-                    pass
-
-            early_failure = (
-                process_failed and process_duration_seconds < 30
-            )  # Failed in less than 30 seconds
 
             # Analyze each agent with enhanced insights
             for agent_name, agent_data in agents_data.items():
@@ -413,6 +392,23 @@ class ProcessStatusRepository(RepositoryBase[ProcessStatus, str]):
                 if is_active and duration_seconds > 30:
                     message_parts.append(f"({duration_str})")
 
+                # Add tool usage from recent activity history
+                recent_tools = []
+                for h in activity_history[-5:]:
+                    tool = h.get("tool_used", "")
+                    if tool and tool not in recent_tools:
+                        recent_tools.append(tool)
+                if recent_tools:
+                    tool_names = ", ".join(
+                        recent_tools[-3:]
+                    )  # Show last 3 unique tools
+                    message_parts.append(f"🔧 {tool_names}")
+
+                # Add activity count
+                total_activities = len(activity_history)
+                if total_activities > 0:
+                    message_parts.append(f"📊 {total_activities} actions")
+
                 # Add relationship indicators
                 if relationships["waiting_for"]:
                     waiting_names = [
@@ -496,6 +492,25 @@ class ProcessStatusRepository(RepositoryBase[ProcessStatus, str]):
                 "bottleneck_score": total_blocking,
                 "fast_agents": fast_agents,
                 "failed_agents": failed_agents,
+                # NEW: Structured agent activities for rich frontend display
+                "agent_activities": agents_data,
+                # NEW: Step timing data
+                "step_timings": {
+                    k: v
+                    for k, v in (
+                        getattr(process_data, "step_timings", {}) or {}
+                    ).items()
+                },
+                # NEW: Step results and metrics
+                "step_results": {
+                    k: v
+                    for k, v in (
+                        getattr(process_data, "step_results", {}) or {}
+                    ).items()
+                },
+                "generated_files": getattr(process_data, "generated_files", []) or [],
+                "conversion_metrics": getattr(process_data, "conversion_metrics", {})
+                or {},
             }
 
     async def render_agent_status_old(self, process_id: str) -> dict:

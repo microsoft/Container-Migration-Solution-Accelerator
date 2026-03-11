@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 
 class IDataService(ABC):

@@ -34,7 +34,7 @@ RUN curl -fsSLo /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using UV
-RUN uv sync --frozen --python 3.12 --prerelease=allow
+RUN uv sync --frozen --python 3.12
 
 # Copy the entire source code
 COPY src/ ./src/
@@ -56,4 +56,4 @@ ENV APP_CONFIGURATION_URL=""
 EXPOSE 8080
 
 # Simple command - let Docker handle restarts
-CMD ["uv", "run", "--prerelease=allow", "python", "src/main_service.py"]
+CMD ["uv", "run", "python", "src/main_service.py"]

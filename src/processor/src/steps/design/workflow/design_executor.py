@@ -34,7 +34,7 @@ class DesignExecutor(Executor):
             TelemetryManager
         )
         await telemetry.transition_to_phase(
-            process_id=message.process_id, step="design", phase="start"
+            process_id=message.process_id, step="design", phase="Design"
         )
         result = await design_orchestrator.execute(task_param=message)
 

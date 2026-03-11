@@ -10,6 +10,7 @@ structured `Documentation_ExtendedBooleanResult`.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -117,7 +118,10 @@ class DocumentationOrchestrator(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
         fetch_mcp_tool = MCPStdioTool(
-            name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
+            name="Fetch MCP Tool",
+            command="uvx",
+            args=["mcp-server-fetch"],
+            env={**os.environ, "UV_NO_PROGRESS": "1"},
         )
         blob_io_mcp_tool = get_blob_file_mcp()
         yaml_inventory_mcp_tool = get_yaml_inventory_mcp()

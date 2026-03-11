@@ -66,7 +66,7 @@ def test_documentation_executor_yields_output(monkeypatch):
         message = Yaml_ExtendedBooleanResult(process_id="p1")
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "documentation", "start")]
+        assert telemetry.transitions == [("p1", "documentation", "Documentation")]
         assert len(ctx.yielded) == 1
         assert isinstance(ctx.yielded[0], Documentation_ExtendedBooleanResult)
 

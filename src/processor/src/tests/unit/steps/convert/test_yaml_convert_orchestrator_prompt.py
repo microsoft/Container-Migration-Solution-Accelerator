@@ -89,6 +89,6 @@ def test_yaml_convert_orchestrator_renders_expected_folder_params(monkeypatch):
         assert kwargs["container_name"] == "processes"
         assert kwargs["source_file_folder"] == "p1/source"
         assert kwargs["workspace_file_folder"] == "p1/workspace"
-        assert kwargs["output_file_folder"] == "p1/output"
+        assert kwargs["output_file_folder"] == "p1/converted"
 
     asyncio.run(_run())
