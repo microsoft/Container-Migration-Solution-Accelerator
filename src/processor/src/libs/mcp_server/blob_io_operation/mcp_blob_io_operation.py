@@ -12,6 +12,7 @@
 # ]
 # ///
 import os
+from typing import Any
 
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.blob import BlobServiceClient
@@ -110,6 +111,7 @@ def save_content_to_blob(
     content: str,
     container_name: str | None = None,
     folder_path: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Save content to a blob in Azure Storage.
 
@@ -180,6 +182,7 @@ def read_blob_content(
     blob_name: str,
     container_name: str | None = None,
     folder_path: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Read and return the content of a blob from Azure Storage.
 
@@ -237,6 +240,7 @@ def check_blob_exists(
     blob_name: str,
     container_name: str | None = None,
     folder_path: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Check if a blob exists and return detailed metadata.
 
@@ -298,6 +302,7 @@ def delete_blob(
     blob_name: str,
     container_name: str | None = None,
     folder_path: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Permanently delete a blob from Azure Storage.
 
@@ -345,6 +350,7 @@ def list_blobs_in_container(
     container_name: str | None = None,
     folder_path: str | None = None,
     recursive: bool = False,  # Changed default to False for migration workflows
+    **kwargs: Any,
 ) -> str:
     """List all blobs in a container with detailed information.
 
@@ -393,17 +399,15 @@ def list_blobs_in_container(
                 size_mb = blob.size / 1024 / 1024 if blob.size else 0
                 total_size += blob.size if blob.size else 0
 
-                blob_list.append(
-                    {
-                        "name": blob.name,
-                        "size": blob.size or 0,
-                        "size_mb": size_mb,
-                        "last_modified": blob.last_modified,
-                        "content_type": blob.content_settings.content_type
-                        if blob.content_settings
-                        else "unknown",
-                    }
-                )
+                blob_list.append({
+                    "name": blob.name,
+                    "size": blob.size or 0,
+                    "size_mb": size_mb,
+                    "last_modified": blob.last_modified,
+                    "content_type": blob.content_settings.content_type
+                    if blob.content_settings
+                    else "unknown",
+                })
 
             if not blob_list:
                 return f"""[FOLDER] CONTAINER: {container_name}
@@ -454,7 +458,7 @@ Error: {str(e)}"""
 
 
 @mcp.tool()
-def create_container(container_name: str) -> str:
+def create_container(container_name: str, **kwargs: Any) -> str:
     """Create a new Azure Storage container.
 
     Args:
@@ -486,7 +490,7 @@ Error: {str(e)}
 
 
 @mcp.tool()
-def list_containers() -> str:
+def list_containers(**kwargs: Any) -> str:
     """List all containers in the Azure Storage account.
 
     Returns:
@@ -498,13 +502,11 @@ def list_containers() -> str:
 
         container_list = []
         for container in containers:
-            container_list.append(
-                {
-                    "name": container.name,
-                    "last_modified": container.last_modified,
-                    "metadata": container.metadata or {},
-                }
-            )
+            container_list.append({
+                "name": container.name,
+                "last_modified": container.last_modified,
+                "metadata": container.metadata or {},
+            })
 
         if not container_list:
             return """[PACKAGE] STORAGE ACCOUNT CONTAINERS
@@ -547,6 +549,7 @@ def find_blobs(
     container_name: str | None = None,
     folder_path: str | None = None,
     recursive: bool = False,  # Changed default to False for migration workflows
+    **kwargs: Any,
 ) -> str:
     """Find blobs matching a wildcard pattern.
 
@@ -602,14 +605,12 @@ def find_blobs(
                     blob.name, pattern
                 ):
                     size_mb = blob.size / 1024 / 1024 if blob.size else 0
-                    matching_blobs.append(
-                        {
-                            "name": blob.name,
-                            "size": blob.size or 0,
-                            "size_mb": size_mb,
-                            "last_modified": blob.last_modified,
-                        }
-                    )
+                    matching_blobs.append({
+                        "name": blob.name,
+                        "size": blob.size or 0,
+                        "size_mb": size_mb,
+                        "last_modified": blob.last_modified,
+                    })
 
             if not matching_blobs:
                 return f"""[SEARCH] BLOB SEARCH RESULTS
@@ -665,7 +666,7 @@ Error: {str(e)}"""
 
 
 @mcp.tool()
-def get_storage_account_info() -> str:
+def get_storage_account_info(**kwargs: Any) -> str:
     """Get information about the Azure Storage account.
 
     Returns:
@@ -733,6 +734,7 @@ def copy_blob(
     target_container: str | None = None,
     source_folder: str | None = None,
     target_folder: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Copy a blob within or across containers.
 
@@ -793,6 +795,7 @@ def move_blob(
     source_folder: str | None = None,
     target_folder: str | None = None,
     new_name: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Move/rename a blob between containers or folders.
 
@@ -864,6 +867,7 @@ def delete_multiple_blobs(
     blob_patterns: str,
     container_name: str | None = None,
     folder_path: str | None = None,
+    **kwargs: Any,
 ) -> str:
     """Delete multiple blobs matching patterns.
 
@@ -969,7 +973,9 @@ Error: {str(e)}"""
 
 
 @mcp.tool()
-def clear_container(container_name: str, folder_path: str | None = None) -> str:
+def clear_container(
+    container_name: str, folder_path: str | None = None, **kwargs: Any
+) -> str:
     """Delete all blobs in a container or folder.
 
     Args:
@@ -1031,7 +1037,7 @@ Error: {str(e)}"""
 
 
 @mcp.tool()
-def delete_container(container_name: str) -> str:
+def delete_container(container_name: str, **kwargs: Any) -> str:
     """Delete an entire Azure Storage container and all its contents.
 
     Args:
@@ -1070,6 +1076,7 @@ def create_folder(
     folder_path: str,
     container_name: str | None = None,
     marker_file_name: str = ".keep",
+    **kwargs: Any,
 ) -> str:
     """Create an empty folder structure in Azure Blob Storage by creating a marker blob.
 

@@ -1210,47 +1210,39 @@ class TelemetryManager:
 
                                     # YAML phase uses ConvertedFile shape.
                                     if phase == "yaml":
-                                        generated_files.append(
-                                            {
-                                                "phase": phase,
-                                                "source_file": file_info.get(
-                                                    "source_file", ""
-                                                ),
-                                                "file_name": file_info.get(
-                                                    "converted_file", ""
-                                                ),
-                                                "file_type": file_info.get(
-                                                    "file_type",
-                                                    file_info.get("file_kind", ""),
-                                                ),
-                                                "status": file_info.get(
-                                                    "conversion_status", "Success"
-                                                ),
-                                                "accuracy": file_info.get(
-                                                    "accuracy_rating", ""
-                                                ),
-                                                "summary": "",
-                                                "timestamp": _get_utc_timestamp(),
-                                            }
-                                        )
+                                        generated_files.append({
+                                            "phase": phase,
+                                            "source_file": file_info.get(
+                                                "source_file", ""
+                                            ),
+                                            "file_name": file_info.get(
+                                                "converted_file", ""
+                                            ),
+                                            "file_type": file_info.get(
+                                                "file_type",
+                                                file_info.get("file_kind", ""),
+                                            ),
+                                            "status": file_info.get(
+                                                "conversion_status", "Success"
+                                            ),
+                                            "accuracy": file_info.get(
+                                                "accuracy_rating", ""
+                                            ),
+                                            "summary": "",
+                                            "timestamp": _get_utc_timestamp(),
+                                        })
                                     else:
-                                        generated_files.append(
-                                            {
-                                                "phase": phase,
-                                                "file_name": file_info.get(
-                                                    "file_name", ""
-                                                ),
-                                                "file_type": file_info.get(
-                                                    "file_type", ""
-                                                ),
-                                                "status": "Success",
-                                                "accuracy": "",
-                                                "summary": file_info.get(
-                                                    "content_summary", ""
-                                                ),
-                                                "timestamp": _get_utc_timestamp(),
-                                            }
-                                        )
+                                        generated_files.append({
+                                            "phase": phase,
+                                            "file_name": file_info.get("file_name", ""),
+                                            "file_type": file_info.get("file_type", ""),
+                                            "status": "Success",
+                                            "accuracy": "",
+                                            "summary": file_info.get(
+                                                "content_summary", ""
+                                            ),
+                                            "timestamp": _get_utc_timestamp(),
+                                        })
 
                     # Extract conversion metrics
                     if isinstance(metrics, dict):
@@ -1280,7 +1272,7 @@ class TelemetryManager:
                 # Provide a compact, UI-friendly "finalized" section inside final_outcome.
                 # Keep it small: counts + pointers, not full file contents.
                 container = _get_process_blob_container_name()
-                output_folder = f"{process_id}/converted"
+                output_folder = f"{process_id}/output"
                 conversion_report_file = None
                 try:
                     yaml_step = (current_process.step_results or {}).get("yaml")
@@ -1314,13 +1306,11 @@ class TelemetryManager:
                     isinstance(conversion_report_file, str)
                     and conversion_report_file.strip()
                 ):
-                    finalized_generated["artifacts"].append(
-                        {
-                            "type": "conversion_report",
-                            "container": container,
-                            "path": conversion_report_file,
-                        }
-                    )
+                    finalized_generated["artifacts"].append({
+                        "type": "conversion_report",
+                        "container": container,
+                        "path": conversion_report_file,
+                    })
 
                 # Record the final outcome
                 current_process.final_outcome = {
@@ -1384,7 +1374,7 @@ class TelemetryManager:
                             blob_name = f"debug/traceback_{failed_step}_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.txt"
                             artifact = await _upload_text_to_process_blob(
                                 process_id=process_id,
-                                folder_path=f"{process_id}/converted",
+                                folder_path=f"{process_id}/output",
                                 blob_name=blob_name,
                                 content=tb,
                             )

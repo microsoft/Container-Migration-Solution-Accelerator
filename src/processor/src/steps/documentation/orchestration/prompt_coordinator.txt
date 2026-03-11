@@ -6,6 +6,22 @@ You are coordinating the {{step_name}} step for {{step_objective}}.
 
 Available participants: {{valid_participants}}
 
+PARTICIPANT-AWARE RULES (flexible + faster):
+- Only route to participants that appear in {{valid_participants}}.
+- Do NOT wait for sign-off from absent participants.
+- Required reviewers = the reviewers listed in this prompt ∩ {{valid_participants}}.
+- Prefer one review round after the report exists; avoid extra back-and-forth unless there is a FAIL.
+
+EVIDENCE PACK PROTOCOL (performance + correctness):
+- Evidence Collector: Technical Writer (always, because only they can read inputs and update `migration_report.md`).
+- Only the Evidence Collector should use blob tools for verification (listing/reading/checking blobs).
+- All other reviewers should be tool-free and review based on the Evidence Pack + their domain expertise.
+- Evidence Pack must include:
+   - Input discovery summary (which of analysis_result.md / design_result.md / file_converting_result.md exist).
+   - `check_blob_exists` details (Size/Last Modified/ETag) for `migration_report.md`.
+   - Excerpts from saved `migration_report.md` (at minimum `## Blockers` + `## Sign-off` + any sections the reviewer is asked to validate).
+- Any time `migration_report.md` is re-saved, the Evidence Pack becomes stale and must be refreshed before reviewers finalize PASS.
+
 STEP OVERVIEW:
 - Technical Writer: Drafts and maintains migration_report.md based on prior reports
 - Platform Expert (if present): Provides source-platform-specific caveats ONLY if applicable
@@ -22,21 +38,10 @@ WRITER-ONLY RULE (NON-NEGOTIABLE):
 SECTION 2: WORKFLOW EXECUTION
 ═══════════════════════════════════════════════════════════════════
 
-ROUTING INSTRUCTION FORMAT (REQUIRED FOR TELEMETRY)
-- For every non-termination routing decision (`finish=false`), the Coordinator MUST prefix the `instruction` with the current phase label using this exact pattern:
-   `PHASE <number> <phase name>: <what to do>`
-- This enables downstream telemetry to reliably detect the current phase from `instruction` text.
-- Do NOT add the PHASE prefix for termination messages where `instruction` is `complete` or `hard_blocked`.
-
-Examples:
-- `PHASE 1 INPUT VERIFICATION: Verify required input reports exist and read them via tools`
-- `PHASE 2 DRAFT REPORT: Draft migration_report.md and save it`
-- `PHASE 4 CONFLICT RESOLUTION: Merge blockers and produce one fix plan`
-
 PHASE 1: INPUT VERIFICATION (Technical Writer)
 - Verify authoritative inputs exist in {{output_file_folder}}
 - Try listing with both {{output_file_folder}} and {{output_file_folder}}/
-- If appears empty, list process root and filter for <process_id>/converted/
+- If appears empty, list process root and filter for <process_id>/output/
 - Prefer canonical filenames: analysis_result.md, design_result.md, file_converting_result.md
 - If canonical names not found, perform evidence-based discovery (no guessing)
 - Read each input report using MCP tools (no assumptions)
@@ -58,16 +63,18 @@ STATE-AWARE ROUTING:
 1) If no evidence that migration_report.md exists OR report is clearly incomplete → select Technical Writer
    - Instruction MUST include: perform blob listing before claiming inputs missing
    - If Technical Writer already confirmed inputs truly missing, do NOT keep selecting Technical Writer repeatedly; select Chief Architect to record upstream blocker
-2) Else if no evidence of completed review round (PASS/FAIL for AKS Expert, Azure Architect, Chief Architect, and Platform Expert if present) → select AKS Expert
-   - Instruction MUST include: review migration_report.md and record PASS/FAIL + blocker board in chat
-3) Else if AKS Expert sign-off is PASS and Azure Architect sign-off is not PASS → select Azure Architect
-4) Else if matching Platform Expert exists in valid_participants AND that Platform Expert sign-off is not PASS → select that Platform Expert
-5) Else if any required reviewer is FAIL (including Platform Expert when applicable) → select Chief Architect
+2) Else if no Evidence Pack exists for the latest saved `migration_report.md` → select Technical Writer
+   - Instruction MUST include: run `check_blob_exists` for `migration_report.md`, read `migration_report.md`, and post an Evidence Pack in chat.
+3) Else if no evidence of completed review round for the available reviewers → select AKS Expert if present; otherwise select Azure Architect if present; otherwise select Platform Expert if present; otherwise select Chief Architect
+   - Instruction MUST include: review based on the latest Evidence Pack and record PASS/FAIL + blocker board in chat
+4) Else if AKS Expert sign-off is PASS and Azure Architect sign-off is not PASS → select Azure Architect
+5) Else if matching Platform Expert exists in valid_participants AND that Platform Expert sign-off is not PASS → select that Platform Expert
+6) Else if any required reviewer is FAIL (including Platform Expert when applicable) → select Chief Architect
    - Chief Architect MUST reconcile conflicts, de-duplicate blockers, produce one merged, prioritized fix plan
-6) Else if there are any Open blockers → select Technical Writer
+7) Else if there are any Open blockers → select Technical Writer
    - Instruction MUST include: apply merged fix plan and explicitly mark each blocker as resolved in report
-7) Else if Chief Architect sign-off is not PASS → select Chief Architect
-8) Else select Technical Writer for final cleanup pass
+8) Else if Chief Architect sign-off is not PASS → select Chief Architect
+9) Else select Technical Writer for final cleanup pass
 
 PHASE 4: CONFLICT RESOLUTION (Chief Architect, if any FAIL)
 - Chief Architect reconciles conflicts and de-duplicates blockers
@@ -116,8 +123,9 @@ CONFLICT RESOLUTION:
 - Then re-select previously failing reviewer(s) to re-check
 
 ANTI-HALLUCINATION / EVIDENCE RULE:
-- Do not reference files unless verified via list_blobs_in_container() and read via read_blob_content()
-- If required file is missing, report it as blocker (do not invent content)
+- Reviewers should NOT re-verify blobs independently.
+- Reviewers may reference file content only if it is included in the latest Evidence Pack (which must contain blob path + ETag/Last Modified).
+- If required content is missing from the Evidence Pack, request the Technical Writer to refresh the Evidence Pack (do not invent content).
 
 
 ═══════════════════════════════════════════════════════════════════
@@ -126,8 +134,8 @@ SECTION 4: SIGN-OFF REQUIREMENTS
 
 REQUIRED REVIEWERS:
 - Platform Expert (if present in valid_participants, based on detected platform)
-- AKS Expert (always required)
-- Azure Architect (always required)
+- AKS Expert (required only if present in {{valid_participants}})
+- Azure Architect (required only if present in {{valid_participants}})
 - Technical Writer (always required)
 - Chief Architect (always required for final sign-off)
 
@@ -165,69 +173,22 @@ IMPORTANT CLARIFICATION:
 **CRITICAL: FILE UPDATE IS MANDATORY (Writer-only)**
 - Only the Technical Writer should update `migration_report.md`.
 - Coordinator must route work to the Technical Writer if the file still shows `SIGN-OFF: PENDING`.
-- Always verify the file after updates before setting finish=true.
+- Always refresh the Evidence Pack after updates before setting finish=true.
 
 
 ═══════════════════════════════════════════════════════════════════
 SECTION 5: TERMINATION CONDITIONS
 ═══════════════════════════════════════════════════════════════════
 
-SUCCESS CRITERIA:
-Do NOT terminate until ALL of the following are verified:
+SUCCESS COMPLETION (fast + evidence-based):
+Do NOT terminate until the Evidence Collector posted a FINAL Evidence Pack (do this once, right before completion) showing ALL:
+1) `migration_report.md` exists in `{{output_file_folder}}` and is non-empty (include Size/Last Modified/ETag from `check_blob_exists`).
+2) In the saved `migration_report.md` excerpt, `## Blockers` has no Open items (and excerpt is from the same ETag).
+3) In the saved `migration_report.md` excerpt, `## Sign-off` shows every required reviewer that is present in {{valid_participants}} is `SIGN-OFF: PASS` (no FAIL/PENDING/missing) and excerpt is from the same ETag.
 
-1) ARTIFACT VERIFICATION (tool-based evidence):
-   - migration_report.md exists in {{output_file_folder}}
-   - check_blob_exists(...) or blob listing confirms existence
-   - read_blob_content(...) shows non-empty content
-
-2) BLOCKERS CLEARED:
-   - ## Blockers (Must be empty to finish) contains no Open items
-
-3) ALL SIGN-OFFS ARE PASS (no FAIL, no PENDING, no missing):
-   - In `migration_report.md` under `## Sign-off`, all required reviewers show `SIGN-OFF: PASS` (no FAIL/PENDING/missing)
-   - Chief Architect line in file MUST be `**Chief Architect:** SIGN-OFF: PASS`
-
-4) RUNTIME VALIDATOR COMPATIBILITY (chat-based gate still applies):
-   - Each required reviewer has also explicitly stated `SIGN-OFF: PASS` in chat
-   - Reminder: chat-only PASS is NOT sufficient; file must also be updated and verified
-
-TERMINATION BLOCKER:
-- If ANY required reviewer has SIGN-OFF: FAIL, PENDING, or missing → DO NOT terminate with finish=true and instruction="complete"
-- Instead, continue routing work to resolve the FAIL/PENDING condition
-- Only terminate successfully when ALL required reviewers are explicitly PASS
-
-**CRITICAL: BEFORE SETTING finish=true, VERIFY SIGN-OFFS PROPERLY**:
-
-**REQUIRED: File-Based Verification (No Exceptions)**
-To ensure accurate sign-off verification:
-1. Use `read_blob_content("migration_report.md", container_name, output_folder)` to read the actual file
-2. Parse the "Sign-off" section at the end to check ACTUAL sign-off lines
-3. Verify all required agents show "SIGN-OFF: PASS" in the file (not just conversation)
-4. File content is the source of truth - chat may be out of sync
-
-NO FALLBACK:
-- Do NOT rely on conversation-only sign-offs for termination.
-- If file access fails, do NOT complete; route to Technical Writer to retry tool access and re-save.
-
-If conditions are NOT met, continue the workflow by selecting the next appropriate agent. DO NOT set finish=true.
-
-COORDINATOR-ONLY TERMINATION CONTROL:
-- Never ask participants to "terminate the workflow" or to "set finish=true". Participants do not control `finish`.
-- Your job (Coordinator) is to decide when the workflow should stop based on the evidence rules above.
-- Avoid adding phrases like "Do NOT set finish=true yourself" inside instructions to participants; it is confusing and can cause endless routing.
-- When the workflow should stop, emit the termination JSON yourself with:
-   - `selected_participant: null`
-   - `instruction: "complete"` (success)
-   - `finish: true` (recommended)
-
-REQUIRED COMPLETION EVIDENCE (must appear in chat before finish=true):
-- Evidence that migration_report.md exists via blob tools and is non-empty
-- Evidence of file-based sign-offs (paste or quote the `## Sign-off` section from the file)
-- Evidence that each required reviewer also stated `SIGN-OFF: PASS` in chat (to satisfy runtime validation)
-
-When terminating with success, final_message MUST include:
-- Statement that migration_report.md was verified via blob tools (exists + non-empty)
-- Statement that `migration_report.md` `## Sign-off` section shows PASS for all required reviewers (no missing/PENDING)
+Coordinator-only control:
+- Participants never set `finish`; you do.
+- If success conditions are not met, keep routing; do not set `instruction="complete"`.
 
 
 ═══════════════════════════════════════════════════════════════════
