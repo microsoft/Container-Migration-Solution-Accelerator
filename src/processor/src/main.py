@@ -40,23 +40,23 @@ class Application(ApplicationBase):
 
     def register_services(self):
         # Additional initialization logic can be added here
-        ############################################################################
-        ## Initialize AgentFrameworkHelper and add it to the application context  ##
-        ############################################################################
+        # ---------------------------------------------------------------------------
+        # Initialize AgentFrameworkHelper and add it to the application context
+        # ---------------------------------------------------------------------------
         self.application_context.add_singleton(
             AgentFrameworkHelper, AgentFrameworkHelper()
         )
-        ## Initialize AgentFrameworkHelper with LLM settings from application context
+        # Initialize AgentFrameworkHelper with LLM settings from application context
         self.application_context.get_service(AgentFrameworkHelper).initialize(
             self.application_context.llm_settings
         )
 
-        ##################################################################################
-        ## Initialize middlewares - All Middlewares below are registered as a singleton ##
-        ##################################################################################
-        ### InputObserverMiddleware(Agent Level)
-        ### LoggingFunctionMiddleware(Agent Level)
-        ### DebuggingMiddleware(Run Level)
+        # ------------------------------------------------------------------------------
+        # Initialize middlewares - all middlewares below are registered as a singleton
+        # ------------------------------------------------------------------------------
+        # - InputObserverMiddleware (Agent level)
+        # - LoggingFunctionMiddleware (Agent level)
+        # - DebuggingMiddleware (Run level)
         (
             # Register DebuggingMiddleware as a singleton
             self.application_context.add_singleton(
@@ -112,7 +112,7 @@ class Application(ApplicationBase):
             process_id="e7fc15e2-13c9-4587-b8ed-6f3015990229",
             container_name="processes",
             source_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/source",
-            output_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/converted",
+            output_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/output",
             workspace_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/workspace",
         )
         await migration_processor.run(input_data=input_data)
