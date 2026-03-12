@@ -166,7 +166,7 @@ CHAT VERBOSITY CAP (20/50 RULE):
 **ENSURE PERFECT MERMAID ARCHITECTURE DIAGRAMS:**
 
 **MANDATORY MERMAID SYNTAX VALIDATION:**
-- **Code Block**: Always wrap in ````mermaid` block with proper closure
+- **Code Block**: Always wrap in ` ```mermaid ` block with proper closure
 - **Diagram Type**: Use `flowchart TD` for top-down architecture diagrams
 - **Subgraphs**: Use proper syntax `subgraph Name["Display Label"]`
 - **Node Labels**: Use quotes for labels with spaces: `["Azure Subscription"]`
@@ -180,15 +180,15 @@ CHAT VERBOSITY CAP (20/50 RULE):
 - **Professional Names**: Enterprise-appropriate resource naming
 
 **COMMON MERMAID ERRORS TO AVOID:**
-- Missing code block: `flowchart TD` → ````mermaid\nflowchart TD`
+- Missing code block: `flowchart TD` → ` ```mermaid\nflowchart TD `
 - Broken subgraphs: `[Landing Zone Subscription]` → `["Landing Zone Subscription"]`
 - Invalid node shapes: `[(Node <info>)]` → `[Node - info]`
 - Broken arrows: `-- label -->` → `-->|label|`
 
-**MERMAID VALIDATION PROTOCOL:**
-1. **Before Saving**: Validate all Mermaid syntax in design documents
-2. **Test Rendering**: Ensure diagrams render correctly in markdown viewers
-3. **Professional Quality**: Architecture diagrams suitable for executive presentation
+**MERMAID TOOL-BASED VALIDATION (USE THESE TOOLS):**
+1. **After writing design_result.md**: Call `validate_mermaid_in_markdown(markdown_text)` to check all mermaid blocks in the document. If it reports errors, call `fix_mermaid(mermaid_code)` on the broken block to get a corrected version, then update the document.
+2. **Before final save**: Always validate once more with `validate_mermaid_in_markdown` to ensure diagrams render correctly.
+3. Do NOT rely on manual syntax checking alone — always use the tool for validation.
 
 ## SOURCE FILE VERIFICATION (MANDATORY)
 1. Tool refresh first

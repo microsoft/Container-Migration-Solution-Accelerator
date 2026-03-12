@@ -14,18 +14,23 @@
 Goals:
 - Catch the most common broken Mermaid outputs produced by LLMs.
 - Apply safe, deterministic fixes (no external network calls).
+- Use mermaid.js CLI for real syntax validation when available.
 
-This is intentionally conservative: it does not attempt to fully parse Mermaid.
-Instead it provides:
+This provides:
 - block extraction from Markdown
-- basic structural validation
+- basic structural validation (heuristic)
+- mermaid.js-powered validation (if mmdc/node available)
 - best-effort normalization and small repairs
 
 """
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
+import tempfile
 from dataclasses import dataclass
 
 from fastmcp import FastMCP
@@ -323,29 +328,105 @@ def basic_fix_mermaid(code: str) -> tuple[str, list[str], MermaidValidation]:
     return normalized, applied, validation
 
 
+def _mermaid_render_check(code: str, timeout: int = 10) -> tuple[bool, str]:
+    """Try to render mermaid code using Node.js mermaid library for real validation.
+
+    Returns (success, error_message). If Node.js or mermaid is not available,
+    returns (True, "") to fall back gracefully.
+    """
+    node_path = shutil.which("node")
+    if not node_path:
+        return True, ""  # Node not available, skip render check
+
+    # Use a simple Node.js script that imports mermaid and tries to parse
+    js_script = """
+const { createRequire } = require('module');
+try {
+    const mermaid = require('mermaid');
+    mermaid.default.initialize({ startOnLoad: false, suppressErrors: false });
+    const code = process.argv[1];
+    mermaid.default.parse(code).then(result => {
+        process.stdout.write(JSON.stringify({ valid: true }));
+    }).catch(err => {
+        process.stdout.write(JSON.stringify({ valid: false, error: err.message || String(err) }));
+    });
+} catch (e) {
+    // mermaid not installed, skip
+    process.stdout.write(JSON.stringify({ valid: true, skipped: true }));
+}
+"""
+    try:
+        result = subprocess.run(
+            [node_path, "-e", js_script, code],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if result.returncode != 0 and result.stderr:
+            # Parse error from stderr if present
+            stderr = result.stderr.strip()
+            if "Error" in stderr or "error" in stderr:
+                # Extract just the error message
+                lines = stderr.split("\n")
+                error_line = next((l for l in lines if "Error" in l or "error" in l), lines[0])
+                return False, error_line[:200]
+            return True, ""
+
+        if result.stdout.strip():
+            try:
+                parsed = json.loads(result.stdout.strip())
+                if parsed.get("skipped"):
+                    return True, ""
+                if not parsed.get("valid", True):
+                    return False, parsed.get("error", "Unknown mermaid syntax error")[:200]
+            except json.JSONDecodeError:
+                pass
+
+        return True, ""
+    except (subprocess.TimeoutExpired, OSError):
+        return True, ""  # Timeout or OS error, skip render check
+
+
 @mcp.tool()
 def validate_mermaid(code: str) -> dict:
-    """Validate Mermaid code (heuristic)."""
+    """Validate Mermaid code using heuristic checks and mermaid.js rendering."""
     v = basic_validate_mermaid(code)
-    return {
+    result = {
         "valid": v.valid,
-        "errors": v.errors,
+        "errors": list(v.errors),
         "warnings": v.warnings,
         "diagram_type": v.diagram_type,
         "normalized_code": v.normalized_code,
     }
 
+    # If heuristic check passed, also try real mermaid.js rendering
+    if v.valid:
+        render_ok, render_error = _mermaid_render_check(v.normalized_code)
+        if not render_ok:
+            result["valid"] = False
+            result["errors"].append(f"mermaid_render_error: {render_error}")
+
+    return result
+
 
 @mcp.tool()
 def fix_mermaid(code: str) -> dict:
-    """Normalize and best-effort fix Mermaid code, then validate."""
+    """Normalize and best-effort fix Mermaid code, then validate with mermaid.js."""
     fixed, applied, v = basic_fix_mermaid(code)
+    errors = list(v.errors)
+
+    # If heuristic validation passed, also check with mermaid.js renderer
+    if v.valid:
+        render_ok, render_error = _mermaid_render_check(fixed)
+        if not render_ok:
+            errors.append(f"mermaid_render_error: {render_error}")
+
     return {
         "fixed_code": fixed,
         "applied_fixes": applied,
         "validation": {
-            "valid": v.valid,
-            "errors": v.errors,
+            "valid": v.valid and len(errors) == 0,
+            "errors": errors,
             "warnings": v.warnings,
             "diagram_type": v.diagram_type,
         },

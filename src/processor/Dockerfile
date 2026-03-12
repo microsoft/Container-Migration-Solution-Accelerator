@@ -28,7 +28,8 @@ RUN curl -fsSLo /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-
     && tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
     && rm -f /tmp/node.tar.gz \
     && node --version \
-    && npm --version
+    && npm --version \
+    && npm install -g mermaid
 
 # Copy pyproject.toml and uv.lock first for better caching
 COPY pyproject.toml uv.lock ./
