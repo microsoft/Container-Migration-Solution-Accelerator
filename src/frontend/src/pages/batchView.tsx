@@ -29,6 +29,7 @@ import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
 import yaml from "react-syntax-highlighter/dist/esm/languages/hljs/yaml"
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown"
+import json from "react-syntax-highlighter/dist/esm/languages/hljs/json"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -46,6 +47,7 @@ import { format } from "sql-formatter";
 SyntaxHighlighter.registerLanguage("sql", sql)
 SyntaxHighlighter.registerLanguage("yaml", yaml)
 SyntaxHighlighter.registerLanguage("markdown", markdown)
+SyntaxHighlighter.registerLanguage("json", json)
 
 
 
@@ -197,6 +199,8 @@ const BatchStoryPage = () => {
       case 'md':
       case 'markdown':
         return { language: 'markdown', type: 'Markdown' };
+      case 'json':
+        return { language: 'json', type: 'JSON' };
       default:
         return { language: 'sql', type: 'T-SQL' }; // Default to SQL for backwards compatibility
     }
