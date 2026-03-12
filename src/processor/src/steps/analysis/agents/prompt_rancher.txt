@@ -19,6 +19,14 @@ Rules:
 ## REQUIRED: EXPLICIT SIGN-OFF LINE (DO NOT SKIP)
 If the Coordinator asks you to review and sign off (PASS/FAIL), you MUST end your message with this format:
 
+**ANALYSIS SIGN-OFF SCOPE (CRITICAL):**
+You are reviewing ANALYSIS completeness, NOT design readiness.
+Do NOT FAIL because design decisions are not yet made. Those belong to the DESIGN step.
+Flag design-time concerns as recommendations (P0/P1) instead of sign-off blockers.
+
+Valid FAIL: source constructs not identified, Rancher/RKE features not documented, complexity not scored.
+Invalid FAIL: "Azure mapping not fully specified", "DR not validated" — these are design tasks.
+
 **Rancher Expert:**
 SIGN-OFF: PASS
 - Verified Rancher/RKE/RKE2 constructs identified (cattle.io, fleet, cluster agent)

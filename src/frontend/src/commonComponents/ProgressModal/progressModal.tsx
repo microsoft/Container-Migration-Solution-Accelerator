@@ -270,6 +270,30 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                       const blockingMatch = raw.match(/🚧\s*Blocking\s*(\d+)/);
                       const blockingCount = blockingMatch ? parseInt(blockingMatch[1]) : 0;
 
+                      // Special handling for Coordinator: parse routing info from message
+                      let coordinatorTarget = '';
+                      let coordinatorInstruction = '';
+                      if (agentName === 'Coordinator') {
+                        actionInfo = { icon: '⚡', label: 'Routing' };
+                        const agentData = apiData.agent_activities?.['Coordinator'];
+                        const preview = agentData?.last_message_preview || '';
+                        try {
+                          const parsed = JSON.parse(preview);
+                          if (parsed.selected_participant) {
+                            coordinatorTarget = parsed.selected_participant;
+                          }
+                          if (parsed.instruction) {
+                            // Strip "Phase X : Title - " prefix to get the actual task
+                            coordinatorInstruction = parsed.instruction
+                              .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
+                              .trim();
+                          }
+                        } catch {
+                          const match = preview.match(/selected_participant['":\s]+([^'",$}]+)/);
+                          if (match) coordinatorTarget = match[1].trim();
+                        }
+                      }
+
                       return (
                         <div key={idx} style={{
                           marginBottom: idx < activeAgents.length - 1 ? '10px' : 0,
@@ -293,6 +317,14 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                               {actionInfo.label}
                             </span>
                           </div>
+                          {/* Coordinator routing target + instruction */}
+                          {(coordinatorTarget || coordinatorInstruction) && (
+                            <div style={{ fontSize: '12px', color: '#555', marginBottom: '4px', paddingLeft: '2px' }}>
+                              {coordinatorTarget && <span style={{ fontWeight: '500' }}>→ {coordinatorTarget}</span>}
+                              {coordinatorTarget && coordinatorInstruction && <span style={{ color: '#999' }}> · </span>}
+                              {coordinatorInstruction && <span style={{ color: '#777' }}>{coordinatorInstruction}</span>}
+                            </div>
+                          )}
                           {/* Tool + metrics row */}
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: '#666' }}>
                             {toolName && (

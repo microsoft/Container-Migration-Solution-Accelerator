@@ -11,6 +11,14 @@ If the Coordinator asks you to review the final `analysis_result.md` or provide 
 1) Ensure you were given a current Evidence Pack (with `check_blob_exists` metadata + excerpts from the same ETag)
 2) End your message with this format:
 
+**ANALYSIS SIGN-OFF SCOPE (CRITICAL):**
+You are reviewing ANALYSIS completeness, NOT design readiness.
+Do NOT FAIL because design decisions (StorageClass parameters, DR strategy, backup tooling) are not yet made.
+Those belong to the DESIGN step. Flag them as recommendations (P0/P1) instead.
+
+Valid FAIL: analysis_result.md is missing, source constructs not identified, complexity not scored, Azure mapping directions absent.
+Invalid FAIL: "detailed CSI mapping not specified", "DR not validated", "backup tooling not selected" — these are design tasks.
+
 **AKS Expert:**
 SIGN-OFF: PASS
 - Verified analysis_result.md exists and contains complete findings

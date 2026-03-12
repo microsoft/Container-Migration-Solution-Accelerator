@@ -137,6 +137,7 @@ const ProcessPage: React.FC = () => {
       'analysis': 'Analysis',
       'design': 'Design',
       'yaml_conversion': 'YAML',
+      'yaml': 'YAML',
       'documentation': 'Documentation'
     };
 
@@ -144,6 +145,7 @@ const ProcessPage: React.FC = () => {
       'analysis': 'Analyzing workloads and dependencies, existing container images and configurations',
       'design': 'Designing target environment mappings to align with Azure AKS',
       'yaml_conversion': 'Converting container specifications and orchestration configs to Azure format',
+      'yaml': 'Converting container specifications and orchestration configs to Azure format',
       'documentation': 'Generating migration report and deployment files'
     };
 
@@ -165,7 +167,7 @@ const ProcessPage: React.FC = () => {
     }
 
     const stepKey = (step || '').toLowerCase();
-    const stepName = stepDisplayNames[stepKey] || step || 'Processing';
+    const stepName = stepDisplayNames[stepKey] || (step ? step.charAt(0).toUpperCase() + step.slice(1) : 'Processing');
 
     // Use step-level description if phase matches the step, otherwise show sub-phase
     const baseMessage = stepMessages[stepKey] || `${phase} phase in progress`;
@@ -214,6 +216,7 @@ const ProcessPage: React.FC = () => {
             'analysis': 'Analysis',
             'design': 'Design',
             'yaml_conversion': 'YAML',
+            'yaml': 'YAML',
             'documentation': 'Documentation'
           };
           const stepKey = (response.step || '').toLowerCase();
