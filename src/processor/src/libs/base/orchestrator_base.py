@@ -5,10 +5,11 @@
 
 import json
 import logging
+import re
 from abc import abstractmethod
 from typing import Any, Callable, Generic, MutableMapping, Sequence, TypeVar
 
-from agent_framework import ChatAgent, ToolProtocol, ManagerSelectionResponse
+from agent_framework import ChatAgent, ManagerSelectionResponse, ToolProtocol
 
 from libs.agent_framework.agent_builder import AgentBuilder
 from libs.agent_framework.agent_framework_helper import ClientType
@@ -110,7 +111,8 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
             # Only attach tools when provided. (Coordinator should typically have none.)
             if agent_info.tools is not None:
                 builder = (
-                    builder.with_tools(agent_info.tools)
+                    builder
+                    .with_tools(agent_info.tools)
                     .with_temperature(0.0)
                     .with_max_tokens(20_000)
                 )
@@ -118,7 +120,8 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
             if agent_info.agent_name == "Coordinator":
                 # Routing-only: keep deterministic and small.
                 builder = (
-                    builder.with_temperature(0.0)
+                    builder
+                    .with_temperature(0.0)
                     .with_response_format(ManagerSelectionResponse)
                     .with_max_tokens(1_500)
                     .with_tools(agent_info.tools)  # for checking file existence
@@ -126,7 +129,8 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
             elif agent_info.agent_name == "ResultGenerator":
                 # Structured JSON generation; deterministic and bounded.
                 builder = (
-                    builder.with_temperature(0.0)
+                    builder
+                    .with_temperature(0.0)
                     .with_max_tokens(12_000)
                     .with_tool_choice("none")
                 )
@@ -217,6 +221,19 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 coordinator_response = ManagerSelectionResponse.model_validate(
                     response_dict
                 )
+
+                # Extract phase name from instruction (e.g., "Phase 2 : Platform Enhancement - ..." -> "Platform Enhancement")
+                instruction = coordinator_response.instruction or ""
+                phase_match = re.match(
+                    r"Phase\s+\d+\s*:\s*([^-]+)", instruction, re.IGNORECASE
+                )
+                if phase_match:
+                    phase_name = phase_match.group(1).strip().title()
+                    await telemetry.update_phase(
+                        process_id=self.task_param.process_id,
+                        phase=phase_name,
+                    )
+
                 if not coordinator_response.finish:
                     if self.is_console_summarization_enabled():
                         try:

@@ -245,15 +245,20 @@ ABSOLUTE RULE: Respond with single JSON object only.
 JSON SCHEMA:
 {
   "selected_participant": "<name from valid list>" | null,
-  "instruction": "<what to do>" | "complete" | "hard_blocked",
+  "instruction": "Phase X : Phase Title - <what to do>" | "complete" | "hard_blocked",
   "finish": true | false,
   "final_message": "<reason>" | null
 }
 
+IMPORTANT: When continuing work (finish=false), instruction MUST start with
+"Phase X : Phase Title - " where X is the current phase number and Phase Title
+matches the PHASE heading from Section 2. This is required for the UI to display
+phase progress.
+
 EXAMPLES:
 
 Continue work (select next participant):
-{"selected_participant": "Technical Writer", "instruction": "Draft migration_report.md based on analysis, design, and conversion reports", "finish": false, "final_message": null}
+{"selected_participant": "Technical Writer", "instruction": "Phase 2 : Draft Report - Draft migration_report.md based on analysis, design, and conversion reports", "finish": false, "final_message": null}
 
 Terminate with success:
 {"selected_participant": null, "instruction": "complete", "finish": true, "final_message": "migration_report.md verified via blob tools and all required reviewers provided SIGN-OFF: PASS."}
