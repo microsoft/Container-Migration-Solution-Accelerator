@@ -276,21 +276,31 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                       if (agentName === 'Coordinator') {
                         actionInfo = { icon: '⚡', label: 'Routing' };
                         const agentData = apiData.agent_activities?.['Coordinator'];
+                        // Try full message first (preview is truncated to 300 chars which breaks JSON parsing)
+                        const fullMsg = agentData?.last_full_message || '';
                         const preview = agentData?.last_message_preview || '';
+                        const msgToParse = fullMsg || preview;
                         try {
-                          const parsed = JSON.parse(preview);
+                          const parsed = JSON.parse(msgToParse);
                           if (parsed.selected_participant) {
                             coordinatorTarget = parsed.selected_participant;
                           }
                           if (parsed.instruction) {
-                            // Strip "Phase X : Title - " prefix to get the actual task
                             coordinatorInstruction = parsed.instruction
                               .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
                               .trim();
                           }
                         } catch {
-                          const match = preview.match(/selected_participant['":\s]+([^'",$}]+)/);
-                          if (match) coordinatorTarget = match[1].trim();
+                          // Try regex on both full and preview
+                          const text = fullMsg || preview;
+                          const nameMatch = text.match(/selected_participant['":\s]+([^'",$}]+)/);
+                          if (nameMatch) coordinatorTarget = nameMatch[1].trim();
+                          const instrMatch = text.match(/instruction['":\s]+([^"]+?)(?:"|$)/);
+                          if (instrMatch) {
+                            coordinatorInstruction = instrMatch[1]
+                              .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
+                              .trim();
+                          }
                         }
                       }
 

@@ -221,6 +221,7 @@ class ProcessStatusRepository(RepositoryBase[ProcessStatus, str]):
                         "name": agent.name,
                         "current_action": agent.current_action,
                         "last_message_preview": agent.last_message_preview,
+                        "last_full_message": getattr(agent, "last_full_message", ""),
                         "last_update_time": agent.last_update_time,
                         "is_active": agent.is_active,
                         "is_currently_speaking": agent.is_currently_speaking,
