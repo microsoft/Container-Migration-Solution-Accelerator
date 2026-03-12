@@ -86,8 +86,12 @@ PHASE 5: RE-CHECK (previously failing reviewers)
 - They re-check and update SIGN-OFF
 
 PHASE 6: FINAL SIGN-OFF (Chief Architect)
+- BEFORE Chief Architect finalizes, check:
+  * If YAML Expert's sign-off is still PENDING in file_converting_result.md → route to YAML Expert with instruction: "All reviewers have provided PASS. Update your own SIGN-OFF from PENDING to PASS in file_converting_result.md and populate the ## References section with validated Microsoft Learn URLs using microsoft_docs_search."
+  * If References section is empty or says "To be populated" → route to YAML Expert to populate it
+- THEN route to Chief Architect for final sign-off
 - Chief Architect provides final: "SIGN-OFF: PASS" or "SIGN-OFF: FAIL"
-- All reviewers must be explicitly PASS before termination
+- All reviewers (including YAML Expert) must be explicitly PASS before termination
 
 
 ═══════════════════════════════════════════════════════════════════
@@ -134,7 +138,9 @@ REQUIRED REVIEWERS:
 
 SIGN-OFF FORMAT:
 Each reviewer MUST state exactly:
-- PASS: "SIGN-OFF: PASS" or "SIGN-OFF: PASS - <optional notes>"
+- PASS: "SIGN-OFF: PASS" followed by bullet notes explaining WHAT was verified (minimum 2 bullets)
+  Example: "SIGN-OFF: PASS\n- All converted YAMLs structurally valid and AKS-compatible\n- Assumptions documented for GPU labels and storage names"
+  REJECT bare "SIGN-OFF: PASS" with no notes — route back and ask for verification details.
 - FAIL: "SIGN-OFF: FAIL" + blocker board (see below)
 
 BLOCKER BOARD FORMAT (for FAIL only):

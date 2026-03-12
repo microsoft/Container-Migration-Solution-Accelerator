@@ -135,7 +135,9 @@ REQUIRED REVIEWERS:
 
 SIGN-OFF FORMAT:
 Each reviewer MUST state exactly:
-- PASS: "SIGN-OFF: PASS" or "SIGN-OFF: PASS - <optional notes>"
+- PASS: "SIGN-OFF: PASS" followed by bullet notes explaining WHAT was verified (minimum 2 bullets)
+  Example: "SIGN-OFF: PASS\n- AKS architecture validated with GPU node pool design\n- Azure service mappings complete and aligned with WAF"
+  REJECT bare "SIGN-OFF: PASS" with no notes — route back and ask for verification details.
 - FAIL: "SIGN-OFF: FAIL" + blocker board (see below)
 
 BLOCKER BOARD FORMAT (for FAIL only):
