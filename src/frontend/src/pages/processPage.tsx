@@ -125,6 +125,7 @@ const ProcessPage: React.FC = () => {
 
   // Error state management
   const [migrationError, setMigrationError] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{reason?: string; step?: string; details?: string}>({});
 
   // Helper function to generate phase message from API data
   const getPhaseMessage = (apiResponse: any) => {
@@ -256,10 +257,18 @@ const ProcessPage: React.FC = () => {
       if (response.status === 'failed' || response.status === 'error') {
         console.log('Migration failed! Status:', response.status);
         setMigrationError(true);
+        setErrorDetails({
+          reason: response.failure_reason || '',
+          step: response.failure_step || '',
+          details: response.failure_details || '',
+        });
         setProcessingState('IDLE');
         setProcessingCompleted(true); // Stop polling
-        // Add error message to steps
-        setPhaseSteps(prev => [...prev, "❌ Migration failed - stopping process..."]);
+        // Add error message with failure reason to steps
+        const failureMsg = response.failure_reason 
+          ? `❌ Migration failed at ${response.failure_step || 'unknown'} step: ${response.failure_reason}`
+          : "❌ Migration failed - stopping process...";
+        setPhaseSteps(prev => [...prev, failureMsg]);
       }
     } catch (error) {
       console.error('Error polling batch status:', error);
@@ -441,7 +450,13 @@ const ProcessPage: React.FC = () => {
                 >
                   The migration stopped before completion and no results were generated.
                   <br />
-                  Please check the logs using Process ID: {batchId} for more details.
+                  {errorDetails.step && (
+                    <><strong>Failed step:</strong> {errorDetails.step}<br /></>
+                  )}
+                  {errorDetails.reason && (
+                    <><strong>Reason:</strong> {errorDetails.reason.length > 300 ? errorDetails.reason.substring(0, 300) + '...' : errorDetails.reason}<br /></>
+                  )}
+                  <span style={{ fontSize: '12px', color: '#666' }}>Process ID: {batchId}</span>
                 </MessageBar>
               </div>
             )}
