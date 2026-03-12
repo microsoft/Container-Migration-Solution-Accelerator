@@ -118,12 +118,12 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 )
 
             if agent_info.agent_name == "Coordinator":
-                # Routing-only: keep deterministic and small.
+                # Routing-only: keep deterministic. Needs enough tokens for long instructions.
                 builder = (
                     builder
                     .with_temperature(0.0)
                     .with_response_format(ManagerSelectionResponse)
-                    .with_max_tokens(1_500)
+                    .with_max_tokens(4_000)
                     .with_tools(agent_info.tools)  # for checking file existence
                 )
             elif agent_info.agent_name == "ResultGenerator":
