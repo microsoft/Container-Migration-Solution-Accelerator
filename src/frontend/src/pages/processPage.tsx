@@ -29,21 +29,21 @@ const scrollbarStyles = `
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
@@ -57,17 +57,17 @@ const scrollbarStyles = `
   .main-content::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   .main-content::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
-  
+
   .main-content::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
   }
-  
+
   .main-content::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
@@ -77,11 +77,11 @@ const scrollbarStyles = `
     .bg-gray-50 {
       padding: 2rem !important;
     }
-    
+
     .text-2xl {
       font-size: 2.5rem !important;
     }
-    
+
     .text-lg {
       font-size: 1.5rem !important;
     }
@@ -265,7 +265,7 @@ const ProcessPage: React.FC = () => {
         setProcessingState('IDLE');
         setProcessingCompleted(true); // Stop polling
         // Add error message with failure reason to steps
-        const failureMsg = response.failure_reason 
+        const failureMsg = response.failure_reason
           ? `❌ Migration failed at ${response.failure_step || 'unknown'} step: ${response.failure_reason}`
           : "❌ Migration failed - stopping process...";
         setPhaseSteps(prev => [...prev, failureMsg]);
@@ -298,23 +298,23 @@ const ProcessPage: React.FC = () => {
   // Progressive step display that keeps appending cycles
   useEffect(() => {
     let stepTimer: ReturnType<typeof setTimeout>;
-    
+
     const addNextStep = () => {
       setVisibleStepsCount(prev => {
         const newCount = prev + 1;
-        
+
         // After every 4 steps, increment the cycle count
         if (newCount % 4 === 0) {
           setTotalCycles(prevCycles => prevCycles + 1);
         }
-        
+
         return newCount;
       });
-      
+
       // Schedule next step in 5 seconds
       stepTimer = setTimeout(addNextStep, 5000);
     };
-    
+
     // Start the first step after 5 seconds
     stepTimer = setTimeout(addNextStep, 5000);
 

@@ -31,6 +31,9 @@ import yaml from "react-syntax-highlighter/dist/esm/languages/hljs/yaml"
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeRaw from "rehype-raw"
+import mermaid from "mermaid"
 import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
@@ -57,6 +60,107 @@ interface FileItem {
   errorCount?: number;
   warningCount?: number;
 }
+
+// Initialize mermaid for diagram rendering
+mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+// Mermaid code block renderer
+const MermaidBlock: React.FC<{ chart: string }> = ({ chart }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = React.useState<string>('');
+
+  React.useEffect(() => {
+    const renderChart = async () => {
+      try {
+        const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
+        const { svg: renderedSvg } = await mermaid.render(id, chart);
+        setSvg(renderedSvg);
+      } catch (err) {
+        console.warn('Mermaid render failed:', err);
+        setSvg(`<pre style="color:#888">${chart}</pre>`);
+      }
+    };
+    renderChart();
+  }, [chart]);
+
+  return (
+    <div
+      ref={containerRef}
+      dangerouslySetInnerHTML={{ __html: svg }}
+      style={{ textAlign: 'center', margin: '16px 0', overflow: 'auto' }}
+    />
+  );
+};
+
+// GitHub-style markdown table and content styles
+const markdownStyles = `
+  .gh-markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .gh-markdown th, .gh-markdown td {
+    border: 1px solid #d0d7de;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .gh-markdown th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+  }
+  .gh-markdown tr:nth-child(even) {
+    background-color: #f6f8fa;
+  }
+  .gh-markdown h1, .gh-markdown h2 {
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 8px;
+    margin-top: 24px;
+  }
+  .gh-markdown h3, .gh-markdown h4 {
+    margin-top: 20px;
+  }
+  .gh-markdown code {
+    background-color: #eff1f3;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .gh-markdown pre {
+    background-color: #f6f8fa;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  .gh-markdown pre code {
+    background-color: transparent;
+    padding: 0;
+  }
+  .gh-markdown blockquote {
+    border-left: 4px solid #d0d7de;
+    padding: 0 16px;
+    color: #656d76;
+    margin: 16px 0;
+  }
+  .gh-markdown ul, .gh-markdown ol {
+    padding-left: 24px;
+  }
+  .gh-markdown li {
+    margin: 4px 0;
+  }
+  .gh-markdown a {
+    color: #0969da;
+    text-decoration: none;
+  }
+  .gh-markdown a:hover {
+    text-decoration: underline;
+  }
+  .gh-markdown hr {
+    border: none;
+    border-top: 1px solid #d0d7de;
+    margin: 24px 0;
+  }
+`;
 
 const BatchStoryPage = () => {
   const { batchId } = useParams<{ batchId: string }>();
@@ -101,7 +205,7 @@ const BatchStoryPage = () => {
   // Helper function to format content based on file type
   const formatContent = (content: string, fileName: string) => {
     const { language } = getFileLanguageAndType(fileName);
-    
+
     // Only apply SQL formatting for SQL files
     if (language === 'sql') {
       try {
@@ -111,7 +215,7 @@ const BatchStoryPage = () => {
         return content;
       }
     }
-    
+
     // Return content as-is for YAML and Markdown files
     return content;
   };
@@ -410,15 +514,45 @@ const BatchStoryPage = () => {
                 ) : null}
                 {selectedFileTranslatedContent ? (
                   getFileLanguageAndType(selectedFile.name).language === 'markdown' ? (
-                    <div style={{
+                    <div className="gh-markdown" style={{
                       margin: 0,
-                      padding: "16px",
+                      padding: "16px 24px",
                       backgroundColor: tokens.colorNeutralBackground1,
                       borderRadius: "4px",
                       overflow: "auto",
-                      maxHeight: "70vh"
+                      maxHeight: "70vh",
+                      lineHeight: "1.6",
+                      fontSize: "14px",
                     }}>
-                      <ReactMarkdown>{selectedFileTranslatedContent}</ReactMarkdown>
+                      <style>{markdownStyles}</style>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          code({ className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            const codeText = String(children).replace(/\n$/, '');
+                            if (match && match[1] === 'mermaid') {
+                              return <MermaidBlock chart={codeText} />;
+                            }
+                            // Inline code vs block code
+                            if (!className) {
+                              return <code {...props}>{children}</code>;
+                            }
+                            return (
+                              <SyntaxHighlighter
+                                language={match ? match[1] : 'text'}
+                                style={vs}
+                                customStyle={{ margin: 0, borderRadius: '6px' }}
+                              >
+                                {codeText}
+                              </SyntaxHighlighter>
+                            );
+                          }
+                        }}
+                      >
+                        {selectedFileTranslatedContent}
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <SyntaxHighlighter
@@ -500,7 +634,7 @@ const BatchStoryPage = () => {
                   {getJsonYamlFileCount() === 0 ? "No files to process!" : "No errors! Your files are ready to download."}
                 </Text>
                 <Text style={{ marginBottom: '16px', color: '#666' }}>
-                  {getJsonYamlFileCount() === 0 
+                  {getJsonYamlFileCount() === 0
                     ? "No files were found in this migration batch. Please upload files to proceed with the migration process."
                     : "Your files have been successfully migrated with no errors. All files are now ready for download. Click 'Download' to save them to your local drive."
                   }
@@ -546,8 +680,8 @@ const BatchStoryPage = () => {
                           <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Conversion Accuracy</div>
                           <div style={{ fontSize: '20px', fontWeight: '600', color: '#107c10' }}>
                             {(() => {
-                              const yamlResult = Array.isArray(telemetryData.step_results.yaml.result) 
-                                ? telemetryData.step_results.yaml.result[0] 
+                              const yamlResult = Array.isArray(telemetryData.step_results.yaml.result)
+                                ? telemetryData.step_results.yaml.result[0]
                                 : telemetryData.step_results.yaml.result;
                               return yamlResult?.termination_output?.overall_conversion_metrics?.overall_accuracy || 'N/A';
                             })()}
@@ -799,9 +933,9 @@ const BatchStoryPage = () => {
 
       <div className={styles.content}>
         <PanelLeft panelWidth={400} panelResize={true}>
-          <div className={styles.panelHeader} style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
+          <div className={styles.panelHeader} style={{
+            display: "flex",
+            justifyContent: "space-between",
             alignItems: "center",
             padding: "8px 16px 8px 16px",
             marginTop: "15px",

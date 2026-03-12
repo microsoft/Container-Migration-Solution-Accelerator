@@ -1,12 +1,12 @@
 import React from "react";
-import { 
-  Dialog, 
-  DialogSurface, 
-  DialogBody, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
   DialogContent,
   DialogActions,
-  Button 
+  Button
 } from "@fluentui/react-components";
 import { Dismiss24Regular } from "@fluentui/react-icons";
 import Lottie from 'lottie-react';
@@ -77,8 +77,8 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onOpenChange={(event, data) => {
         // Just close the modal without triggering onCancel
         setOpen(data.open);
@@ -90,9 +90,9 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <DialogTitle>{title}</DialogTitle>
             {!processingCompleted && (
-              <Button 
-                appearance="subtle" 
-                icon={<Dismiss24Regular />} 
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
                 onClick={handleClose}
                 style={{
                   position: "absolute",
@@ -104,23 +104,23 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
               />
             )}
           </div>
-          
+
           <DialogContent>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Current Phase Display */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '40px', height: '40px' }}>
                   {!processingCompleted ? (
-                    <Lottie 
-                      animationData={documentLoader} 
-                      loop={true} 
+                    <Lottie
+                      animationData={documentLoader}
+                      loop={true}
                       style={{ width: '100%', height: '100%' }}
                     />
                   ) : (
-                    <div style={{ 
-                      fontSize: '24px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <div style={{
+                      fontSize: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       width: '100%',
                       height: '100%'
@@ -131,13 +131,13 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                 </div>
                 <div>
                   <div style={{ fontWeight: '600', fontSize: '16px' }}>
-                    {migrationError ? 'Migration Failed!' : 
-                     processingCompleted ? 'Migration Completed!' : 
+                    {migrationError ? 'Migration Failed!' :
+                     processingCompleted ? 'Migration Completed!' :
                      `${currentPhase || 'Processing'} Phase`}
                   </div>
                   <div style={{ fontSize: '14px', color: '#666' }}>
                     {migrationError ? 'The migration stopped before completion.' :
-                     processingCompleted ? 'Your container migration is ready!' : 
+                     processingCompleted ? 'Your container migration is ready!' :
                      'Converting your container workloads...'}
                   </div>
                 </div>
@@ -145,9 +145,9 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
 
               {/* Progress Bar */}
               <div style={{ width: '100%' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   marginBottom: '8px'
                 }}>
@@ -165,7 +165,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                     style={{
                       width: `${progressPercentage}%`,
                       height: '100%',
-                      backgroundColor: migrationError ? '#dc3545' : 
+                      backgroundColor: migrationError ? '#dc3545' :
                                      processingCompleted ? '#4CAF50' : '#0078d4',
                       borderRadius: '4px',
                       transition: 'width 0.5s ease-in-out'
@@ -176,9 +176,9 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
 
               {/* Phase Information */}
               {apiData && (
-                <div style={{ 
-                  backgroundColor: '#f8f9fa', 
-                  padding: '12px', 
+                <div style={{
+                  backgroundColor: '#f8f9fa',
+                  padding: '12px',
                   borderRadius: '6px',
                   fontSize: '14px'
                 }}>
@@ -335,9 +335,9 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                             <span style={{ fontSize: '15px' }}>{actionInfo.icon}</span>
                             <span style={{ fontWeight: '600', color: '#333' }}>{agentName}</span>
-                            <span style={{ 
-                              fontSize: '12px', 
-                              color: '#0078d4', 
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#0078d4',
                               backgroundColor: '#e8f4fd',
                               padding: '1px 8px',
                               borderRadius: '10px',
@@ -416,10 +416,10 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                   <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {[...phaseSteps].reverse().slice(0, 5).map((step, index) => (
-                      <div 
+                      <div
                         key={index}
-                        style={{ 
-                          fontSize: '13px', 
+                        style={{
+                          fontSize: '13px',
                           color: '#666',
                           padding: '6px 8px',
                           backgroundColor: 'white',
@@ -436,36 +436,36 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
               )}
             </div>
           </DialogContent>
-          
+
           {showCancelButton && !processingCompleted && (
             <DialogActions>
-              <Button 
-                appearance="primary" 
+              <Button
+                appearance="primary"
                 onClick={handleClose}
               >
                 Continue
               </Button>
-              <Button 
-                appearance="secondary" 
+              <Button
+                appearance="secondary"
                 onClick={handleCancel}
               >
                 Cancel Processing
               </Button>
             </DialogActions>
           )}
-          
+
           {processingCompleted && (
             <DialogActions>
               {migrationError && onNavigateHome && (
-                <Button 
-                  appearance="secondary" 
+                <Button
+                  appearance="secondary"
                   onClick={onNavigateHome}
                 >
                   Back to Home
                 </Button>
               )}
-              <Button 
-                appearance="primary" 
+              <Button
+                appearance="primary"
                 onClick={() => setOpen(false)}
               >
                 View Results
