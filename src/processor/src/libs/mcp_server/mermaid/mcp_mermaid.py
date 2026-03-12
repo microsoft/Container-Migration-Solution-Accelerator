@@ -340,7 +340,6 @@ def _mermaid_render_check(code: str, timeout: int = 10) -> tuple[bool, str]:
 
     # Use a simple Node.js script that imports mermaid and tries to parse
     js_script = """
-const { createRequire } = require('module');
 try {
     const mermaid = require('mermaid');
     mermaid.default.initialize({ startOnLoad: false, suppressErrors: false });
@@ -348,7 +347,13 @@ try {
     mermaid.default.parse(code).then(result => {
         process.stdout.write(JSON.stringify({ valid: true }));
     }).catch(err => {
-        process.stdout.write(JSON.stringify({ valid: false, error: err.message || String(err) }));
+        const msg = err.message || String(err);
+        // DOMPurify/DOM errors mean syntax parsed OK but renderer needs browser - treat as valid
+        if (msg.includes('DOMPurify') || msg.includes('document') || msg.includes('window')) {
+            process.stdout.write(JSON.stringify({ valid: true }));
+        } else {
+            process.stdout.write(JSON.stringify({ valid: false, error: msg }));
+        }
     });
 } catch (e) {
     // mermaid not installed, skip

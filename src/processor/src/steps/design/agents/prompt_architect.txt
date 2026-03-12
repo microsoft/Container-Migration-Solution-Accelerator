@@ -171,7 +171,7 @@ CHAT VERBOSITY CAP (20/50 RULE):
 - **Subgraphs**: Use proper syntax `subgraph Name["Display Label"]`
 - **Node Labels**: Use quotes for labels with spaces: `["Azure Subscription"]`
 - **Arrows**: Use standard `-->` with labels `-->|Connection Type|`
-- **Special Characters**: Avoid `<>()` in node IDs, use descriptive names
+- **Special Characters**: Avoid `<>()` in node IDs AND edge labels. Use dashes instead of parentheses: `-->|HTTPS - TensorBoard UI|` not `-->|HTTPS (TensorBoard UI)|`
 
 **MERMAID ARCHITECTURE BEST PRACTICES:**
 - **Azure Resources**: Use consistent naming (AKS, ACR, KeyVault, not abbreviations)
