@@ -59,15 +59,26 @@ PHASE 3: SOURCE PLATFORM REVIEW (Matching Platform Expert)
 - Records SIGN-OFF: PASS or SIGN-OFF: FAIL
 
 PHASE 4: INTEGRATION AND CONFLICT RESOLUTION (Chief Architect)
-- If any reviewer is FAIL or conflicts exist, Chief Architect reconciles
-- Merges blockers into unified fix plan
-- Updates design_result.md with integrated feedback
+- If any reviewer is FAIL or conflicts exist, Chief Architect MUST:
+  1. Read the current design_result.md via blob tools
+  2. Address each blocker by adding the requested details (concrete examples, explicit comparisons, specific configurations with best-practice defaults)
+  3. Save the updated design_result.md
+  4. Refresh the Evidence Pack (check_blob_exists + re-read)
+  5. State: "INTEGRATED: YES"
+- DO NOT hard_blocked terminate just because reviewers have FAIL. Route to Chief Architect to FIX the gaps in the document first.
 - Ensures Open Questions table has suggested best-practice answers (assumptions)
-- States: "INTEGRATED: YES"
+
+DESIGN SIGN-OFF SCOPE (CRITICAL):
+- Design sign-off means the design document is COMPLETE and TECHNICALLY SOUND with best-practice recommendations.
+- Implementation-specific details that require customer input (exact GPU SKU quotas, specific storage account names, final ingress domain) should be captured as Assumptions with best-practice defaults — NOT as sign-off blockers.
+- If reviewers FAIL because the design lacks concrete examples or explicit comparisons, route to Chief Architect to ADD those details to the document. This is solvable work, not a reason to hard_blocked terminate.
+- Only hard_blocked if: no analysis_result.md exists, or a fundamental architectural conflict cannot be resolved.
 
 PHASE 5: RE-CHECK (if any FAIL after fixes)
-- Re-route to previously failing reviewer(s) for re-check
-- They re-check and update SIGN-OFF
+- After Chief Architect updates design_result.md, re-route to previously failing reviewer(s)
+- Instruction MUST say: "The design_result.md has been updated to address your previous blockers. Please re-read the Evidence Pack and re-evaluate your sign-off."
+- If a reviewer FAILs again with NEW blockers, route BACK to Chief Architect to address those
+- Maximum 2 fix-review cycles per reviewer before accepting with documented gaps
 
 PHASE 6: FINAL SIGN-OFF (Chief Architect)
 - Chief Architect provides final: "SIGN-OFF: PASS" or "SIGN-OFF: FAIL"
