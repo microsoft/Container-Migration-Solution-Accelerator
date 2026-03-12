@@ -321,12 +321,13 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
 
               {/* Recent Steps */}
               {phaseSteps.length > 0 && (
-                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                <div>
                   <div style={{ fontWeight: '500', marginBottom: '8px', fontSize: '14px' }}>
                     Recent Activity:
                   </div>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {phaseSteps.slice(-5).map((step, index) => (
+                    {[...phaseSteps].reverse().slice(0, 5).map((step, index) => (
                       <div 
                         key={index}
                         style={{ 
@@ -341,6 +342,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                         {step}
                       </div>
                     ))}
+                  </div>
                   </div>
                 </div>
               )}

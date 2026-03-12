@@ -218,7 +218,8 @@ const ProcessPage: React.FC = () => {
           };
           const stepKey = (response.step || '').toLowerCase();
           const stepLabel = stepDisplayNames[stepKey] || response.step || response.phase || 'Processing';
-          setCurrentPhase(stepLabel);
+          // Show phase name (sub-phase) in the title for real-time detail, fall back to step name
+          setCurrentPhase(response.phase || stepLabel);
           setPhaseSteps(prev => {
             // Check if the new message is different from the last message
             const lastMessage = prev[prev.length - 1];
