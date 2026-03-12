@@ -311,15 +311,20 @@ class MigrationProcessor:
                         report_collector.set_current_step(
                             event.source_executor_id or "unknown"
                         )
+
+                        # Build a meaningful error message instead of generic "Workflow output is None"
+                        executor_id = event.source_executor_id or "unknown"
+                        error_msg = f"Step '{executor_id}' completed without producing output. This may be caused by context length overflow, agent timeout, or an internal orchestration error. Check processor logs for '[AOAI_CTX_TRIM_STREAM]' or exception details."
+
                         report_collector.record_failure(
-                            exception=ValueError("Workflow output is None"),
-                            custom_message="Workflow output is None",
+                            exception=ValueError(error_msg),
+                            custom_message=error_msg,
                         )
 
-                        failure_details: Any = "Workflow output is None"
+                        failure_details: Any = error_msg
                         try:
                             failure_details = {
-                                "reason": "Workflow output is None",
+                                "reason": error_msg,
                                 "migration_report_summary": await _generate_report_summary(
                                     ReportStatus.FAILED
                                 ),
@@ -330,7 +335,7 @@ class MigrationProcessor:
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
                             failed_step=event.source_executor_id or "unknown",
-                            error_message="Workflow output is None",
+                            error_message=error_msg,
                             failure_details=failure_details,
                             execution_time_seconds=(
                                 time.perf_counter()
@@ -348,7 +353,7 @@ class MigrationProcessor:
                             {
                                 "executor_id": event.source_executor_id or "unknown",
                                 "error_type": "WorkflowOutputMissing",
-                                "message": "Workflow output is None",
+                                "message": error_msg,
                                 "traceback": None,
                             }
                         )

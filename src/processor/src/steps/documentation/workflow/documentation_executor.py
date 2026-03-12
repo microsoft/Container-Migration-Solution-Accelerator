@@ -41,23 +41,8 @@ class DocumentationExecutor(Executor):
 
         result = await documentation_orchestrator.execute(task_param=message)
 
-        # if result.result is None:
-        #     await telemetry.record_failure_outcome(
-        #         process_id=message.process_id,
-        #         failed_step="documentation",
-        #         error_message=result.error or "No result",
-        #         failure_details=result.error or "No result",
-        #     )
-        #     raise Exception(f"DocumentationExecutor: {result.error or 'No result'}")
-
-        # await telemetry.record_step_result(
-        #     process_id=message.process_id,
-        #     step_name="documentation",
-        #     step_result=result.result,
-        # )
-
-        # await telemetry.update_process_status(
-        #     process_id=message.process_id, status="completed"
-        # )
+        if not result.success or result.result is None:
+            error_msg = result.error or "Documentation orchestration failed with no output"
+            raise Exception(f"DocumentationExecutor failed: {error_msg}")
 
         await ctx.yield_output(result.result)

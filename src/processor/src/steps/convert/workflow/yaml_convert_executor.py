@@ -39,16 +39,9 @@ class YamlConvertExecutor(Executor):
 
         result = await yaml_convert_orchestrator.execute(task_param=message)
 
-        # if not result.success or result.result is None:
-        #     await telemetry.record_failure_outcome(
-        #         process_id=message.process_id,
-        #         failed_step="yaml_conversion",
-        #         error_message=result.error or "YAML conversion orchestration failed",
-        #         failure_details=result.error or "YAML conversion orchestration failed",
-        #     )
-        #     raise Exception(
-        #         f"YamlConvertExecutor: {result.error or 'YAML conversion orchestration failed'}"
-        #     )
+        if not result.success or result.result is None:
+            error_msg = result.error or "YAML conversion orchestration failed with no output"
+            raise Exception(f"YamlConvertExecutor failed: {error_msg}")
 
         if result.result:
             if not result.result.is_hard_terminated:

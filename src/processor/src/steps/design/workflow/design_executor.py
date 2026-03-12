@@ -38,16 +38,9 @@ class DesignExecutor(Executor):
         )
         result = await design_orchestrator.execute(task_param=message)
 
-        # if not result.success or result.result is None:
-        #     await telemetry.record_failure_outcome(
-        #         process_id=message.process_id,
-        #         failed_step="design",
-        #         error_message=result.error or "Design orchestration failed",
-        #         failure_details=result.error or "Design orchestration failed",
-        #     )
-        #     raise Exception(
-        #         f"DesignExecutor: {result.error or 'Design orchestration failed'}"
-        #     )
+        if not result.success or result.result is None:
+            error_msg = result.error or "Design orchestration failed with no output"
+            raise Exception(f"DesignExecutor failed: {error_msg}")
 
         if result.result:
             if not result.result.is_hard_terminated:
