@@ -494,11 +494,13 @@ const BatchStoryPage = () => {
               width: isPanelOpen ? "calc(100% - 320px)" : "98%",
               transition: "width 0.3s ease-in-out",
             }}>
+            {getFileLanguageAndType(selectedFile.name).language !== 'markdown' && (
             <div className={styles.codeHeader}>
               <Text weight="semibold">
-                {selectedFile.name} {selectedFileTranslatedContent && getFileLanguageAndType(selectedFile.name).language !== 'markdown' ? "(Migrated)" : ""}
+                {selectedFile.name} {selectedFileTranslatedContent ? "(Migrated)" : ""}
               </Text>
             </div>
+            )}
             {fileLoading ? (
               <div style={{ padding: "20px", textAlign: "center" }}>
                 <Spinner />
