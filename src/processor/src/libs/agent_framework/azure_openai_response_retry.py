@@ -246,14 +246,14 @@ class ContextTrimConfig:
     """
 
     enabled: bool = True
-    # GPT-5.x class models typically support larger context windows. These defaults
-    # intentionally allow more history before trimming, while still guarding
-    # against accidental multi-hundred-KB blobs being injected into a single call.
-    max_total_chars: int = 240_000
-    max_message_chars: int = 20_000
-    keep_last_messages: int = 40
-    keep_head_chars: int = 10_000
-    keep_tail_chars: int = 3_000
+    # GPT-5.1 supports 272K input tokens (~800K chars). These defaults stay well
+    # within that budget while guarding against accidental large blob injection.
+    # Progressive trimming on retry will reduce these further if needed.
+    max_total_chars: int = 600_000
+    max_message_chars: int = 40_000
+    keep_last_messages: int = 50
+    keep_head_chars: int = 15_000
+    keep_tail_chars: int = 5_000
     keep_system_messages: bool = True
     retry_on_context_error: bool = True
 
@@ -651,33 +651,34 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                     and _looks_like_context_length(e)
                 ):
                     # Make trimming progressively more aggressive on each retry
+                    # GPT-5.1: 272K input tokens ≈ 800K chars. Scale down from 600K default.
                     scale = attempt_index + 1
                     aggressive_cfg = ContextTrimConfig(
                         enabled=True,
                         max_total_chars=max(
-                            20_000,
+                            30_000,
                             self._context_trim_config.max_total_chars
-                            - scale * 50_000,
+                            - scale * 100_000,
                         ),
                         max_message_chars=max(
-                            1_500,
+                            2_000,
                             self._context_trim_config.max_message_chars
-                            - scale * 4_000,
+                            - scale * 8_000,
                         ),
                         keep_last_messages=max(
-                            3,
+                            4,
                             self._context_trim_config.keep_last_messages
                             - scale * 8,
                         ),
                         keep_head_chars=max(
                             500,
                             self._context_trim_config.keep_head_chars
-                            - scale * 2_000,
+                            - scale * 3_000,
                         ),
                         keep_tail_chars=max(
                             500,
                             self._context_trim_config.keep_tail_chars
-                            - scale * 500,
+                            - scale * 1_000,
                         ),
                         keep_system_messages=True,
                         retry_on_context_error=True,
