@@ -651,29 +651,34 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                     and _looks_like_context_length(e)
                 ):
                     # Make trimming progressively more aggressive on each retry
+                    scale = attempt_index + 1
                     aggressive_cfg = ContextTrimConfig(
                         enabled=True,
                         max_total_chars=max(
-                            50_000,
+                            20_000,
                             self._context_trim_config.max_total_chars
-                            - (attempt_index + 1) * 40_000,
+                            - scale * 50_000,
                         ),
                         max_message_chars=max(
-                            3_000,
+                            1_500,
                             self._context_trim_config.max_message_chars
-                            - (attempt_index + 1) * 3_000,
+                            - scale * 4_000,
                         ),
                         keep_last_messages=max(
-                            6,
+                            3,
                             self._context_trim_config.keep_last_messages
-                            - (attempt_index + 1) * 6,
+                            - scale * 8,
                         ),
                         keep_head_chars=max(
-                            1_000,
+                            500,
                             self._context_trim_config.keep_head_chars
-                            - (attempt_index + 1) * 2_000,
+                            - scale * 2_000,
                         ),
-                        keep_tail_chars=self._context_trim_config.keep_tail_chars,
+                        keep_tail_chars=max(
+                            500,
+                            self._context_trim_config.keep_tail_chars
+                            - scale * 500,
+                        ),
                         keep_system_messages=True,
                         retry_on_context_error=True,
                     )
