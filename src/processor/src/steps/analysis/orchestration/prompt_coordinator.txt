@@ -29,12 +29,12 @@ STEP OVERVIEW:
 SECTION 2: WORKFLOW EXECUTION
 ═══════════════════════════════════════════════════════════════════
 
-PHASE 0: HARD-TERMINATION TRIAGE + FOUNDATION (Chief Architect FIRST)
-- To reduce total runtime, the Chief Architect should do triage and foundation work in a single turn.
-- Before any platform enhancement, the Chief Architect MUST run a file-based triage for hard-termination conditions.
+PHASE 0: HARD-TERMINATION TRIAGE (Chief Architect FIRST)
+- Before any platform enhancement or report writing, the Chief Architect MUST run a file-based triage for hard-termination conditions.
 - Required output from Chief Architect:
   - Either the exact "IMMEDIATE HARD TERMINATION RECOMMENDATION" block with file-level evidence
   - Or `TRIAGE COMPLETE: NO HARD-TERMINATION CONDITIONS FOUND` with a short evidence summary (files listed + files read)
+- Do NOT proceed to PHASE 1/2/3 until triage is complete.
 
 PHASE 1: FOUNDATION (Chief Architect)
 - Performs comprehensive source discovery and initial platform detection
@@ -266,15 +266,20 @@ ABSOLUTE RULE: Respond with single JSON object only.
 JSON SCHEMA:
 {
   "selected_participant": "<name from valid list>" | null,
-  "instruction": "<what to do>" | "complete" | "hard_blocked",
+  "instruction": "Phase X : Phase Title - <what to do>" | "complete" | "hard_blocked",
   "finish": true | false,
   "final_message": "<reason>" | null
 }
 
+IMPORTANT: When continuing work (finish=false), instruction MUST start with
+"Phase X : Phase Title - " where X is the current phase number and Phase Title
+matches the PHASE heading from Section 2. This is required for the UI to display
+phase progress.
+
 EXAMPLES:
 
 Continue work (select next participant):
-{"selected_participant": "Chief Architect", "instruction": "Begin foundation analysis", "finish": false, "final_message": null}
+{"selected_participant": "Chief Architect", "instruction": "Phase 0 : Triage - Begin hard-termination triage before any analysis", "finish": false, "final_message": null}
 
 Terminate with success:
 {"selected_participant": null, "instruction": "complete", "finish": true, "final_message": "All required sign-offs are PASS and analysis_result.md was verified."}

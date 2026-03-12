@@ -9,7 +9,7 @@ No global variables, no locks - just clean async/await based functions with a te
 
 Usage:
     telemetry = TelemetryManager(app_context)
-    await telemetry.init_process("process_id", "analysis", "step_1")
+    await telemetry.init_process(process_id="process_id", phase="start", step="analysis")
     await telemetry.update_agent_activity("agent_name", "thinking", "Processing data...")
 """
 
@@ -389,7 +389,7 @@ class TelemetryManager:
 
         # Ensure initial step timing is seeded immediately. This makes lap timing robust
         # even if the workflow emits step "invoked" events late.
-        if (phase or "").strip().lower() == "start" and (step or "").strip():
+        if (step or "").strip():
             timing = new_process.step_timings.get(step) or {}
             timing["started_at"] = (
                 timing.get("started_at") or new_process.started_at_time
@@ -677,6 +677,30 @@ class TelemetryManager:
                     process_id,
                     agent_name,
                 )
+
+    async def update_phase(self, process_id: str, phase: str):
+        """Update only the phase display name without changing step or step timing.
+
+        Used when the Coordinator's instruction indicates a sub-phase transition
+        (e.g. "PHASE 2 PLATFORM ENHANCEMENT: ...") within the current step.
+        """
+        if not self.repository:
+            return
+
+        try:
+            current_process = await self.repository.get_async(process_id)
+            if not current_process:
+                return
+
+            current_process.phase = phase
+            current_process.last_update_time = _get_utc_timestamp()
+            await self.repository.update_async(current_process)
+        except Exception:
+            logger.exception(
+                "Error updating phase (process_id=%s, phase=%s)",
+                process_id,
+                phase,
+            )
 
     async def transition_to_phase(self, process_id: str, phase: str, step: str):
         """Clean transition between phases with proper agent cleanup."""

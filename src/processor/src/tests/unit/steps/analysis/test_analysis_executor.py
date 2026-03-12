@@ -15,7 +15,7 @@ class _FakeTelemetry:
     def __init__(self):
         self.transitions: list[tuple[str, str, str]] = []
 
-    async def transition_to_phase(self, process_id: str, step: str, phase: str):
+    async def transition_to_phase(self, process_id: str, phase: str, step: str):
         self.transitions.append((process_id, step, phase))
 
 

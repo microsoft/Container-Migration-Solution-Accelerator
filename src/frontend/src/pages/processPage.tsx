@@ -130,13 +130,21 @@ const ProcessPage: React.FC = () => {
   const getPhaseMessage = (apiResponse: any) => {
     if (!apiResponse) return "";
 
-    const { phase, active_agent_count, total_agents, health_status, agents } = apiResponse;
+    const { step, phase, active_agent_count, total_agents, health_status, agents } = apiResponse;
 
-    const phaseMessages = {
-      'Analysis': 'Analyzing workloads and dependencies, existing container images and configurations',
-      'Design': 'Designing target environment mappings to align with Azure AKS',
-      'YAML': 'Converting container specifications and orchestration configs to Azure format',
-      'Documentation': 'Generating migration report and deployment files'
+    // Map step identifiers to human-readable step names
+    const stepDisplayNames: Record<string, string> = {
+      'analysis': 'Analysis',
+      'design': 'Design',
+      'yaml_conversion': 'YAML',
+      'documentation': 'Documentation'
+    };
+
+    const stepMessages: Record<string, string> = {
+      'analysis': 'Analyzing workloads and dependencies, existing container images and configurations',
+      'design': 'Designing target environment mappings to align with Azure AKS',
+      'yaml_conversion': 'Converting container specifications and orchestration configs to Azure format',
+      'documentation': 'Generating migration report and deployment files'
     };
 
     // Extract active agent information from agents array
@@ -156,11 +164,16 @@ const ProcessPage: React.FC = () => {
       agentActivity = ` - ${agentName} is thinking`;
     }
 
-    const baseMessage = phaseMessages[phase] || `${phase} phase in progress`;
-    const agentInfo = active_agent_count && total_agents ? ` (${active_agent_count}/${total_agents} agents active)` : '';
-    const healthIcon = health_status?.includes('🟢') ? ' 🟢' : '';
+    const stepKey = (step || '').toLowerCase();
+    const stepName = stepDisplayNames[stepKey] || step || 'Processing';
 
-    return `${phase} phase: ${baseMessage}${agentActivity}${agentInfo}`;
+    // Use step-level description if phase matches the step, otherwise show sub-phase
+    const baseMessage = stepMessages[stepKey] || `${phase} phase in progress`;
+    // If phase differs from the step-level name, show the sub-phase as detail
+    const phaseDetail = (phase && phase !== stepDisplayNames[stepKey]) ? `${phase} - ` : '';
+    const agentInfo = active_agent_count && total_agents ? ` (${active_agent_count}/${total_agents} agents active)` : '';
+
+    return `${stepName}: ${phaseDetail}${baseMessage}${agentActivity}${agentInfo}`;
   };
 
   // Polling function to check batch status
@@ -193,11 +206,19 @@ const ProcessPage: React.FC = () => {
         setLastUpdateTime(response.last_update_time);
 
         // Update current phase and generate step message
-        if (response.phase) {
+        if (response.step || response.phase) {
           const newPhaseMessage = getPhaseMessage(response);
 
           // Add the new message to steps ONLY if it's different from the last message
-          setCurrentPhase(response.phase);
+          const stepDisplayNames: Record<string, string> = {
+            'analysis': 'Analysis',
+            'design': 'Design',
+            'yaml_conversion': 'YAML',
+            'documentation': 'Documentation'
+          };
+          const stepKey = (response.step || '').toLowerCase();
+          const stepLabel = stepDisplayNames[stepKey] || response.step || response.phase || 'Processing';
+          setCurrentPhase(stepLabel);
           setPhaseSteps(prev => {
             // Check if the new message is different from the last message
             const lastMessage = prev[prev.length - 1];
