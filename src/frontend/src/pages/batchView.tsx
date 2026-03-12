@@ -608,15 +608,6 @@ const BatchStoryPage = () => {
                 transition: "width 0.3s ease-in-out",
                 overflowX: "hidden",
               }}>
-              {/* Green success banner */}
-              <Card className={styles.summaryCard}>
-                <div style={{ padding: "8px" }}>
-                  <Text weight="semibold">
-                    {getJsonYamlFileCount()} {getJsonYamlFileCount() === 1 ? 'file' : 'files'} processed successfully and {getMdFileCount()} {getMdFileCount() === 1 ? 'report' : 'reports'} generated successfully.
-                  </Text>
-                </div>
-              </Card>
-
               {/* Success checkmark and message */}
               <div className="file-content"
                 style={{
@@ -653,11 +644,14 @@ const BatchStoryPage = () => {
 
                   {/* Migration Overview Card */}
                   <Card style={{ marginBottom: '16px', padding: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <Text size={500} weight="semibold">Migration Overview</Text>
                       <span style={{ fontSize: '12px', color: '#888' }}>
                         {telemetryData.conversion_metrics?.platform_detected || 'Unknown'} → Azure Kubernetes Service
                       </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#107c10', marginBottom: '12px' }}>
+                      ✓ {getJsonYamlFileCount()} {getJsonYamlFileCount() === 1 ? 'file' : 'files'} converted and {getMdFileCount()} {getMdFileCount() === 1 ? 'report' : 'reports'} generated
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
                       {/* Total Time */}
