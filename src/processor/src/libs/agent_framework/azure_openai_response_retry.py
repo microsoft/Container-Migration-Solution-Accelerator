@@ -118,10 +118,16 @@ def _looks_like_tool_result(text: str) -> bool:
         return False
     # Common patterns in tool results from blob operations
     indicators = [
-        '"blob_name"', '"container_name"', '"folder_path"',
-        '"content":', '"size":', '"last_modified":',
-        "BlobProperties", "Successfully saved",
-        "# ", "## ",  # Markdown headers from read_blob_content
+        '"blob_name"',
+        '"container_name"',
+        '"folder_path"',
+        '"content":',
+        '"size":',
+        '"last_modified":',
+        "BlobProperties",
+        "Successfully saved",
+        "# ",
+        "## ",  # Markdown headers from read_blob_content
     ]
     return any(ind in text[:500] for ind in indicators)
 
@@ -136,9 +142,10 @@ def _looks_like_save_blob_call(text: str) -> bool:
 def _summarize_save_blob(text: str, max_chars: int) -> str:
     """Extract blob name and size from save_content_to_blob call."""
     import re
+
     blob_match = re.search(r'"blob_name"\s*:\s*"([^"]+)"', text)
     blob_name = blob_match.group(1) if blob_match else "unknown"
-    return f'[saved {blob_name} to blob storage ({len(text)} chars)]'
+    return f"[saved {blob_name} to blob storage ({len(text)} chars)]"
 
 
 def _truncate_text(
@@ -300,8 +307,8 @@ def _trim_messages(
     # while keeping the most recent ones intact for the current agent turn.
     # ──────────────────────────────────────────────────────────────────────
     KEEP_RECENT_TOOL_RESULTS = 4  # Keep the N most recent tool results in full
-    TOOL_RESULT_MAX_CHARS = 500   # Truncate older tool results to this size
-    SAVE_ARG_MAX_CHARS = 200      # Truncate save_content_to_blob arguments
+    TOOL_RESULT_MAX_CHARS = 500  # Truncate older tool results to this size
+    SAVE_ARG_MAX_CHARS = 200  # Truncate save_content_to_blob arguments
 
     tool_result_indices: list[int] = []
     for i, m in enumerate(messages):
@@ -323,7 +330,10 @@ def _trim_messages(
             m = messages[idx]
             text = _estimate_message_text(m)
             if len(text) > TOOL_RESULT_MAX_CHARS:
-                truncated = text[:TOOL_RESULT_MAX_CHARS] + f"\n[... tool output truncated from {len(text)} chars ...]"
+                truncated = (
+                    text[:TOOL_RESULT_MAX_CHARS]
+                    + f"\n[... tool output truncated from {len(text)} chars ...]"
+                )
                 messages[idx] = _set_message_text(m, truncated)
 
     # Keep last N messages; optionally keep system messages from the head.
@@ -548,16 +558,27 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
             ):
                 raise
 
-            trimmed = _trim_messages(messages, cfg=ContextTrimConfig(
-                enabled=True,
-                max_total_chars=max(50_000, self._context_trim_config.max_total_chars - 80_000),
-                max_message_chars=max(3_000, self._context_trim_config.max_message_chars - 6_000),
-                keep_last_messages=max(6, self._context_trim_config.keep_last_messages - 12),
-                keep_head_chars=max(1_000, self._context_trim_config.keep_head_chars - 4_000),
-                keep_tail_chars=self._context_trim_config.keep_tail_chars,
-                keep_system_messages=True,
-                retry_on_context_error=True,
-            ))
+            trimmed = _trim_messages(
+                messages,
+                cfg=ContextTrimConfig(
+                    enabled=True,
+                    max_total_chars=max(
+                        50_000, self._context_trim_config.max_total_chars - 80_000
+                    ),
+                    max_message_chars=max(
+                        3_000, self._context_trim_config.max_message_chars - 6_000
+                    ),
+                    keep_last_messages=max(
+                        6, self._context_trim_config.keep_last_messages - 12
+                    ),
+                    keep_head_chars=max(
+                        1_000, self._context_trim_config.keep_head_chars - 4_000
+                    ),
+                    keep_tail_chars=self._context_trim_config.keep_tail_chars,
+                    keep_system_messages=True,
+                    retry_on_context_error=True,
+                ),
+            )
             logger.warning(
                 "[AOAI_CTX_TRIM] retrying after context-length error; count=%s -> %s",
                 len(messages),
@@ -656,9 +677,7 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                         keep_system_messages=True,
                         retry_on_context_error=True,
                     )
-                    trimmed = _trim_messages(
-                        effective_messages, cfg=aggressive_cfg
-                    )
+                    trimmed = _trim_messages(effective_messages, cfg=aggressive_cfg)
                     logger.warning(
                         "[AOAI_CTX_TRIM_STREAM] retrying after context-length error (attempt %s); count=%s -> %s, budget=%s",
                         attempt_index + 1,

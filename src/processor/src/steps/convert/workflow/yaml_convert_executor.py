@@ -40,7 +40,9 @@ class YamlConvertExecutor(Executor):
         result = await yaml_convert_orchestrator.execute(task_param=message)
 
         if not result.success or result.result is None:
-            error_msg = result.error or "YAML conversion orchestration failed with no output"
+            error_msg = (
+                result.error or "YAML conversion orchestration failed with no output"
+            )
             raise Exception(f"YamlConvertExecutor failed: {error_msg}")
 
         if result.result:

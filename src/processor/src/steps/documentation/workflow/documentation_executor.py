@@ -3,9 +3,9 @@
 
 """Workflow executor for the documentation step."""
 
+from agent_framework import Executor, WorkflowContext, handler
 from typing_extensions import Never
 
-from agent_framework import Executor, WorkflowContext, handler
 from libs.application.application_context import AppContext
 from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
 from steps.documentation.models.step_output import Documentation_ExtendedBooleanResult
@@ -42,7 +42,9 @@ class DocumentationExecutor(Executor):
         result = await documentation_orchestrator.execute(task_param=message)
 
         if not result.success or result.result is None:
-            error_msg = result.error or "Documentation orchestration failed with no output"
+            error_msg = (
+                result.error or "Documentation orchestration failed with no output"
+            )
             raise Exception(f"DocumentationExecutor failed: {error_msg}")
 
         await ctx.yield_output(result.result)
