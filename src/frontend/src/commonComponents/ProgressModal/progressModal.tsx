@@ -274,24 +274,39 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                       let coordinatorTarget = '';
                       let coordinatorInstruction = '';
                       if (agentName === 'Coordinator') {
-                        actionInfo = { icon: '⚡', label: 'Routing' };
                         const agentData = apiData.agent_activities?.['Coordinator'];
                         // Try full message first (preview is truncated to 300 chars which breaks JSON parsing)
                         const fullMsg = agentData?.last_full_message || '';
                         const preview = agentData?.last_message_preview || '';
                         const msgToParse = fullMsg || preview;
+                        let parsedInstruction = '';
                         try {
                           const parsed = JSON.parse(msgToParse);
                           if (parsed.selected_participant) {
                             coordinatorTarget = parsed.selected_participant;
                           }
                           if (parsed.instruction) {
-                            coordinatorInstruction = parsed.instruction
+                            parsedInstruction = parsed.instruction;
+                            coordinatorInstruction = parsedInstruction
                               .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
                               .trim();
                           }
+                          // Dynamic badge based on instruction content
+                          if (parsed.finish && parsed.instruction === 'complete') {
+                            actionInfo = { icon: '✅', label: 'Completed' };
+                          } else if (parsed.finish && parsed.instruction === 'hard_blocked') {
+                            actionInfo = { icon: '🚫', label: 'Blocked' };
+                          } else {
+                            // Extract phase name for badge: "Phase X : Phase Title - ..."
+                            const phaseMatch = parsedInstruction.match(/^Phase\s+\d+\s*:\s*([^-]+)/i);
+                            if (phaseMatch) {
+                              actionInfo = { icon: '⚡', label: phaseMatch[1].trim() };
+                            } else {
+                              actionInfo = { icon: '⚡', label: 'Routing' };
+                            }
+                          }
                         } catch {
-                          // Try regex on both full and preview
+                          actionInfo = { icon: '⚡', label: 'Routing' };
                           const text = fullMsg || preview;
                           const nameMatch = text.match(/selected_participant['":\s]+([^'",$}]+)/);
                           if (nameMatch) coordinatorTarget = nameMatch[1].trim();
@@ -301,6 +316,10 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                               .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
                               .trim();
                           }
+                        }
+                        // Truncate long instructions for readability
+                        if (coordinatorInstruction.length > 120) {
+                          coordinatorInstruction = coordinatorInstruction.substring(0, 120) + '...';
                         }
                       }
 
