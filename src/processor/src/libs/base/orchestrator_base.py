@@ -222,10 +222,10 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     response_dict
                 )
 
-                # Extract phase name from instruction (e.g., "Phase 2 : Platform Enhancement - ..." -> "Platform Enhancement")
+                # Extract phase name from instruction (e.g., "Phase 6 : Re-Check - ..." -> "Re-Check")
                 instruction = coordinator_response.instruction or ""
                 phase_match = re.match(
-                    r"Phase\s+\d+\s*:\s*([^-]+)", instruction, re.IGNORECASE
+                    r"Phase\s+\d+\s*:\s*(.+?)\s+-\s+", instruction, re.IGNORECASE
                 )
                 if phase_match:
                     phase_name = phase_match.group(1).strip().title()

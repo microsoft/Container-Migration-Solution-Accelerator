@@ -288,7 +288,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                           if (parsed.instruction) {
                             parsedInstruction = parsed.instruction;
                             coordinatorInstruction = parsedInstruction
-                              .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
+                              .replace(/^Phase\s+\d+\s*:\s*.+?\s+-\s+/i, '')
                               .trim();
                           }
                           // Dynamic badge based on instruction content
@@ -298,7 +298,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                             actionInfo = { icon: '🚫', label: 'Blocked' };
                           } else {
                             // Extract phase name for badge: "Phase X : Phase Title - ..."
-                            const phaseMatch = parsedInstruction.match(/^Phase\s+\d+\s*:\s*([^-]+)/i);
+                            const phaseMatch = parsedInstruction.match(/^Phase\s+\d+\s*:\s*(.+?)\s+-\s+/i);
                             if (phaseMatch) {
                               actionInfo = { icon: '⚡', label: phaseMatch[1].trim() };
                             } else {
@@ -313,7 +313,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                           const instrMatch = text.match(/instruction['":\s]+([^"]+?)(?:"|$)/);
                           if (instrMatch) {
                             coordinatorInstruction = instrMatch[1]
-                              .replace(/^Phase\s+\d+\s*:\s*[^-]*-\s*/i, '')
+                              .replace(/^Phase\s+\d+\s*:\s*.+?\s+-\s+/i, '')
                               .trim();
                           }
                         }
