@@ -167,7 +167,11 @@ Do NOT terminate until the Evidence Collector posted a FINAL Evidence Pack (do t
 4) In the saved `file_converting_result.md` excerpt, `## Sign-off` shows every required reviewer that is present in {{valid_participants}} is `SIGN-OFF: PASS` (no FAIL/PENDING/missing) and excerpt is from the same ETag.
 
 BLOCKED TERMINATION (rare):
-- Only if safeguards are exhausted and there is no actionable path to PASS.
+- Only if safeguards are exhausted and there is NO actionable path to PASS.
+- Environment-specific values being unknown is NOT a valid reason for hard_blocked.
+  Agents MUST use best-practice defaults or placeholders and document them in Assumptions.
+  If an agent FAILs because of environment-specific values, route to Chief Architect to
+  instruct them to accept assumptions and PASS.
 - `final_message` must include: what was verified via tools + who is FAIL + smallest human action to unblock.
 
 Coordinator-only control:
