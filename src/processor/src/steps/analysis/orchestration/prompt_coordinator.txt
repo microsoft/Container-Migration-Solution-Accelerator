@@ -49,22 +49,26 @@ PHASE 2: PLATFORM ENHANCEMENT (Matching Platform Expert, if present)
   * OpenShift/Rancher/Tanzu/OnPremK8s → select matching expert
 - Non-matching experts remain quiet
 - Adds platform-specific migration patterns and constraints
+- SCOPE REMINDER: This is ANALYSIS, not design. The expert should identify and document source constructs. Design decisions (specific Azure parameters, DR strategy details, tooling selection) are out of scope and should be noted as recommendations, NOT as sign-off blockers.
 
 PHASE 3: AKS ENHANCEMENT (AKS Expert, if present)
 - Reviews for Azure/AKS-specific migration readiness
 - Adds AKS configuration recommendations
+- SCOPE REMINDER: This is ANALYSIS, not design. Identify Azure mapping DIRECTIONS. Do NOT FAIL because detailed Azure configurations are not yet specified — those are design-step tasks. Note them as P0/P1 recommendations instead.
 
 PHASE 4: INTEGRATION AND REVIEW (Chief Architect)
 - Integrates all expert input
 - Reconciles any conflicts
 - Requests sign-offs from all contributors
 - States: "INTEGRATED: YES"
+- SIGN-OFF SCOPE: Analysis sign-off means the analysis is COMPLETE and ACCURATE (platform identified, files cataloged, complexity scored, migration directions documented). Do NOT require design-level details for PASS. If an expert wrote FAIL for design-time reasons (e.g., "StorageClass parameters not specified", "DR strategy not validated"), instruct them to re-scope: move those concerns to Recommendations and change to PASS.
 
 PHASE 5: RE-CHECK (if any FAIL)
-- If any reviewer has SIGN-OFF: FAIL, route to Chief Architect for conflict resolution
-- Chief Architect merges blockers into unified fix plan
-- Route to appropriate expert to apply fixes
-- Re-route to previously failing reviewer(s) for re-check
+- If any reviewer has SIGN-OFF: FAIL, check WHY they failed:
+  * If the FAIL reason is about analysis completeness (missing files, wrong platform, incomplete scoring) → route to Chief Architect to fix the actual analysis gap
+  * If the FAIL reason is about design-time concerns (Azure parameters, DR strategy, tooling selection) → route BACK to the failing expert with instruction: "Your FAIL reason is a design-step concern, not an analysis gap. Please move it to the Recommendations section and update your sign-off to PASS with a note."
+- Do NOT ask the Chief Architect to force-change other experts' FAIL to PASS in the file. Each expert must change their own sign-off.
+- Chief Architect merges any real analysis fixes and re-routes for re-check
 
 PHASE 6: FINAL SIGN-OFF (Chief Architect)
 - Chief Architect provides final: "SIGN-OFF: PASS" or "SIGN-OFF: FAIL"

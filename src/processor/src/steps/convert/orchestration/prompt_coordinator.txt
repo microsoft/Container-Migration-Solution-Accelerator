@@ -50,6 +50,13 @@ PHASE 2: COLLABORATIVE REVIEW ROUND (available reviewers)
    * Azure Architect (if present): reviews Azure integration and Well-Architected alignment based on the Evidence Pack
 - Do NOT interleave YAML fixes between these reviewers unless hard stop (e.g., QA finds no outputs)
 
+CONVERSION SIGN-OFF SCOPE (CRITICAL):
+- Environment-specific values (GPU labels, storage account names, ingress patterns, workload identity details) that are UNKNOWN should use explicit best-practice assumptions or placeholders (e.g., `<<AZURE_STORAGE_ACCOUNT>>`) and be documented in the Assumptions/Manual Follow-ups section.
+- These are NOT valid FAIL reasons. Reviewers should PASS with noted assumptions.
+- Valid FAIL reasons: YAML syntax errors, missing required Kubernetes fields, incorrect API versions, security violations, wrong resource types.
+- Invalid FAIL reasons: "GPU node labels need human confirmation", "storage account name is assumed", "ingress pattern not decided" — these should be assumptions, not blockers.
+- Do NOT issue hard_blocked termination because of environment-specific unknowns. Use assumed best-practice values and proceed.
+
 STATE-AWARE ROUTING:
 1) If no evidence that converted YAML blobs were written OR no evidence file_converting_result.md exists/was updated → select YAML Expert
 2) Else if no Evidence Pack exists for the latest saved `file_converting_result.md` → select Evidence Collector (QA Engineer preferred if present; otherwise YAML Expert; otherwise Chief Architect)
@@ -75,6 +82,7 @@ PHASE 4: APPLY FIXES (YAML Expert)
 
 PHASE 5: RE-CHECK (previously failing reviewers)
 - Re-route to previously failing reviewer(s) for re-check
+- If the FAIL was about environment-specific unknowns (GPU labels, storage names, ingress patterns, identity config), instruct the reviewer: "Environment-specific values use best-practice assumptions documented in the Assumptions section. Please PASS with noted assumptions instead of FAIL."
 - They re-check and update SIGN-OFF
 
 PHASE 6: FINAL SIGN-OFF (Chief Architect)
