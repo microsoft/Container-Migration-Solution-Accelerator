@@ -548,7 +548,16 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
             ):
                 raise
 
-            trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+            trimmed = _trim_messages(messages, cfg=ContextTrimConfig(
+                enabled=True,
+                max_total_chars=max(50_000, self._context_trim_config.max_total_chars - 80_000),
+                max_message_chars=max(3_000, self._context_trim_config.max_message_chars - 6_000),
+                keep_last_messages=max(6, self._context_trim_config.keep_last_messages - 12),
+                keep_head_chars=max(1_000, self._context_trim_config.keep_head_chars - 4_000),
+                keep_tail_chars=self._context_trim_config.keep_tail_chars,
+                keep_system_messages=True,
+                retry_on_context_error=True,
+            ))
             logger.warning(
                 "[AOAI_CTX_TRIM] retrying after context-length error; count=%s -> %s",
                 len(messages),
@@ -614,17 +623,48 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                     except Exception:
                         pass
 
-                # One-shot retry for context-length failures.
+                # Progressive retry for context-length failures.
                 if (
                     self._context_trim_config.enabled
                     and self._context_trim_config.retry_on_context_error
                     and _looks_like_context_length(e)
                 ):
-                    trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+                    # Make trimming progressively more aggressive on each retry
+                    aggressive_cfg = ContextTrimConfig(
+                        enabled=True,
+                        max_total_chars=max(
+                            50_000,
+                            self._context_trim_config.max_total_chars
+                            - (attempt_index + 1) * 40_000,
+                        ),
+                        max_message_chars=max(
+                            3_000,
+                            self._context_trim_config.max_message_chars
+                            - (attempt_index + 1) * 3_000,
+                        ),
+                        keep_last_messages=max(
+                            6,
+                            self._context_trim_config.keep_last_messages
+                            - (attempt_index + 1) * 6,
+                        ),
+                        keep_head_chars=max(
+                            1_000,
+                            self._context_trim_config.keep_head_chars
+                            - (attempt_index + 1) * 2_000,
+                        ),
+                        keep_tail_chars=self._context_trim_config.keep_tail_chars,
+                        keep_system_messages=True,
+                        retry_on_context_error=True,
+                    )
+                    trimmed = _trim_messages(
+                        effective_messages, cfg=aggressive_cfg
+                    )
                     logger.warning(
-                        "[AOAI_CTX_TRIM_STREAM] retrying after context-length error; count=%s -> %s",
-                        len(messages),
+                        "[AOAI_CTX_TRIM_STREAM] retrying after context-length error (attempt %s); count=%s -> %s, budget=%s",
+                        attempt_index + 1,
+                        len(effective_messages),
                         len(trimmed),
+                        aggressive_cfg.max_total_chars,
                     )
                     effective_messages = trimmed
                     if attempt_index >= attempts - 1:
