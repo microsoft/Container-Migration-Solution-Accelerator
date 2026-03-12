@@ -112,6 +112,35 @@ def _safe_str(val: Any) -> str:
     return str(val)
 
 
+def _looks_like_tool_result(text: str) -> bool:
+    """Heuristic: detect tool/function result messages by content patterns."""
+    if not text or len(text) < 50:
+        return False
+    # Common patterns in tool results from blob operations
+    indicators = [
+        '"blob_name"', '"container_name"', '"folder_path"',
+        '"content":', '"size":', '"last_modified":',
+        "BlobProperties", "Successfully saved",
+        "# ", "## ",  # Markdown headers from read_blob_content
+    ]
+    return any(ind in text[:500] for ind in indicators)
+
+
+def _looks_like_save_blob_call(text: str) -> bool:
+    """Detect save_content_to_blob tool calls with large content arguments."""
+    if not text:
+        return False
+    return "save_content_to_blob" in text[:200] and len(text) > 1000
+
+
+def _summarize_save_blob(text: str, max_chars: int) -> str:
+    """Extract blob name and size from save_content_to_blob call."""
+    import re
+    blob_match = re.search(r'"blob_name"\s*:\s*"([^"]+)"', text)
+    blob_name = blob_match.group(1) if blob_match else "unknown"
+    return f'[saved {blob_name} to blob storage ({len(text)} chars)]'
+
+
 def _truncate_text(
     text: str, *, max_chars: int, keep_head_chars: int, keep_tail_chars: int
 ) -> str:
@@ -261,6 +290,41 @@ def _trim_messages(
 ) -> list[Any]:
     if not cfg.enabled:
         return list(messages)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Phase 0: Smart tool-result compression.
+    # Tool outputs (read_blob_content, save_content_to_blob, etc.) are the
+    # largest context consumers. Once an agent has responded after a tool
+    # call, the raw output is redundant — the agent's response is the
+    # distilled intelligence. We compress old tool results aggressively
+    # while keeping the most recent ones intact for the current agent turn.
+    # ──────────────────────────────────────────────────────────────────────
+    KEEP_RECENT_TOOL_RESULTS = 4  # Keep the N most recent tool results in full
+    TOOL_RESULT_MAX_CHARS = 500   # Truncate older tool results to this size
+    SAVE_ARG_MAX_CHARS = 200      # Truncate save_content_to_blob arguments
+
+    tool_result_indices: list[int] = []
+    for i, m in enumerate(messages):
+        role = _get_message_role(m)
+        text = _estimate_message_text(m)
+        if role == "tool" or (role is None and _looks_like_tool_result(text)):
+            tool_result_indices.append(i)
+        # Also detect save_content_to_blob in assistant/function messages
+        elif _looks_like_save_blob_call(text):
+            if len(text) > SAVE_ARG_MAX_CHARS:
+                # Extract just the blob name and byte count
+                summary = _summarize_save_blob(text, SAVE_ARG_MAX_CHARS)
+                messages[i] = _set_message_text(m, summary)
+
+    # Compress older tool results, keep recent ones in full
+    if len(tool_result_indices) > KEEP_RECENT_TOOL_RESULTS:
+        old_indices = tool_result_indices[:-KEEP_RECENT_TOOL_RESULTS]
+        for idx in old_indices:
+            m = messages[idx]
+            text = _estimate_message_text(m)
+            if len(text) > TOOL_RESULT_MAX_CHARS:
+                truncated = text[:TOOL_RESULT_MAX_CHARS] + f"\n[... tool output truncated from {len(text)} chars ...]"
+                messages[idx] = _set_message_text(m, truncated)
 
     # Keep last N messages; optionally keep system messages from the head.
     system_messages: list[Any] = []
