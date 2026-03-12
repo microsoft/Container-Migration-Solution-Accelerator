@@ -367,6 +367,33 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                               </span>
                             )}
                           </div>
+                          {/* Agent response preview (non-Coordinator, only when agent has responded) */}
+                          {agentName !== 'Coordinator' && (() => {
+                            const agentKey = agentName.replace(/\s+/g, '_');
+                            const agentData = apiData.agent_activities?.[agentKey];
+                            const currentAction = (agentData?.current_action || '').toLowerCase();
+                            // Only show response when agent has finished speaking/responded, not while thinking/invoking tools
+                            if (currentAction !== 'speaking' && currentAction !== 'responded' && currentAction !== 'idle') return null;
+                            const lastMsg = agentData?.last_message_preview || '';
+                            if (lastMsg && lastMsg.length > 20 && !lastMsg.startsWith('Ready for')) {
+                              const truncated = lastMsg.length > 150 ? lastMsg.substring(0, 150) + '...' : lastMsg;
+                              return (
+                                <div style={{
+                                  marginTop: '6px',
+                                  padding: '6px 8px',
+                                  backgroundColor: '#f8f9fa',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  color: '#555',
+                                  lineHeight: '1.4',
+                                  borderLeft: '2px solid #0078d4',
+                                }}>
+                                  💬 {truncated}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       );
                     });
