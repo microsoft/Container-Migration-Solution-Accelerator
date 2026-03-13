@@ -31,7 +31,7 @@ class Mem0AsyncMemoryManager:
                 "config": {
                     "model": "gpt-5.1",
                     "temperature": 0.1,
-                    "max_tokens": 100000,
+                    "max_tokens": 4000,
                     "azure_kwargs": {
                         "azure_deployment": "gpt-5.1",
                         "api_version": "2024-12-01-preview",
