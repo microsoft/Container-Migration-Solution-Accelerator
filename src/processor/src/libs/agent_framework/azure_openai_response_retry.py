@@ -657,28 +657,23 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                         enabled=True,
                         max_total_chars=max(
                             30_000,
-                            self._context_trim_config.max_total_chars
-                            - scale * 100_000,
+                            self._context_trim_config.max_total_chars - scale * 100_000,
                         ),
                         max_message_chars=max(
                             2_000,
-                            self._context_trim_config.max_message_chars
-                            - scale * 8_000,
+                            self._context_trim_config.max_message_chars - scale * 8_000,
                         ),
                         keep_last_messages=max(
                             4,
-                            self._context_trim_config.keep_last_messages
-                            - scale * 8,
+                            self._context_trim_config.keep_last_messages - scale * 8,
                         ),
                         keep_head_chars=max(
                             500,
-                            self._context_trim_config.keep_head_chars
-                            - scale * 3_000,
+                            self._context_trim_config.keep_head_chars - scale * 3_000,
                         ),
                         keep_tail_chars=max(
                             500,
-                            self._context_trim_config.keep_tail_chars
-                            - scale * 1_000,
+                            self._context_trim_config.keep_tail_chars - scale * 1_000,
                         ),
                         keep_system_messages=True,
                         retry_on_context_error=True,

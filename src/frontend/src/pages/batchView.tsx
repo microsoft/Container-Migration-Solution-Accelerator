@@ -79,7 +79,7 @@ const MermaidBlock: React.FC<{ chart: string }> = ({ chart }) => {
         setSvg(renderedSvg);
       } catch (err) {
         console.warn('Mermaid render failed:', err);
-        setSvg(`<pre style="color:#888">${chart}</pre>`);
+        setSvg(`<div style="border:1px solid #e0e0e0; padding:12px; border-radius:6px; background:#f8f9fa"><div style="color:#d32f2f; font-size:12px; margin-bottom:8px">⚠ Mermaid diagram could not be rendered</div><pre style="color:#555; white-space:pre-wrap; font-size:12px">${chart.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div>`);
       }
     };
     renderChart();
@@ -535,6 +535,15 @@ const BatchStoryPage = () => {
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeRaw]}
                         components={{
+                          pre({ children, ...props }) {
+                            // Check if the child is a code element with mermaid language
+                            const child = children as any;
+                            if (child?.props?.className === 'language-mermaid') {
+                              const codeText = String(child.props.children).replace(/\n$/, '');
+                              return <MermaidBlock chart={codeText} />;
+                            }
+                            return <pre {...props}>{children}</pre>;
+                          },
                           code({ className, children, ...props }) {
                             const match = /language-(\w+)/.exec(className || '');
                             const codeText = String(children).replace(/\n$/, '');

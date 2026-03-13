@@ -30,7 +30,6 @@ import json
 import re
 import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass
 
 from fastmcp import FastMCP
@@ -373,7 +372,9 @@ try {
             if "Error" in stderr or "error" in stderr:
                 # Extract just the error message
                 lines = stderr.split("\n")
-                error_line = next((l for l in lines if "Error" in l or "error" in l), lines[0])
+                error_line = next(
+                    (l for l in lines if "Error" in l or "error" in l), lines[0]
+                )
                 return False, error_line[:200]
             return True, ""
 
@@ -383,7 +384,9 @@ try {
                 if parsed.get("skipped"):
                     return True, ""
                 if not parsed.get("valid", True):
-                    return False, parsed.get("error", "Unknown mermaid syntax error")[:200]
+                    return False, parsed.get("error", "Unknown mermaid syntax error")[
+                        :200
+                    ]
             except json.JSONDecodeError:
                 pass
 
@@ -445,15 +448,13 @@ def validate_mermaid_in_markdown(markdown: str) -> dict:
     results = []
     for i, block in enumerate(blocks):
         v = basic_validate_mermaid(block)
-        results.append(
-            {
-                "index": i,
-                "valid": v.valid,
-                "errors": v.errors,
-                "warnings": v.warnings,
-                "diagram_type": v.diagram_type,
-            }
-        )
+        results.append({
+            "index": i,
+            "valid": v.valid,
+            "errors": v.errors,
+            "warnings": v.warnings,
+            "diagram_type": v.diagram_type,
+        })
 
     return {
         "blocks_found": len(blocks),
@@ -481,15 +482,13 @@ def fix_mermaid_in_markdown(markdown: str) -> dict:
     def _replace(match: re.Match) -> str:
         raw = match.group(1)
         fixed, applied, v = basic_fix_mermaid(raw)
-        per_block.append(
-            {
-                "valid": v.valid,
-                "errors": v.errors,
-                "warnings": v.warnings,
-                "diagram_type": v.diagram_type,
-                "applied_fixes": applied,
-            }
-        )
+        per_block.append({
+            "valid": v.valid,
+            "errors": v.errors,
+            "warnings": v.warnings,
+            "diagram_type": v.diagram_type,
+            "applied_fixes": applied,
+        })
         return "```mermaid\n" + fixed + "\n```"
 
     updated = pattern.sub(_replace, text)

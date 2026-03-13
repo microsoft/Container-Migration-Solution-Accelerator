@@ -78,7 +78,11 @@ STATE-AWARE ROUTING (fast path):
 1) If triage is not yet complete AND there is no evidence analysis_result.md was created/updated → select Chief Architect with instruction to do triage + create/update analysis_result.md in one turn.
 2) Else if a matching platform expert exists in {{valid_participants}} AND has not provided SIGN-OFF yet → select that platform expert.
 3) Else if AKS Expert exists in {{valid_participants}} AND has not provided SIGN-OFF yet → select AKS Expert.
-4) Else select Chief Architect to integrate, update file sign-offs, and provide final SIGN-OFF.
+4) Else if ANY reviewer has SIGN-OFF: FAIL → enter Phase 5 re-scope:
+   - Check the FAIL reason. If it's a design-time concern (not an analysis gap), route BACK to that failing expert with instruction: "Your FAIL reason '[reason]' is a design-step concern. Please move it to Recommendations and update your sign-off to PASS."
+   - Do NOT finish with FAILs. Do NOT set finish=true while any reviewer is FAIL.
+   - After re-scope, route back to Chief Architect for Phase 6 final sign-off.
+5) Else (all reviewers PASS) → select Chief Architect to provide final SIGN-OFF and complete.
 
 
 ═══════════════════════════════════════════════════════════════════
@@ -161,6 +165,11 @@ SUCCESS COMPLETION (fast + evidence-based):
 Do NOT finish successfully unless the Evidence Collector posted a FINAL Evidence Pack (do this once, right before completion) showing BOTH:
 1) `analysis_result.md` exists in `{{output_file_folder}}` and is non-empty (include Size/Last Modified/ETag from `check_blob_exists`).
 2) In the saved `analysis_result.md` `## Sign-off`, every required reviewer that is present in {{valid_participants}} is `SIGN-OFF: PASS` (no FAIL/PENDING/missing) and the excerpt is from the same ETag.
+
+NON-NEGOTIABLE RULE: Do NOT set finish=true while ANY reviewer has SIGN-OFF: FAIL.
+- If reviewers have FAIL, you MUST route to Phase 5 re-scope first.
+- If FAIL reasons are design-time concerns, route BACK to each failing expert to re-scope.
+- Only after all reviewers are PASS may you set finish=true with instruction="complete".
 
 Coordinator-only control:
 - Participants never set `finish`; you do.
