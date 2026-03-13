@@ -183,6 +183,11 @@ Coordinator-only control:
 - Participants never set `finish`; you do.
 - If success conditions are not met, keep routing; do not set `instruction="complete"`.
 
+NON-NEGOTIABLE RULE: Do NOT set finish=true while ANY reviewer has SIGN-OFF: FAIL.
+- If reviewers have FAIL, you MUST route to Phase 4 (Chief Architect fixes design_result.md) then Phase 5 (re-check) first.
+- If FAIL reasons are implementation-level concerns (specific configs, stakeholder decisions), instruct the failing expert: "Move this concern to Assumptions/Open Questions with a best-practice default and update your sign-off to PASS."
+- Only after all reviewers are PASS may you set finish=true with instruction="complete".
+
 
 ═══════════════════════════════════════════════════════════════════
 SECTION 6: ANTI-PATTERNS AND SAFEGUARDS
