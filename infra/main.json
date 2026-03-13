@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.40.2.10011",
-      "templateHash": "46164870636097653"
+      "version": "0.41.2.15936",
+      "templateHash": "15378128850313943283"
     }
   },
   "parameters": {
@@ -4698,8 +4698,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "13184395339364197836"
+              "version": "0.41.2.15936",
+              "templateHash": "10681183203421948888"
             }
           },
           "definitions": {
@@ -8840,7 +8840,7 @@
             "value": "[take(variables('jumpboxVmName'), 15)]"
           },
           "vmSize": {
-            "value": "[coalesce(parameters('vmSize'), 'Standard_DS2_v2')]"
+            "value": "[coalesce(parameters('vmSize'), 'Standard_D2s_v5')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -26118,8 +26118,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "virtualNetwork"
       ]
     },
@@ -30068,8 +30068,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "8742987061721021759"
+              "version": "0.41.2.15936",
+              "templateHash": "8365054813170845685"
             }
           },
           "definitions": {
@@ -52099,9 +52099,9 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
