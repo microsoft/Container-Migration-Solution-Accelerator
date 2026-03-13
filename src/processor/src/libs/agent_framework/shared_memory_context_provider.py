@@ -32,16 +32,21 @@ MAX_MEMORY_CONTEXT_CHARS = 15_000
 MIN_CONTENT_LENGTH_TO_STORE = 50
 
 
+# Step order for determining cross-step queries
+_STEP_ORDER = ["analysis", "design", "convert", "documentation"]
+
+
 class SharedMemoryContextProvider(ContextProvider):
     """ContextProvider that reads/writes shared memory via Qdrant.
 
     Attached to each agent individually, but all agents share the same
     QdrantMemoryStore instance, enabling cross-agent knowledge sharing.
 
-    Lifecycle per agent turn:
-        1. invoking() — query memory for relevant context → inject as instructions
-        2. [LLM call happens]
-        3. invoked() — store the agent's response into shared memory
+    Optimized for cross-step memory sharing:
+    - invoking(): only searches memories from PREVIOUS steps (within-step context
+      is already available via GroupChat conversation broadcast)
+    - invoked(): only stores the LAST response per agent per step (avoids
+      redundant embedding calls for intermediate turns)
     """
 
     def __init__(
@@ -67,6 +72,16 @@ class SharedMemoryContextProvider(ContextProvider):
         self._top_k = top_k
         self._score_threshold = score_threshold
         self._turn_counter = 0
+        self._last_content: str | None = None  # Track last response for deferred storage
+
+        # Determine which prior steps to search (skip current step)
+        step_lower = step.lower()
+        step_idx = None
+        for i, s in enumerate(_STEP_ORDER):
+            if s == step_lower:
+                step_idx = i
+                break
+        self._prior_steps = _STEP_ORDER[:step_idx] if step_idx else []
 
     async def invoking(
         self,
@@ -75,10 +90,13 @@ class SharedMemoryContextProvider(ContextProvider):
     ) -> Context:
         """Called before the agent's LLM call. Injects relevant shared memories.
 
-        Extracts the latest message as a search query, retrieves semantically
-        similar memories from the shared store, and returns them as additional
-        context instructions.
+        Only searches memories from PREVIOUS steps. Within the current step,
+        agents already see all messages via GroupChat broadcast.
         """
+        # Skip if this is the first step (no prior memories exist)
+        if not self._prior_steps:
+            return Context()
+
         # Extract query from the most recent messages
         query = self._extract_query(messages)
         if not query:
@@ -127,10 +145,12 @@ class SharedMemoryContextProvider(ContextProvider):
         invoke_exception: Exception | None = None,
         **kwargs,
     ) -> None:
-        """Called after the agent's LLM response. Stores the response in shared memory.
+        """Called after the agent's LLM response. Buffers the response for storage.
 
-        Only stores substantive responses (above minimum length threshold).
-        Skips storage on errors.
+        Instead of storing every turn (expensive), we buffer the latest response
+        and only store it when the next invocation happens or the step ends.
+        This means only the agent's last response per step gets stored,
+        which is the most complete and useful summary.
         """
         if invoke_exception is not None:
             return
@@ -143,7 +163,31 @@ class SharedMemoryContextProvider(ContextProvider):
         if not content or len(content) < MIN_CONTENT_LENGTH_TO_STORE:
             return
 
+        # Store previous buffered content before replacing
+        if self._last_content is not None:
+            await self._flush_memory()
+
+        self._last_content = content
         self._turn_counter += 1
+
+    async def flush(self) -> None:
+        """Flush any buffered memory to the store.
+
+        Called at step completion to ensure the last agent response is stored.
+        """
+        if self._last_content is not None:
+            await self._flush_memory()
+
+    async def _flush_memory(self) -> None:
+        """Store the buffered content into the memory store."""
+        content = self._last_content
+        self._last_content = None
+        if not content:
+            return
+
+        # Guard: skip if memory store is no longer available
+        if not getattr(self._memory_store, "_initialized", False):
+            return
 
         try:
             await self._memory_store.add(

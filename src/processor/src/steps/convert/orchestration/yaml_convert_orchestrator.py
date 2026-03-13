@@ -98,6 +98,7 @@ class YamlConvertOrchestrator(
                 on_workflow_complete=self.on_orchestration_complete,
                 on_agent_response_stream=self.on_agent_response_stream,
             )
+            await self.flush_agent_memories()
             return orchestration_result
 
     async def prepare_mcp_tools(
@@ -212,27 +213,9 @@ class YamlConvertOrchestrator(
         agent_infos.append(coordinator_agent_info)
 
         # Result generator
-        result_generator_instruction = """
-    You are a Result Generator.
-
-    ROLE & RESPONSIBILITY (do not exceed scope):
-    - You do NOT decide whether the step succeeded/failed and you do NOT introduce new blockers.
-    - The step outcome has already happened via stakeholder discussion and coordinator termination.
-    - Your only job is to serialize the final outcome into the required schema exactly.
-
-    RULES:
-    - Output MUST be valid JSON only.
-    - Do NOT call tools.
-    - Do NOT verify file existence.
-    - Do NOT invent missing files, blockers, or metrics.
-    - Only summarize what participants explicitly stated.
-    - Keep `reason` short (one sentence).
-
-    WHAT TO DO:
-    1) Review the conversation (excluding the Coordinator).
-    2) Extract conversion results (converted files, concerns, metrics, and report path) as stated.
-    3) Emit JSON that conforms exactly to `Yaml_ExtendedBooleanResult`.
-"""
+        result_generator_instruction = self.read_prompt_file(
+            str(Path(__file__).parent / "prompt_resultgenerator.txt")
+        )
         result_generator_info = AgentInfo(
             agent_name="ResultGenerator",
             agent_instruction=result_generator_instruction,

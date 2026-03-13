@@ -221,17 +221,12 @@ class MigrationProcessor:
 
             embedding_deployment = service_config.embedding_deployment_name
             if not embedding_deployment:
-                print(
-                    "[MEMORY] No embedding deployment configured — skipping memory. "
-                    "Set AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME to enable."
-                )
                 logger.warning(
                     "[MEMORY] No embedding deployment configured — skipping memory. "
                     "Set AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME to enable."
                 )
                 return None
 
-            print(f"[MEMORY] Embedding deployment found: {embedding_deployment}")
             token_provider = get_bearer_token_provider()
             embedding_client = AsyncAzureOpenAI(
                 azure_endpoint=service_config.endpoint,
@@ -248,13 +243,11 @@ class MigrationProcessor:
                 "[MEMORY] Workflow-level shared memory store initialized (process=%s)",
                 process_id,
             )
-            print(f"[MEMORY] Workflow-level shared memory store initialized (process={process_id})")
             return store
         except Exception as e:
             logger.warning(
                 "[MEMORY] Failed to create memory store: %s — continuing without", e
             )
-            print(f"[MEMORY] Failed to create memory store: {e} — continuing without")
             return None
 
     async def run(self, input_data: Analysis_TaskParam) -> Any:
@@ -649,18 +642,20 @@ class MigrationProcessor:
                         telemetry: TelemetryManager = (
                             await self.app_context.get_service_async(TelemetryManager)
                         )
-                        # Map executor IDs to human-readable phase names
-                        phase_names = {
+                        # Map executor IDs to human-readable step names
+                        step_display_names = {
                             "design": "Design",
                             "yaml_conversion": "YAML",
+                            "yaml": "YAML",
                             "documentation": "Documentation",
                         }
+                        step_display = step_display_names.get(
+                            event.executor_id, event.executor_id.capitalize()
+                        )
                         await telemetry.transition_to_phase(
                             process_id=event.data.process_id,
                             step=event.executor_id,
-                            phase=phase_names.get(
-                                event.executor_id, event.executor_id.capitalize()
-                            ),
+                            phase=f"Initializing {step_display}",
                         )
                         print(f"Executor invoked ({event.executor_id})")
                         print(text2art(event.executor_id.capitalize()))

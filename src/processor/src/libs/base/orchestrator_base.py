@@ -71,11 +71,40 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         if self.app_context.is_registered(QdrantMemoryStore):
             try:
                 self.memory_store = self.app_context.get_service(QdrantMemoryStore)
+                logger.info(
+                    "[MEMORY] Resolved memory store for step=%s, initialized=%s, id=%s",
+                    self.step_name,
+                    getattr(self.memory_store, "_initialized", "?"),
+                    id(self.memory_store),
+                )
             except Exception:
                 self.memory_store = None
 
         self.agents = await self.create_agents(self.agentinfos, process_id=process_id)
         self.initialized = True
+
+    async def flush_agent_memories(self) -> None:
+        """Flush buffered memories from all agent context providers.
+
+        Called at step completion to ensure each agent's last response
+        is stored in the shared memory before the next step begins.
+        """
+        for agent in (self.agents or {}).values():
+            # ChatAgent stores providers in agent.context_provider (AggregateContextProvider)
+            # which has a .providers list of individual ContextProvider instances
+            agg_provider = getattr(agent, "context_provider", None)
+            if agg_provider is None:
+                continue
+            inner_providers = getattr(agg_provider, "providers", None)
+            if not inner_providers:
+                continue
+            for provider in inner_providers:
+                flush = getattr(provider, "flush", None)
+                if callable(flush):
+                    try:
+                        await flush()
+                    except Exception as e:
+                        logger.warning("[MEMORY] flush failed: %s", e)
 
     def load_platform_registry(self, registry_path: str) -> list[dict[str, Any]]:
         with open(registry_path, "r", encoding="utf-8") as f:
@@ -118,11 +147,25 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
     ) -> list[ChatAgent]:
         agents = dict[str, ChatAgent]()
         agent_client = await self.get_client(thread_id=process_id)
+
+        # Workspace context — injected into every agent's system instructions
+        # so it survives context trimming (system messages are never trimmed)
+        workspace_context = (
+            f"\n\n## WORKSPACE CONTEXT\n"
+            f"- Process ID: {process_id}\n"
+            f"- Container: processes\n"
+            f"- Source folder: {process_id}/source\n"
+            f"- Output folder: {process_id}/converted\n"
+        )
+
         for agent_info in agent_infos:
+            # Append workspace context to every agent's instruction
+            instruction = agent_info.agent_instruction + workspace_context
+
             builder = (
                 AgentBuilder(agent_client)
                 .with_name(agent_info.agent_name)
-                .with_instructions(agent_info.agent_instruction)
+                .with_instructions(instruction)
             )
 
             # Only attach tools when provided. (Coordinator should typically have none.)

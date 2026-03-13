@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-from libs.agent_framework.qdrant_memory_store import MemoryEntry, QdrantMemoryStore
+from libs.agent_framework.qdrant_memory_store import MemoryEntry
 from libs.agent_framework.shared_memory_context_provider import (
     MAX_MEMORY_CONTEXT_CHARS,
     MIN_CONTENT_LENGTH_TO_STORE,
@@ -209,6 +209,7 @@ def test_invoked_stores_response():
         response = [_make_chat_message("We should use Azure CNI for networking configuration in the AKS cluster")]
 
         await provider.invoked(request, response)
+        await provider.flush()
 
         store.add.assert_called_once()
         kwargs = store.add.call_args
@@ -260,6 +261,7 @@ def test_invoked_stores_long_response():
         long_resp = [_make_chat_message("x" * (MIN_CONTENT_LENGTH_TO_STORE + 1))]
 
         await provider.invoked(request, long_resp)
+        await provider.flush()
         store.add.assert_called_once()
 
     asyncio.run(_run())
@@ -285,7 +287,8 @@ def test_invoked_store_failure_does_not_raise():
         request = [_make_chat_message("Q")]
         response = [_make_chat_message("A" * 100)]
 
-        await provider.invoked(request, response)  # Should not raise
+        await provider.invoked(request, response)
+        await provider.flush()  # Should not raise
 
     asyncio.run(_run())
 
@@ -297,6 +300,7 @@ def test_invoked_with_single_message():
         response = _make_chat_message("We should use Azure CNI Overlay for the networking configuration in AKS")
 
         await provider.invoked(request, response)
+        await provider.flush()
         store.add.assert_called_once()
 
     asyncio.run(_run())
