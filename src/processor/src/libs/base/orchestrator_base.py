@@ -5,13 +5,11 @@
 
 import json
 import logging
-import os
 import re
 from abc import abstractmethod
 from typing import Any, Callable, Generic, MutableMapping, Sequence, TypeVar
 
 from agent_framework import ChatAgent, ManagerSelectionResponse, ToolProtocol
-from openai import AsyncAzureOpenAI
 
 from libs.agent_framework.agent_builder import AgentBuilder
 from libs.agent_framework.agent_framework_helper import ClientType
@@ -28,7 +26,6 @@ from libs.agent_framework.shared_memory_context_provider import (
 )
 from utils.agent_telemetry import TelemetryManager
 from utils.console_util import format_agent_message
-from utils.credential_util import get_async_bearer_token_provider
 
 from .agent_base import AgentBase
 
@@ -70,74 +67,15 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         ) = await self.prepare_mcp_tools()
         self.agentinfos = await self.prepare_agent_infos()
 
-        # Initialize shared memory store if enabled
-        await self._initialize_memory_store(process_id)
+        # Resolve workflow-level shared memory store from AppContext (if registered)
+        if self.app_context.is_registered(QdrantMemoryStore):
+            try:
+                self.memory_store = self.app_context.get_service(QdrantMemoryStore)
+            except Exception:
+                self.memory_store = None
 
         self.agents = await self.create_agents(self.agentinfos, process_id=process_id)
         self.initialized = True
-
-    async def _initialize_memory_store(self, process_id: str) -> None:
-        """Initialize the Qdrant-backed shared memory store.
-
-        The memory store is shared across all agents in the orchestrator,
-        enabling cross-agent knowledge sharing without full conversation replay.
-        Disabled if SHARED_MEMORY_ENABLED env var is set to 'false'.
-        """
-        enabled = os.getenv("SHARED_MEMORY_ENABLED", "true").strip().lower()
-        if enabled not in ("1", "true", "yes", "on"):
-            logger.info("[MEMORY] Shared memory disabled via SHARED_MEMORY_ENABLED")
-            return
-
-        service_config = self.agent_framework_helper.settings.get_service_config(
-            "default"
-        )
-        if not service_config:
-            logger.warning("[MEMORY] No default service config — skipping memory init")
-            return
-
-        embedding_deployment = service_config.embedding_deployment_name
-        if not embedding_deployment:
-            logger.warning(
-                "[MEMORY] No embedding_deployment_name configured — skipping memory init. "
-                "Set AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME to enable."
-            )
-            return
-
-        try:
-            token_provider = await get_async_bearer_token_provider()
-            embedding_client = AsyncAzureOpenAI(
-                azure_endpoint=service_config.endpoint,
-                azure_ad_token_provider=token_provider,
-                api_version=service_config.api_version,
-            )
-
-            self.memory_store = QdrantMemoryStore(process_id=process_id)
-            await self.memory_store.initialize(
-                embedding_client=embedding_client,
-                embedding_deployment=embedding_deployment,
-            )
-            logger.info(
-                "[MEMORY] Shared memory store initialized for process %s",
-                process_id,
-            )
-        except Exception as e:
-            logger.warning(
-                "[MEMORY] Failed to initialize shared memory: %s — continuing without",
-                e,
-            )
-            self.memory_store = None
-
-    async def cleanup_memory(self) -> None:
-        """Close the shared memory store and release resources.
-
-        Should be called after the orchestration completes.
-        Safe to call multiple times.
-        """
-        if self.memory_store is not None:
-            count = await self.memory_store.get_count()
-            logger.info("[MEMORY] Closing memory store (%d memories stored)", count)
-            await self.memory_store.close()
-            self.memory_store = None
 
     def load_platform_registry(self, registry_path: str) -> list[dict[str, Any]]:
         with open(registry_path, "r", encoding="utf-8") as f:

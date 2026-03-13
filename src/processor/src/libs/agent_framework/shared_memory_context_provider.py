@@ -165,7 +165,8 @@ class SharedMemoryContextProvider(ContextProvider):
 
         Uses the last non-system message as the query, truncated for embedding.
         """
-        if isinstance(messages, ChatMessage):
+        # Single message (not a list/sequence)
+        if not isinstance(messages, (list, MutableSequence)):
             return self._get_text(messages)[:2000]
 
         if not messages:
@@ -214,7 +215,7 @@ class SharedMemoryContextProvider(ContextProvider):
         messages: ChatMessage | Sequence[ChatMessage],
     ) -> str:
         """Extract text content from response message(s)."""
-        if isinstance(messages, ChatMessage):
+        if not isinstance(messages, (list, Sequence)) or isinstance(messages, str):
             return SharedMemoryContextProvider._get_text(messages)
 
         parts = []
