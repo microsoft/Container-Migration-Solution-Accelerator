@@ -47,7 +47,7 @@ from openai import AsyncAzureOpenAI
 
 from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
 from libs.application.application_context import AppContext
-from utils.credential_util import get_async_bearer_token_provider
+from utils.credential_util import get_bearer_token_provider
 
 logger = logging.getLogger(__name__)
 from libs.reporting import (
@@ -221,13 +221,18 @@ class MigrationProcessor:
 
             embedding_deployment = service_config.embedding_deployment_name
             if not embedding_deployment:
+                print(
+                    "[MEMORY] No embedding deployment configured — skipping memory. "
+                    "Set AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME to enable."
+                )
                 logger.warning(
                     "[MEMORY] No embedding deployment configured — skipping memory. "
                     "Set AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME to enable."
                 )
                 return None
 
-            token_provider = await get_async_bearer_token_provider()
+            print(f"[MEMORY] Embedding deployment found: {embedding_deployment}")
+            token_provider = get_bearer_token_provider()
             embedding_client = AsyncAzureOpenAI(
                 azure_endpoint=service_config.endpoint,
                 azure_ad_token_provider=token_provider,
@@ -243,11 +248,13 @@ class MigrationProcessor:
                 "[MEMORY] Workflow-level shared memory store initialized (process=%s)",
                 process_id,
             )
+            print(f"[MEMORY] Workflow-level shared memory store initialized (process={process_id})")
             return store
         except Exception as e:
             logger.warning(
                 "[MEMORY] Failed to create memory store: %s — continuing without", e
             )
+            print(f"[MEMORY] Failed to create memory store: {e} — continuing without")
             return None
 
     async def run(self, input_data: Analysis_TaskParam) -> Any:

@@ -35,7 +35,7 @@ class Mem0AsyncMemoryManager:
                     "azure_kwargs": {
                         "azure_deployment": "gpt-5.1",
                         "api_version": "2024-12-01-preview",
-                        "azure_endpoint": "https://aifappframework.cognitiveservices.azure.com/",
+                        "azure_endpoint": "https://aif-rgcmsraitest7ynmo.openai.azure.com/",
                     },
                 },
             },
@@ -46,7 +46,7 @@ class Mem0AsyncMemoryManager:
                     "azure_kwargs": {
                         "api_version": "2024-02-01",
                         "azure_deployment": "text-embedding-3-large",
-                        "azure_endpoint": "https://aifappframework.openai.azure.com/",
+                        "azure_endpoint": "https://aif-rgcmsraitest7ynmo.openai.azure.com/",
                         "default_headers": {
                             "CustomHeader": "container migration",
                         },
