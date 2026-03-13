@@ -83,8 +83,16 @@ PHASE 5: RE-CHECK (if any FAIL after fixes)
 PHASE 6: FINAL SIGN-OFF (Chief Architect)
 - Chief Architect provides final: "SIGN-OFF: PASS" or "SIGN-OFF: FAIL"
 - All reviewers must be explicitly PASS before termination
+- Chief Architect MUST use blob tools to update the ## Sign-off section in design_result.md to set their own line from PENDING to PASS before giving chat sign-off
+- Do NOT complete (finish=true) if Chief Architect's sign-off is still PENDING in the saved file
 
-OPEN QUESTIONS REQUIREMENT:
+STATE-AWARE ROUTING (fast path):
+1) If no evidence that design_result.md was created → select Chief Architect for Phase 1.
+2) Else if AKS Expert has not provided SIGN-OFF → select AKS Expert for Phase 2.
+3) Else if matching Source Platform Expert has not provided SIGN-OFF → select that expert for Phase 3.
+4) Else if any reviewer has SIGN-OFF: FAIL → enter Phase 4/5 fix-review cycle.
+5) Else if Chief Architect has NOT provided SIGN-OFF: PASS (still PENDING or absent) → select Chief Architect for Phase 6 with instruction: "All other reviewers are PASS. Read design_result.md, update your ## Sign-off line from PENDING to PASS with verification notes, save the file, and provide your final SIGN-OFF: PASS in chat."
+6) Else (all reviewers including Chief Architect are PASS) → complete.
 - Do not allow report to end with only unanswered questions
 - Ensure team provides best-practice suggested answer (clearly labeled as assumption) for each open question
 - Use ## Open Questions table format with: Question | Suggested best-practice answer (assumption) | Why / decision drivers | What to confirm
@@ -195,15 +203,19 @@ SECTION 6: ANTI-PATTERNS AND SAFEGUARDS
 
 **CIRCUIT BREAKER - DETECT STUCK AGENTS**:
 
-If the same agent returns "SIGN-OFF: FAIL" with substantially the same failure reason 3+ times in a row:
+If the same agent returns "SIGN-OFF: FAIL" with substantially the same failure reason 2+ times in a row:
 
 1. **Recognize the agent is stuck** - It cannot complete the assigned task (tool access issues, constraints, bugs)
 2. **DO NOT repeat the same request** - Insanity is doing the same thing and expecting different results
 3. **KEEP THE WORKFLOW MOVING** - Try alternative approaches to complete the task:
 
+**SPECIFIC PATTERN: "Assessment loop without tool usage"**:
+If Chief Architect returns SIGN-OFF: FAIL without calling any blob tools (no read_blob_content, no save_content_to_blob in their response), they are RE-EVALUATING instead of EDITING.
+Fix: Route to a different agent (AKS Expert or GKE Expert) with explicit instruction: "Read design_result.md, apply these specific changes: [list changes from the Chief Architect's blocker board], save the updated file."
+
 **Priority 1 - Delegate to Different Agent:**
 - Select a different agent who successfully used tools earlier in this workflow
-- Ask them to handle the stuck task (e.g., "AKS Expert, please verify and update sign-offs in the report file")
+- Ask them to handle the stuck task (e.g., "AKS Expert, please read design_result.md, add the multi-dimension scoring to Architecture Decisions, and save the updated file")
 
 **Priority 2 - Simplify the Task:**
 - Break complex requests into smaller, specific steps

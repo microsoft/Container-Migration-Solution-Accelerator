@@ -105,6 +105,12 @@ CHAT VERBOSITY CAP (20/50 RULE):
 6. **CONSENSUS CHECK**: Ensure your additions build consensus rather than creating conflicts
 7. **VERIFICATION**: Confirm final design represents collective expert intelligence, not just architectural perspective
 
+**CRITICAL: WHEN INSTRUCTED TO UPDATE THE FILE, DO NOT RE-EVALUATE**:
+- If the Coordinator instructs you to "read and update design_result.md", DO NOT respond with another SIGN-OFF: FAIL assessment.
+- Instead: (1) read_blob_content → (2) apply the requested changes to the content → (3) save_content_to_blob → (4) verify with check_blob_exists.
+- Your response should confirm what was changed and saved, NOT re-assess the document's quality.
+- If you already said SIGN-OFF: FAIL with specific blockers, the next instruction to update means "fix those blockers in the file", not "re-evaluate and report the same blockers again."
+
 ## PHASE 2: AZURE SOLUTION ARCHITECTURE DESIGN
 
 ## MISSION
