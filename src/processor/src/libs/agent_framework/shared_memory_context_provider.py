@@ -110,10 +110,11 @@ class SharedMemoryContextProvider(ContextProvider):
             f"{self.DEFAULT_CONTEXT_PROMPT}\n\n{formatted}"
         )
 
-        logger.debug(
-            "[MEMORY] Injecting %d memories for %s (%d chars)",
+        logger.info(
+            "[MEMORY] Injecting %d memories for %s (step=%s, %d chars)",
             len(memories),
             self._agent_name,
+            self._step,
             len(instructions),
         )
 
@@ -150,6 +151,13 @@ class SharedMemoryContextProvider(ContextProvider):
                 agent_name=self._agent_name,
                 step=self._step,
                 turn=self._turn_counter,
+            )
+            logger.info(
+                "[MEMORY] Stored memory from %s (step=%s, turn=%d, %d chars)",
+                self._agent_name,
+                self._step,
+                self._turn_counter,
+                len(content),
             )
         except Exception as e:
             logger.warning(

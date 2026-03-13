@@ -670,6 +670,18 @@ class MigrationProcessor:
                 elif isinstance(event, ExecutorCompletedEvent):
                     # print(f"Executor completed ({event.executor_id}): {event.data}")
 
+                    # Log shared memory stats after each step
+                    if memory_store is not None:
+                        try:
+                            mem_count = await memory_store.get_count()
+                            logger.info(
+                                "[MEMORY] Step '%s' completed — %d total memories in store",
+                                event.executor_id,
+                                mem_count,
+                            )
+                        except Exception:
+                            pass
+
                     # step name -> executor_id
                     # output result -> event.data => if event.data is not None
                     if event.data:
