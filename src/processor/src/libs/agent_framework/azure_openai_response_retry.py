@@ -251,7 +251,7 @@ class ContextTrimConfig:
     # providing cross-step context, we can keep fewer conversation messages.
     max_total_chars: int = 400_000
     max_message_chars: int = 30_000
-    keep_last_messages: int = 20
+    keep_last_messages: int = 30
     keep_head_chars: int = 12_000
     keep_tail_chars: int = 4_000
     keep_system_messages: bool = True

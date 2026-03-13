@@ -50,7 +50,7 @@ class AnalysisExecutor(Executor):
             TelemetryManager
         )
         await telemetry.transition_to_phase(
-            process_id=message.process_id, step="analysis", phase="Analysis"
+            process_id=message.process_id, step="analysis", phase="Initializing Analysis"
         )
 
         print(text2art("Analysis"))

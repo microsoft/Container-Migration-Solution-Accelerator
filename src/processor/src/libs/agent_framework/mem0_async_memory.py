@@ -3,6 +3,8 @@
 
 """Lazy-initialized async wrapper around the Mem0 vector-store memory backend."""
 
+import os
+
 from mem0 import AsyncMemory
 
 
@@ -17,6 +19,13 @@ class Mem0AsyncMemoryManager:
         return self._memory_instance
 
     async def _create_memory(self):
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+        chat_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5.1")
+        embedding_deployment = os.getenv(
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-3-large"
+        )
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+
         config = {
             "vector_store": {
                 "provider": "redis",
@@ -29,27 +38,24 @@ class Mem0AsyncMemoryManager:
             "llm": {
                 "provider": "azure_openai",
                 "config": {
-                    "model": "gpt-5.1",
+                    "model": chat_deployment,
                     "temperature": 0.1,
                     "max_tokens": 4000,
                     "azure_kwargs": {
-                        "azure_deployment": "gpt-5.1",
-                        "api_version": "2024-12-01-preview",
-                        "azure_endpoint": "https://aif-rgcmsraitest7ynmo.openai.azure.com/",
+                        "azure_deployment": chat_deployment,
+                        "api_version": api_version,
+                        "azure_endpoint": endpoint,
                     },
                 },
             },
             "embedder": {
                 "provider": "azure_openai",
                 "config": {
-                    "model": "text-embedding-3-large",
+                    "model": embedding_deployment,
                     "azure_kwargs": {
-                        "api_version": "2024-02-01",
-                        "azure_deployment": "text-embedding-3-large",
-                        "azure_endpoint": "https://aif-rgcmsraitest7ynmo.openai.azure.com/",
-                        "default_headers": {
-                            "CustomHeader": "container migration",
-                        },
+                        "api_version": api_version,
+                        "azure_deployment": embedding_deployment,
+                        "azure_endpoint": endpoint,
                     },
                 },
             },
