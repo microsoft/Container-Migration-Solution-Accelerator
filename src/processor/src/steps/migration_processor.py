@@ -47,9 +47,6 @@ from openai import AsyncAzureOpenAI
 
 from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
 from libs.application.application_context import AppContext
-from utils.credential_util import get_bearer_token_provider
-
-logger = logging.getLogger(__name__)
 from libs.reporting import (
     MigrationReportCollector,
     MigrationReportGenerator,
@@ -57,12 +54,15 @@ from libs.reporting import (
 )
 from libs.reporting.models.failure_context import FailureType
 from utils.agent_telemetry import TelemetryManager
+from utils.credential_util import get_bearer_token_provider
 
 from .analysis.models.step_param import Analysis_TaskParam
 from .analysis.workflow.analysis_executor import AnalysisExecutor
 from .convert.workflow.yaml_convert_executor import YamlConvertExecutor
 from .design.workflow.design_executor import DesignExecutor
 from .documentation.workflow.documentation_executor import DocumentationExecutor
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowExecutorFailedException(Exception):
