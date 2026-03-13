@@ -373,7 +373,7 @@ try {
                 # Extract just the error message
                 lines = stderr.split("\n")
                 error_line = next(
-                    (l for l in lines if "Error" in l or "error" in l), lines[0]
+                    (line for line in lines if "Error" in line or "error" in line), lines[0]
                 )
                 return False, error_line[:200]
             return True, ""

@@ -92,6 +92,7 @@ class AnalysisOrchestrator(
                 on_agent_response_stream=self.on_agent_response_stream,
                 on_workflow_complete=self.on_orchestration_complete,
             )
+            await self.flush_agent_memories()
             return orchestration_result
 
     async def prepare_mcp_tools(
@@ -209,9 +210,9 @@ class AnalysisOrchestrator(
 
         # Render coordinator prompt with the current participant list.
         participant_names = [ai.agent_name for ai in agent_infos]
-        valid_participants_block = "\n".join(
-            [f'- "{name}"' for name in participant_names]
-        )
+        valid_participants_block = "\n".join([
+            f'- "{name}"' for name in participant_names
+        ])
         coordinator_agent_info.render(
             **self.task_param.model_dump(),
             current_timestamp=get_current_timestamp_utc(),
@@ -223,34 +224,9 @@ class AnalysisOrchestrator(
         agent_infos.append(coordinator_agent_info)
 
         # ResultGenerator: serializes the completed conversation into the output schema.
-        result_generator_instruction = """
-    You are a Result Generator.
-
-    ROLE & RESPONSIBILITY (do not exceed scope):
-    - You do NOT decide whether the step succeeded/failed and you do NOT introduce new blockers.
-    - The step outcome has already happened via stakeholder discussion and coordinator termination.
-    - Your only job is to serialize the final outcome into the required schema exactly.
-
-    STRICT JSON RULES:
-    - Output MUST be valid JSON only (no markdown, no prose).
-    - Do NOT call tools.
-    - Do NOT verify file existence.
-    - Do NOT invent termination codes or blockers.
-
-    HARD-TERMINATION SERIALIZATION RULE (IMPORTANT):
-    - Set `is_hard_terminated=true` ONLY if a participant explicitly provided a hard-termination decision with a termination code
-      from this exact set: NO_YAML_FILES, NO_KUBERNETES_CONTENT, ALL_CORRUPTED, SECURITY_POLICY_VIOLATION, RAI_POLICY_VIOLATION, PROFANITY_DETECTED, MIXED_PLATFORM_DETECTED.
-    - If hard-terminated, `blocking_issues` must be a list of those exact codes ONLY (no extra explanation text inside the list).
-
-        EVIDENCE PRESERVATION (when hard-terminated):
-        - The `reason` MUST include a short **Evidence** section listing which file(s) triggered the termination and what was detected.
-        - NEVER include secret values (tokens/passwords/private keys/base64 blobs). For Secrets, include only key names + resource metadata.
-
-    WHAT TO DO:
-    1) Review the conversation (excluding the Coordinator).
-    2) Extract the final agreed facts and any explicit PASS/FAIL sign-offs exactly as stated.
-    3) Emit JSON that conforms exactly to `Analysis_ExtendedBooleanResult`.
-    """
+        result_generator_instruction = self.read_prompt_file(
+            registry_dir / "prompt_resultgenerator.txt"
+        )
         result_generator_info = AgentInfo(
             agent_name="ResultGenerator",
             agent_instruction=result_generator_instruction,

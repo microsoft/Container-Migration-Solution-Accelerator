@@ -26,6 +26,8 @@ Notes:
 """
 
 import json
+import logging
+import os
 import time
 from datetime import datetime
 from typing import Any
@@ -41,7 +43,9 @@ from agent_framework import (
     WorkflowStartedEvent,
 )
 from art import text2art
+from openai import AsyncAzureOpenAI
 
+from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
 from libs.application.application_context import AppContext
 from libs.reporting import (
     MigrationReportCollector,
@@ -50,12 +54,15 @@ from libs.reporting import (
 )
 from libs.reporting.models.failure_context import FailureType
 from utils.agent_telemetry import TelemetryManager
+from utils.credential_util import get_bearer_token_provider
 
 from .analysis.models.step_param import Analysis_TaskParam
 from .analysis.workflow.analysis_executor import AnalysisExecutor
 from .convert.workflow.yaml_convert_executor import YamlConvertExecutor
 from .design.workflow.design_executor import DesignExecutor
 from .documentation.workflow.documentation_executor import DocumentationExecutor
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowExecutorFailedException(Exception):
@@ -187,6 +194,62 @@ class MigrationProcessor:
 
         return workflow
 
+    async def _create_memory_store(
+        self, process_id: str
+    ) -> QdrantMemoryStore | None:
+        """Create a workflow-scoped shared memory store.
+
+        The memory store lives for the entire workflow (analysis → design → convert
+        → documentation) so memories from earlier steps are available to later steps.
+        Returns None if disabled or misconfigured (workflow proceeds without memory).
+        """
+        enabled = os.getenv("SHARED_MEMORY_ENABLED", "true").strip().lower()
+        if enabled not in ("1", "true", "yes", "on"):
+            logger.info("[MEMORY] Shared memory disabled via SHARED_MEMORY_ENABLED")
+            return None
+
+        try:
+            from libs.agent_framework.agent_framework_helper import AgentFrameworkHelper
+
+            helper: AgentFrameworkHelper = self.app_context.get_service(
+                AgentFrameworkHelper
+            )
+            service_config = helper.settings.get_service_config("default")
+            if not service_config:
+                logger.warning("[MEMORY] No default service config — skipping memory")
+                return None
+
+            embedding_deployment = service_config.embedding_deployment_name
+            if not embedding_deployment:
+                logger.warning(
+                    "[MEMORY] No embedding deployment configured — skipping memory. "
+                    "Set AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME to enable."
+                )
+                return None
+
+            token_provider = get_bearer_token_provider()
+            embedding_client = AsyncAzureOpenAI(
+                azure_endpoint=service_config.endpoint,
+                azure_ad_token_provider=token_provider,
+                api_version=service_config.api_version,
+            )
+
+            store = QdrantMemoryStore(process_id=process_id)
+            await store.initialize(
+                embedding_client=embedding_client,
+                embedding_deployment=embedding_deployment,
+            )
+            logger.info(
+                "[MEMORY] Workflow-level shared memory store initialized (process=%s)",
+                process_id,
+            )
+            return store
+        except Exception as e:
+            logger.warning(
+                "[MEMORY] Failed to create memory store: %s — continuing without", e
+            )
+            return None
+
     async def run(self, input_data: Analysis_TaskParam) -> Any:
         """Run the migration workflow.
 
@@ -223,6 +286,11 @@ class MigrationProcessor:
         report_collector = MigrationReportCollector(process_id=input_data.process_id)
         report_generator = MigrationReportGenerator(report_collector)
         step_start_perf: dict[str, float] = {}
+
+        # Initialize shared memory store at workflow level (shared across all 4 steps)
+        memory_store = await self._create_memory_store(input_data.process_id)
+        if memory_store is not None:
+            self.app_context.add_singleton(QdrantMemoryStore, memory_store)
 
         try:
             telemetry: TelemetryManager = await self.app_context.get_service_async(
@@ -574,18 +642,20 @@ class MigrationProcessor:
                         telemetry: TelemetryManager = (
                             await self.app_context.get_service_async(TelemetryManager)
                         )
-                        # Map executor IDs to human-readable phase names
-                        phase_names = {
+                        # Map executor IDs to human-readable step names
+                        step_display_names = {
                             "design": "Design",
                             "yaml_conversion": "YAML",
+                            "yaml": "YAML",
                             "documentation": "Documentation",
                         }
+                        step_display = step_display_names.get(
+                            event.executor_id, event.executor_id.capitalize()
+                        )
                         await telemetry.transition_to_phase(
                             process_id=event.data.process_id,
                             step=event.executor_id,
-                            phase=phase_names.get(
-                                event.executor_id, event.executor_id.capitalize()
-                            ),
+                            phase=f"Initializing {step_display}",
                         )
                         print(f"Executor invoked ({event.executor_id})")
                         print(text2art(event.executor_id.capitalize()))
@@ -601,6 +671,18 @@ class MigrationProcessor:
                         step_start_perf[event.executor_id] = time.perf_counter()
                 elif isinstance(event, ExecutorCompletedEvent):
                     # print(f"Executor completed ({event.executor_id}): {event.data}")
+
+                    # Log shared memory stats after each step
+                    if memory_store is not None:
+                        try:
+                            mem_count = await memory_store.get_count()
+                            logger.info(
+                                "[MEMORY] Step '%s' completed — %d total memories in store",
+                                event.executor_id,
+                                mem_count,
+                            )
+                        except Exception:
+                            pass
 
                     # step name -> executor_id
                     # output result -> event.data => if event.data is not None
@@ -626,6 +708,18 @@ class MigrationProcessor:
                     # print(f"{event.__class__.__name__} ({event.origin.value}): {event}")
                     pass
         finally:
+            # Clean up shared memory store
+            if memory_store is not None:
+                try:
+                    count = await memory_store.get_count()
+                    logger.info(
+                        "[MEMORY] Workflow complete — closing memory store (%d memories)",
+                        count,
+                    )
+                    await memory_store.close()
+                except Exception as e:
+                    logger.warning("[MEMORY] Error closing memory store: %s", e)
+
             elapsed_seconds = time.perf_counter() - start_perf
             end_dt = datetime.now()
             elapsed_mins, elapsed_secs = divmod(int(elapsed_seconds), 60)

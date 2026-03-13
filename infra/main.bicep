@@ -78,6 +78,16 @@ param aiModelVersion string = '2025-04-16'
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param aiModelCapacity int = 500
 
+@minLength(1)
+@description('Optional. Name of the embedding model to deploy. Defaults to text-embedding-3-large.')
+param aiEmbeddingModelName string = 'text-embedding-3-large'
+
+@description('Optional. Version of the embedding model. Defaults to 1.')
+param aiEmbeddingModelVersion string = '1'
+
+@description('Optional. Embedding model deployment token capacity. Defaults to 500.')
+param aiEmbeddingModelCapacity int = 500
+
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
 
@@ -761,6 +771,18 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
           capacity: aiModelCapacity
         }
       }
+      {
+        name: aiEmbeddingModelName
+        model: {
+          format: 'OpenAI'
+          name: aiEmbeddingModelName
+          version: aiEmbeddingModelVersion
+        }
+        sku: {
+          name: 'Standard'
+          capacity: aiEmbeddingModelCapacity
+        }
+      }
     ]
     roleAssignments: [
       // Service Principal permissions
@@ -857,6 +879,18 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
           capacity: aiModelCapacity
         }
       }
+      {
+        name: aiEmbeddingModelName
+        model: {
+          format: 'OpenAI'
+          name: aiEmbeddingModelName
+          version: aiEmbeddingModelVersion
+        }
+        sku: {
+          name: 'Standard'
+          capacity: aiEmbeddingModelCapacity
+        }
+      }
     ]
     tags: allTags
     enableTelemetry: enableTelemetry
@@ -904,6 +938,10 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       {
         name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME'
         value: aiModelDeploymentName
+      }
+      {
+        name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME'
+        value: aiEmbeddingModelName
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'

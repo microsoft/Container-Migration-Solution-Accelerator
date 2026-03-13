@@ -246,14 +246,14 @@ class ContextTrimConfig:
     """
 
     enabled: bool = True
-    # GPT-5.1 supports 272K input tokens (~800K chars). These defaults stay well
-    # within that budget while guarding against accidental large blob injection.
-    # Progressive trimming on retry will reduce these further if needed.
-    max_total_chars: int = 600_000
-    max_message_chars: int = 40_000
-    keep_last_messages: int = 50
-    keep_head_chars: int = 15_000
-    keep_tail_chars: int = 5_000
+    # GPT-5.1 supports 272K input tokens (~800K chars). With workspace context
+    # injected into system instructions (never trimmed) and Qdrant shared memory
+    # providing cross-step context, we can keep fewer conversation messages.
+    max_total_chars: int = 400_000
+    max_message_chars: int = 30_000
+    keep_last_messages: int = 30
+    keep_head_chars: int = 12_000
+    keep_tail_chars: int = 4_000
     keep_system_messages: bool = True
     retry_on_context_error: bool = True
 
