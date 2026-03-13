@@ -16,16 +16,23 @@ dependencies = [
     "azure-storage-queue==12.13.0",
     "fastmcp==2.12.2",
     "jinja2==3.1.6",
-    "mcp==1.13.1",
-    "openai==1.107.1",
+    "mcp==1.26.0",
+    "openai==2.26.0",
+    "protobuf==7.34.0",
     "psutil==7.0.0",
     "pytz==2025.2",
     "sas-cosmosdb==0.1.4",
-    "semantic-kernel==1.36.2",
+    "semantic-kernel==1.40.0",
 ]
 
 [dependency-groups]
 dev = ["pre-commit>=4.0.1", "ruff>=0.8.6"]
+
+[tool.uv]
+override-dependencies = [
+    "av==16.0.0",
+    "starlette==0.49.1",
+]
 
 [tool.ruff]
 # Set the target Python version
