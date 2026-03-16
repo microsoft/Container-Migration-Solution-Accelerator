@@ -271,6 +271,11 @@ azd auth login --tenant-id <tenant-id>
 > ⚠️ **Critical: Redeployment Warning**  
 > If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
 
+**NOTE:** If you are running the latest azd version (version 1.23.9), please run the following command. 
+```bash 
+azd config set provision.preflight off
+```
+
 ```shell
 azd up
 ```
