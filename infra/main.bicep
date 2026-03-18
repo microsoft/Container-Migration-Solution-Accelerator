@@ -86,7 +86,7 @@ param aiEmbeddingModelName string = 'text-embedding-3-large'
 param aiEmbeddingModelVersion string = '1'
 
 @description('Optional. Embedding model deployment token capacity. Defaults to 500.')
-param aiEmbeddingModelCapacity int = 350
+param aiEmbeddingModelCapacity int = 500
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
