@@ -12,7 +12,6 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_LOCATION`                | string  | `westus`                | Sets the location/region for all Azure resources.                                     |
 | `AZURE_CONTAINER_REGISTRY_HOST` | string  | `myregistry.azurecr.io` | Specifies the container registry from which to pull app container images.             |
 | `AZURE_AI_SERVICE_LOCATION`     | string  | `eastus2`               | Specifies the Azure region for AI services (OpenAI/AI Foundry).                       |
-| `AZURE_AI_DEPLOYMENT_LOCATION`  | string  | `eastus2`               | Specifies alternative location for AI model resources.                                |
 | `AZURE_AI_DEPLOYMENT_TYPE`      | string  | `GlobalStandard`        | Defines the model deployment type (allowed values: `Standard`, `GlobalStandard`).     |
 | `AZURE_AI_MODEL_NAME`           | string  | `o3`                    | Specifies the `o` model name.                                                         |
 | `AZURE_AI_MODEL_VERSION`        | string  | `2025-04-16`            | Specifies the `o` model version.                                                      |
