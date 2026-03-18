@@ -36,7 +36,7 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports GPT5.1 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment.')
 param azureAiServiceLocation string
 
 @allowed([
@@ -68,11 +68,11 @@ param imageTag string = 'latest'
 param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
+@description('Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1.')
 param aiModelName string = 'gpt-5.1'
 
 @minLength(1)
-@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
+@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
 param aiModelVersion string = '2025-11-13'
 
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
