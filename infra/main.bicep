@@ -887,7 +887,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
           version: aiEmbeddingModelVersion
         }
         sku: {
-          name: 'Standard'
+          name: 'GlobalStandard'
           capacity: aiEmbeddingModelCapacity
         }
       }
