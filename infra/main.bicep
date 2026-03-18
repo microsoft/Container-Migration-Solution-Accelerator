@@ -85,6 +85,11 @@ param aiEmbeddingModelName string = 'text-embedding-3-large'
 @description('Optional. Version of the embedding model. Defaults to 1.')
 param aiEmbeddingModelVersion string = '1'
 
+@minLength(1)
+@allowed(['Standard', 'GlobalStandard'])
+@description('Optional. Embedding model deployment type. Defaults to GlobalStandard.')
+param aiEmbeddingDeploymentType string = 'GlobalStandard'
+
 @description('Optional. Embedding model deployment token capacity. Defaults to 500.')
 param aiEmbeddingModelCapacity int = 500
 
@@ -779,7 +784,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
           version: aiEmbeddingModelVersion
         }
         sku: {
-          name: 'Standard'
+          name: aiEmbeddingDeploymentType
           capacity: aiEmbeddingModelCapacity
         }
       }
@@ -887,7 +892,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
           version: aiEmbeddingModelVersion
         }
         sku: {
-          name: 'GlobalStandard'
+          name: aiEmbeddingDeploymentType
           capacity: aiEmbeddingModelCapacity
         }
       }
