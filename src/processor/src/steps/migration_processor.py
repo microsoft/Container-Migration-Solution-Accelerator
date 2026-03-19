@@ -291,6 +291,10 @@ class MigrationProcessor:
         # Initialize shared memory store at workflow level (shared across all 4 steps)
         memory_store = await self._create_memory_store(input_data.process_id)
         if memory_store is not None:
+            # Clear any cached instance from a previous run before re-registering.
+            # add_singleton replaces the descriptor but _instances cache still holds
+            # the old (closed) store, so get_service() would return it.
+            self.app_context._instances.pop(QdrantMemoryStore, None)
             self.app_context.add_singleton(QdrantMemoryStore, memory_store)
 
         try:
