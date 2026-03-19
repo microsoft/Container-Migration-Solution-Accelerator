@@ -32,7 +32,7 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.GPT5.1, 500'
+      'OpenAI.GlobalStandard.gpt-5.1, 500'
     ]
   }
 })
@@ -62,11 +62,11 @@ param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
 @description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
-param aiModelName string = 'GPT5.1'
+param aiModelName string = 'gpt-5.1'
 
 @minLength(1)
-@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
-param aiModelVersion string = '2025-04-16'
+@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
+param aiModelVersion string = '2025-11-13'
 
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param aiModelCapacity int = 1

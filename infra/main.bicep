@@ -32,11 +32,11 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.GPT5.1, 500'
+      'OpenAI.GlobalStandard.gpt-5.1, 500'
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports GPT5.1 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment.')
 param azureAiServiceLocation string
 
 @allowed([
@@ -68,12 +68,12 @@ param imageTag string = 'latest'
 param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
-param aiModelName string = 'GPT5.1'
+@description('Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1.')
+param aiModelName string = 'gpt-5.1'
 
 @minLength(1)
-@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
-param aiModelVersion string = '2025-04-16'
+@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
+param aiModelVersion string = '2025-11-13'
 
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param aiModelCapacity int = 500
@@ -84,6 +84,11 @@ param aiEmbeddingModelName string = 'text-embedding-3-large'
 
 @description('Optional. Version of the embedding model. Defaults to 1.')
 param aiEmbeddingModelVersion string = '1'
+
+@minLength(1)
+@allowed(['Standard', 'GlobalStandard'])
+@description('Optional. Embedding model deployment type. Defaults to GlobalStandard.')
+param aiEmbeddingDeploymentType string = 'GlobalStandard'
 
 @description('Optional. Embedding model deployment token capacity. Defaults to 500.')
 param aiEmbeddingModelCapacity int = 500
@@ -779,7 +784,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
           version: aiEmbeddingModelVersion
         }
         sku: {
-          name: 'Standard'
+          name: aiEmbeddingDeploymentType
           capacity: aiEmbeddingModelCapacity
         }
       }
@@ -887,7 +892,7 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
           version: aiEmbeddingModelVersion
         }
         sku: {
-          name: 'Standard'
+          name: aiEmbeddingDeploymentType
           capacity: aiEmbeddingModelCapacity
         }
       }
