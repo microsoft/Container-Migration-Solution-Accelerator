@@ -20,6 +20,10 @@ from libs.agent_framework.groupchat_orchestrator import (
     AgentResponseStream,
     OrchestrationResult,
 )
+from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
+from libs.agent_framework.shared_memory_context_provider import (
+    SharedMemoryContextProvider,
+)
 from utils.agent_telemetry import TelemetryManager
 from utils.console_util import format_agent_message
 
@@ -29,10 +33,15 @@ TaskParamT = TypeVar("TaskParamT")
 ResultT = TypeVar("ResultT")
 
 
+logger = logging.getLogger(__name__)
+
+
 class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
     def __init__(self, app_context=None):
         super().__init__(app_context)
         self.initialized = False
+        self.memory_store: QdrantMemoryStore | None = None
+        self.step_name: str = ""
 
     def is_console_summarization_enabled(self) -> bool:
         """Return True if console summarization (extra LLM call per turn) is enabled.
@@ -57,8 +66,45 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
             | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
         ) = await self.prepare_mcp_tools()
         self.agentinfos = await self.prepare_agent_infos()
+
+        # Resolve workflow-level shared memory store from AppContext (if registered)
+        if self.app_context.is_registered(QdrantMemoryStore):
+            try:
+                self.memory_store = self.app_context.get_service(QdrantMemoryStore)
+                logger.info(
+                    "[MEMORY] Resolved memory store for step=%s, initialized=%s, id=%s",
+                    self.step_name,
+                    getattr(self.memory_store, "_initialized", "?"),
+                    id(self.memory_store),
+                )
+            except Exception:
+                self.memory_store = None
+
         self.agents = await self.create_agents(self.agentinfos, process_id=process_id)
         self.initialized = True
+
+    async def flush_agent_memories(self) -> None:
+        """Flush buffered memories from all agent context providers.
+
+        Called at step completion to ensure each agent's last response
+        is stored in the shared memory before the next step begins.
+        """
+        for agent in (self.agents or {}).values():
+            # ChatAgent stores providers in agent.context_provider (AggregateContextProvider)
+            # which has a .providers list of individual ContextProvider instances
+            agg_provider = getattr(agent, "context_provider", None)
+            if agg_provider is None:
+                continue
+            inner_providers = getattr(agg_provider, "providers", None)
+            if not inner_providers:
+                continue
+            for provider in inner_providers:
+                flush = getattr(provider, "flush", None)
+                if callable(flush):
+                    try:
+                        await flush()
+                    except Exception as e:
+                        logger.warning("[MEMORY] flush failed: %s", e)
 
     def load_platform_registry(self, registry_path: str) -> list[dict[str, Any]]:
         with open(registry_path, "r", encoding="utf-8") as f:
@@ -101,11 +147,25 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
     ) -> list[ChatAgent]:
         agents = dict[str, ChatAgent]()
         agent_client = await self.get_client(thread_id=process_id)
+
+        # Workspace context — injected into every agent's system instructions
+        # so it survives context trimming (system messages are never trimmed)
+        workspace_context = (
+            f"\n\n## WORKSPACE CONTEXT\n"
+            f"- Process ID: {process_id}\n"
+            f"- Container: processes\n"
+            f"- Source folder: {process_id}/source\n"
+            f"- Output folder: {process_id}/converted\n"
+        )
+
         for agent_info in agent_infos:
+            # Append workspace context to every agent's instruction
+            instruction = agent_info.agent_instruction + workspace_context
+
             builder = (
                 AgentBuilder(agent_client)
                 .with_name(agent_info.agent_name)
-                .with_instructions(agent_info.agent_instruction)
+                .with_instructions(instruction)
             )
 
             # Only attach tools when provided. (Coordinator should typically have none.)
@@ -134,6 +194,20 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     .with_max_tokens(12_000)
                     .with_tool_choice("none")
                 )
+
+            # Attach shared memory context provider to expert agents
+            # (not Coordinator, not ResultGenerator — they don't need memory)
+            if (
+                self.memory_store is not None
+                and agent_info.agent_name not in ("Coordinator", "ResultGenerator")
+            ):
+                memory_provider = SharedMemoryContextProvider(
+                    memory_store=self.memory_store,
+                    agent_name=agent_info.agent_name,
+                    step=self.step_name,
+                )
+                builder = builder.with_context_providers(memory_provider)
+
             agent = builder.build()
             agents[agent_info.agent_name] = agent
 
@@ -160,7 +234,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 ).api_version,
                 thread_id=thread_id,
                 retry_config=RateLimitRetryConfig(
-                    max_retries=5, base_delay_seconds=3.0, max_delay_seconds=60.0
+                    max_retries=8, base_delay_seconds=5.0, max_delay_seconds=120.0
                 ),
             )
             self._client_cache[thread_id] = client
@@ -241,8 +315,11 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                             summarized_response = await summarizer_agent.run(
                                 f"speak as {response.agent_name} : {coordinator_response.instruction} to {coordinator_response.selected_participant}"
                             )
-                            print(
-                                f"{response.agent_name}: {summarized_response.text} ({response.elapsed_time:.2f}s)\n\n"
+                            logger.info(
+                                "%s: %s (%.2fs)",
+                                response.agent_name,
+                                summarized_response.text,
+                                response.elapsed_time,
                             )
                             await telemetry.update_agent_activity(
                                 process_id=self.task_param.process_id,
@@ -253,18 +330,15 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                             )
                         except Exception as e:
                             logging.error(f"Error in summarization: {e}")
-                            print(f"{response.agent_name}: {response.message}\n\n")
+                            logger.info("%s: %s", response.agent_name, response.message)
                     else:
-                        # print(
-                        #     f"{response.agent_name}: {coordinator_response.selected_participant} ← {coordinator_response.instruction} ({response.elapsed_time:.2f}s)\n\n"
-                        # )
-                        # use format_agent_message
-                        print(
+                        logger.info(
+                            "%s",
                             format_agent_message(
                                 name=response.agent_name,
                                 content=f"{response.agent_name}: {coordinator_response.selected_participant} ← {coordinator_response.instruction}",
                                 timestamp=f"{response.elapsed_time:.2f}s",
-                            )
+                            ),
                         )
 
                         await telemetry.update_agent_activity(
@@ -279,7 +353,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 # something wrong with deserialization, ignore
                 pass
         elif response.agent_name == "ResultGenerator":
-            print("Step results has been generated")
+            logger.info("Step results has been generated")
         else:
             # print(f"{response.agent_name}: {response.message} ({response.elapsed_time:.2f}s)\n\n")
             if self.is_console_summarization_enabled():
@@ -288,8 +362,11 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     summarized_response = await summarizer_agent.run(
                         f"speak as {response.agent_name} : {response.message}"
                     )
-                    print(
-                        f"{response.agent_name}: {summarized_response.text} ({response.elapsed_time:.2f}s)\n\n"
+                    logger.info(
+                        "%s: %s (%.2fs)",
+                        response.agent_name,
+                        summarized_response.text,
+                        response.elapsed_time,
                     )
 
                     await telemetry.update_agent_activity(
@@ -301,17 +378,15 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
                 except Exception as e:
                     logging.error(f"Error in summarization: {e}")
-                    print(f"{response.agent_name}: {response.message}\n\n")
+                    logger.info("%s: %s", response.agent_name, response.message)
             else:
-                # print(
-                #     f"{response.agent_name}: {response.message} ({response.elapsed_time:.2f}s)\n\n"
-                # )
-                print(
+                logger.info(
+                    "%s",
                     format_agent_message(
                         name=response.agent_name,
                         content=f"{response.agent_name}: {response.message}",
                         timestamp=f"{response.elapsed_time:.2f}s",
-                    )
+                    ),
                 )
 
                 await telemetry.update_agent_activity(
@@ -329,12 +404,13 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         if response.response_type == "message":
             # GroupChatOrchestrator emits this when an agent starts streaming a new message.
             # print(f"{response.agent_name} is thinking...\n")
-            print(
+            logger.info(
+                "%s",
                 format_agent_message(
                     name=response.agent_name,
                     content=f"{response.agent_name} is thinking...",
                     timestamp="",
-                )
+                ),
             )
 
             await telemetry.update_agent_activity(
@@ -361,12 +437,13 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
             preview_suffix = f"({args_preview})" if args_preview else "()"
             # print(f"{response.agent_name} is invoking {tool_name}{preview_suffix}...\n")
-            print(
+            logger.info(
+                "%s",
                 format_agent_message(
                     name=response.agent_name,
                     content=f"{response.agent_name} is invoking {tool_name}{preview_suffix}...",
                     timestamp="",
-                )
+                ),
             )
 
             await telemetry.update_agent_activity(

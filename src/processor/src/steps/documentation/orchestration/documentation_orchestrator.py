@@ -10,6 +10,7 @@ structured `Documentation_ExtendedBooleanResult`.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
@@ -34,6 +35,8 @@ from steps.documentation.models.step_output import (
 )
 from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentationOrchestrator(
@@ -103,6 +106,7 @@ class DocumentationOrchestrator(
                 on_workflow_complete=self.on_orchestration_complete,
                 on_agent_response_stream=self.on_agent_response_stream,
             )
+            await self.flush_agent_memories()
             return orchestration_result
 
     async def prepare_mcp_tools(
@@ -250,27 +254,9 @@ class DocumentationOrchestrator(
         )
         agent_infos.append(coordinator_info)
 
-        result_generator_instruction = """
-    You are a Result Generator.
-
-    ROLE & RESPONSIBILITY (do not exceed scope):
-    - You do NOT decide whether the step succeeded/failed and you do NOT introduce new blockers.
-    - The step outcome has already happened via stakeholder discussion and coordinator termination.
-    - Your only job is to serialize the final outcome into the required schema exactly.
-
-    RULES:
-    - Output MUST be valid JSON only.
-    - Do NOT call tools.
-    - Do NOT verify file existence.
-    - Do NOT invent metrics, blockers, or sign-offs.
-    - Only summarize what participants explicitly stated.
-    - Keep `reason` short (one sentence).
-
-    WHAT TO DO:
-    1) Review the conversation (excluding the Coordinator).
-    2) Extract roll-up metrics, expert collaboration/consensus notes, and generated file references as stated.
-    3) Emit JSON that conforms exactly to `Documentation_ExtendedBooleanResult`.
-    """
+        result_generator_instruction = self.read_prompt_file(
+            str(Path(__file__).parent / "prompt_resultgenerator.txt")
+        )
         result_generator_info = AgentInfo(
             agent_name="ResultGenerator",
             agent_instruction=result_generator_instruction,
@@ -288,9 +274,10 @@ class DocumentationOrchestrator(
         self, result: OrchestrationResult[Documentation_ExtendedBooleanResult]
     ):
         """Handle orchestration completion (console summary)."""
-        print("Orchestration complete.")
-        print(f"Elapsed: {result.execution_time_seconds:.2f}s")
-        print(f"Final Result: {result}")
+        logger.info(
+            "Documentation Orchestration complete. Elapsed: %.2fs",
+            result.execution_time_seconds,
+        )
 
     async def on_agent_response_stream(self, response):
         """Forward streaming agent output to base hooks."""

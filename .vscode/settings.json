@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd H:\\\\Works\\\\Code-Migration\\\\Container-Migration-Solution-Accelerator\\\\src\\\\backend-api ; python -m ruff check src/ --fix 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npx eslint": true
+    }
+}

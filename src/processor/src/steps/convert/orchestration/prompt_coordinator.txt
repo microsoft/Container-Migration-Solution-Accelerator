@@ -67,7 +67,9 @@ STATE-AWARE ROUTING:
    - Chief Architect MUST merge/de-duplicate blockers into one prioritized fix plan
 5) Else if there are any Open blockers → select YAML Expert
    - YAML Expert MUST apply merged fix plan in one pass, re-save YAMLs, update file_converting_result.md
-6) Else select Chief Architect to finalize
+6) Else if YAML Expert's sign-off is PENDING → select YAML Expert
+   - Instruction: "All reviewers have provided PASS. Update your own SIGN-OFF from PENDING to PASS in file_converting_result.md and populate the ## References section with validated Microsoft Learn URLs."
+7) Else select Chief Architect to finalize
 
 PHASE 3: CONFLICT RESOLUTION (Chief Architect, if any FAIL)
 - Chief Architect reconciles conflicts and de-duplicates blockers

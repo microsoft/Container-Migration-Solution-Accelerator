@@ -82,7 +82,7 @@ def test_analysis_executor_sends_message_on_soft_completion(monkeypatch):
 
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "analysis", "Analysis")]
+        assert telemetry.transitions == [("p1", "analysis", "Initializing Analysis")]
         assert len(ctx.sent) == 1
         assert len(ctx.yielded) == 0
         assert isinstance(ctx.sent[0], Analysis_BooleanExtendedResult)
@@ -133,7 +133,7 @@ def test_analysis_executor_yields_output_on_hard_termination(monkeypatch):
 
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "analysis", "Analysis")]
+        assert telemetry.transitions == [("p1", "analysis", "Initializing Analysis")]
         assert len(ctx.sent) == 0
         assert len(ctx.yielded) == 1
         assert isinstance(ctx.yielded[0], Analysis_BooleanExtendedResult)
