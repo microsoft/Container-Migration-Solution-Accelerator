@@ -24,6 +24,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -124,7 +125,9 @@ class QdrantMemoryStore:
             The unique ID of the stored memory.
         """
         if not self._initialized:
-            raise RuntimeError("QdrantMemoryStore not initialized. Call initialize() first.")
+            raise RuntimeError(
+                "QdrantMemoryStore not initialized. Call initialize() first."
+            )
 
         if not content or not content.strip():
             return ""
@@ -266,20 +269,59 @@ class QdrantMemoryStore:
         self._initialized = False
         logger.info("[MEMORY] QdrantMemoryStore closed for process %s", self.process_id)
 
+    # Embedding retry config (lighter than chat — embeddings are fast and cheap)
+    _EMBED_MAX_RETRIES = 3
+    _EMBED_BASE_DELAY = 2.0
+    _EMBED_MAX_DELAY = 30.0
+
     async def _embed(self, text: str) -> list[float] | None:
-        """Generate an embedding vector for the given text."""
+        """Generate an embedding vector for the given text with retry."""
         if not self._embedding_client or not self._embedding_deployment:
-            return None
-
-        # Truncate to avoid embedding API limits (8191 tokens ≈ ~30K chars)
-        truncated = text[:30_000] if len(text) > 30_000 else text
-
-        try:
-            response = await self._embedding_client.embeddings.create(
-                input=truncated,
-                model=self._embedding_deployment,
+            logger.warning(
+                "[MEMORY] _embed skipped — client=%s, deployment=%s",
+                "set" if self._embedding_client else "None",
+                self._embedding_deployment or "None",
             )
-            return response.data[0].embedding
-        except Exception as e:
-            logger.warning("[MEMORY] Embedding call failed: %s", e)
             return None
+
+        last_error: Exception | None = None
+        for attempt in range(self._EMBED_MAX_RETRIES + 1):
+            try:
+                response = await self._embedding_client.embeddings.create(
+                    input=text,
+                    model=self._embedding_deployment,
+                )
+                return response.data[0].embedding
+            except Exception as e:
+                last_error = e
+                msg = str(e).lower()
+                is_retryable = any(
+                    s in msg
+                    for s in ["429", "too many requests", "rate limit", "throttle",
+                              "timeout", "connection", "server error", "502", "503", "504"]
+                ) or (not msg)  # empty error message = transient
+
+                if not is_retryable or attempt >= self._EMBED_MAX_RETRIES:
+                    logger.warning(
+                        "[MEMORY] Embedding call failed (attempt %d/%d, not retrying): %s",
+                        attempt + 1,
+                        self._EMBED_MAX_RETRIES + 1,
+                        e,
+                    )
+                    return None
+
+                delay = min(
+                    self._EMBED_BASE_DELAY * (2 ** attempt),
+                    self._EMBED_MAX_DELAY,
+                )
+                logger.warning(
+                    "[MEMORY] Embedding call failed (attempt %d/%d), retrying in %.1fs: %s",
+                    attempt + 1,
+                    self._EMBED_MAX_RETRIES + 1,
+                    delay,
+                    e,
+                )
+                await asyncio.sleep(delay)
+
+        logger.warning("[MEMORY] Embedding exhausted all retries: %s", last_error)
+        return None

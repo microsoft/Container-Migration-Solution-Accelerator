@@ -234,7 +234,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 ).api_version,
                 thread_id=thread_id,
                 retry_config=RateLimitRetryConfig(
-                    max_retries=5, base_delay_seconds=3.0, max_delay_seconds=60.0
+                    max_retries=8, base_delay_seconds=5.0, max_delay_seconds=120.0
                 ),
             )
             self._client_cache[thread_id] = client
@@ -315,8 +315,11 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                             summarized_response = await summarizer_agent.run(
                                 f"speak as {response.agent_name} : {coordinator_response.instruction} to {coordinator_response.selected_participant}"
                             )
-                            print(
-                                f"{response.agent_name}: {summarized_response.text} ({response.elapsed_time:.2f}s)\n\n"
+                            logger.info(
+                                "%s: %s (%.2fs)",
+                                response.agent_name,
+                                summarized_response.text,
+                                response.elapsed_time,
                             )
                             await telemetry.update_agent_activity(
                                 process_id=self.task_param.process_id,
@@ -327,18 +330,15 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                             )
                         except Exception as e:
                             logging.error(f"Error in summarization: {e}")
-                            print(f"{response.agent_name}: {response.message}\n\n")
+                            logger.info("%s: %s", response.agent_name, response.message)
                     else:
-                        # print(
-                        #     f"{response.agent_name}: {coordinator_response.selected_participant} ← {coordinator_response.instruction} ({response.elapsed_time:.2f}s)\n\n"
-                        # )
-                        # use format_agent_message
-                        print(
+                        logger.info(
+                            "%s",
                             format_agent_message(
                                 name=response.agent_name,
                                 content=f"{response.agent_name}: {coordinator_response.selected_participant} ← {coordinator_response.instruction}",
                                 timestamp=f"{response.elapsed_time:.2f}s",
-                            )
+                            ),
                         )
 
                         await telemetry.update_agent_activity(
@@ -353,7 +353,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 # something wrong with deserialization, ignore
                 pass
         elif response.agent_name == "ResultGenerator":
-            print("Step results has been generated")
+            logger.info("Step results has been generated")
         else:
             # print(f"{response.agent_name}: {response.message} ({response.elapsed_time:.2f}s)\n\n")
             if self.is_console_summarization_enabled():
@@ -362,8 +362,11 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     summarized_response = await summarizer_agent.run(
                         f"speak as {response.agent_name} : {response.message}"
                     )
-                    print(
-                        f"{response.agent_name}: {summarized_response.text} ({response.elapsed_time:.2f}s)\n\n"
+                    logger.info(
+                        "%s: %s (%.2fs)",
+                        response.agent_name,
+                        summarized_response.text,
+                        response.elapsed_time,
                     )
 
                     await telemetry.update_agent_activity(
@@ -375,17 +378,15 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
                 except Exception as e:
                     logging.error(f"Error in summarization: {e}")
-                    print(f"{response.agent_name}: {response.message}\n\n")
+                    logger.info("%s: %s", response.agent_name, response.message)
             else:
-                # print(
-                #     f"{response.agent_name}: {response.message} ({response.elapsed_time:.2f}s)\n\n"
-                # )
-                print(
+                logger.info(
+                    "%s",
                     format_agent_message(
                         name=response.agent_name,
                         content=f"{response.agent_name}: {response.message}",
                         timestamp=f"{response.elapsed_time:.2f}s",
-                    )
+                    ),
                 )
 
                 await telemetry.update_agent_activity(
@@ -403,12 +404,13 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         if response.response_type == "message":
             # GroupChatOrchestrator emits this when an agent starts streaming a new message.
             # print(f"{response.agent_name} is thinking...\n")
-            print(
+            logger.info(
+                "%s",
                 format_agent_message(
                     name=response.agent_name,
                     content=f"{response.agent_name} is thinking...",
                     timestamp="",
-                )
+                ),
             )
 
             await telemetry.update_agent_activity(
@@ -435,12 +437,13 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
             preview_suffix = f"({args_preview})" if args_preview else "()"
             # print(f"{response.agent_name} is invoking {tool_name}{preview_suffix}...\n")
-            print(
+            logger.info(
+                "%s",
                 format_agent_message(
                     name=response.agent_name,
                     content=f"{response.agent_name} is invoking {tool_name}{preview_suffix}...",
                     timestamp="",
-                )
+                ),
             )
 
             await telemetry.update_agent_activity(

@@ -713,14 +713,14 @@ const BatchStoryPage = () => {
                       <Text size={500} weight="semibold" style={{ marginBottom: '12px', display: 'block' }}>Step Timeline</Text>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {(() => {
-                          const stepOrder = ['analysis', 'design', 'yaml', 'yaml_conversion', 'documentation'];
+                          const stepOrder = ['analysis', 'design', 'yaml', 'documentation'];
                           const stepLabels: Record<string, string> = {
                             'analysis': 'Analysis', 'design': 'Design', 'yaml': 'YAML Conversion',
-                            'yaml_conversion': 'YAML Conversion', 'documentation': 'Documentation'
+                            'documentation': 'Documentation'
                           };
                           const stepIcons: Record<string, string> = {
                             'analysis': '🔍', 'design': '📐', 'yaml': '📄',
-                            'yaml_conversion': '📄', 'documentation': '📝'
+                            'documentation': '📝'
                           };
                           const timings = telemetryData.step_timings;
                           const totalElapsed = Object.values(timings).reduce((sum: number, t: any) => sum + (t?.elapsed_seconds || 0), 0);
@@ -747,7 +747,7 @@ const BatchStoryPage = () => {
                                 const r = Array.isArray(stepResult.result) ? stepResult.result[0] : stepResult.result;
                                 if (key === 'analysis') {
                                   summary = `${r?.output?.platform_detected || ''} detected (${r?.output?.confidence_score || ''})`;
-                                } else if (key === 'yaml' || key === 'yaml_conversion') {
+                                } else if (key === 'yaml') {
                                   const metrics = r?.termination_output?.overall_conversion_metrics;
                                   if (metrics) summary = `${metrics.successful_conversions}/${metrics.total_files} files converted (${metrics.overall_accuracy})`;
                                 } else if (key === 'design') {
@@ -800,7 +800,7 @@ const BatchStoryPage = () => {
                           };
                           const stepLabels: Record<string, string> = {
                             'analysis': 'Analysis', 'design': 'Design', 'yaml': 'YAML',
-                            'yaml_conversion': 'YAML', 'documentation': 'Docs'
+                            'documentation': 'Docs'
                           };
 
                           return Object.entries(agents)

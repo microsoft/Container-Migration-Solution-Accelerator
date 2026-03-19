@@ -72,7 +72,9 @@ class SharedMemoryContextProvider(ContextProvider):
         self._top_k = top_k
         self._score_threshold = score_threshold
         self._turn_counter = 0
-        self._last_content: str | None = None  # Track last response for deferred storage
+        self._last_content: str | None = (
+            None  # Track last response for deferred storage
+        )
 
         # Determine which prior steps to search (skip current step)
         step_lower = step.lower()
@@ -124,9 +126,7 @@ class SharedMemoryContextProvider(ContextProvider):
         if not formatted:
             return Context()
 
-        instructions = (
-            f"{self.DEFAULT_CONTEXT_PROMPT}\n\n{formatted}"
-        )
+        instructions = f"{self.DEFAULT_CONTEXT_PROMPT}\n\n{formatted}"
 
         logger.info(
             "[MEMORY] Injecting %d memories for %s (step=%s, %d chars)",
@@ -153,15 +153,36 @@ class SharedMemoryContextProvider(ContextProvider):
         which is the most complete and useful summary.
         """
         if invoke_exception is not None:
+            logger.debug(
+                "[MEMORY] invoked() skipped for %s — exception: %s",
+                self._agent_name,
+                invoke_exception,
+            )
             return
 
         if response_messages is None:
+            logger.debug(
+                "[MEMORY] invoked() skipped for %s — no response_messages",
+                self._agent_name,
+            )
             return
 
         # Extract text from response
         content = self._extract_text(response_messages)
         if not content or len(content) < MIN_CONTENT_LENGTH_TO_STORE:
+            logger.debug(
+                "[MEMORY] invoked() skipped for %s — content too short (%d chars)",
+                self._agent_name,
+                len(content) if content else 0,
+            )
             return
+
+        logger.info(
+            "[MEMORY] invoked() buffering for %s (step=%s, %d chars)",
+            self._agent_name,
+            self._step,
+            len(content),
+        )
 
         # Store previous buffered content before replacing
         if self._last_content is not None:
@@ -176,7 +197,19 @@ class SharedMemoryContextProvider(ContextProvider):
         Called at step completion to ensure the last agent response is stored.
         """
         if self._last_content is not None:
+            logger.info(
+                "[MEMORY] flush() called for %s (step=%s, buffered=%d chars)",
+                self._agent_name,
+                self._step,
+                len(self._last_content),
+            )
             await self._flush_memory()
+        else:
+            logger.debug(
+                "[MEMORY] flush() called for %s (step=%s) — nothing buffered",
+                self._agent_name,
+                self._step,
+            )
 
     async def _flush_memory(self) -> None:
         """Store the buffered content into the memory store."""
@@ -187,6 +220,11 @@ class SharedMemoryContextProvider(ContextProvider):
 
         # Guard: skip if memory store is no longer available
         if not getattr(self._memory_store, "_initialized", False):
+            logger.warning(
+                "[MEMORY] _flush_memory skipped for %s — memory store not initialized (initialized=%s)",
+                self._agent_name,
+                getattr(self._memory_store, "_initialized", "missing"),
+            )
             return
 
         try:

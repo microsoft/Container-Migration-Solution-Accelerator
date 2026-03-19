@@ -42,11 +42,12 @@ from agent_framework import (
     WorkflowOutputEvent,
     WorkflowStartedEvent,
 )
-from art import text2art
+
 from openai import AsyncAzureOpenAI
 
 from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
 from libs.application.application_context import AppContext
+from libs.base.orchestrator_base import OrchestratorBase
 from libs.reporting import (
     MigrationReportCollector,
     MigrationReportGenerator,
@@ -364,7 +365,7 @@ class MigrationProcessor:
 
             async for event in self.workflow.run_stream(input_data):
                 if isinstance(event, WorkflowStartedEvent):
-                    print(f"Workflow started ({event.origin.value})")
+                    logger.info("Workflow started (%s)", event.origin.value)
 
                     report_collector.set_current_step("analysis", step_phase="start")
                     step_start_perf["analysis"] = time.perf_counter()
@@ -525,7 +526,7 @@ class MigrationProcessor:
                         return event.data
 
                     # Normal completion
-                    print(f"Workflow output ({event.origin.value}): {event.data}")
+                    logger.info("Workflow output (%s): %s", event.origin.value, event.data)
                     await telemetry.record_step_result(
                         process_id=input_data.process_id,
                         step_name=event.source_executor_id,
@@ -571,10 +572,13 @@ class MigrationProcessor:
                     pass
                     # will handle in WorkflowFailedEvent
                 elif isinstance(event, WorkflowFailedEvent):
-                    print(
-                        f"Executor failed ({event.origin.value}): "
-                        f"{event.details.executor_id} [{event.details.error_type}]: {event.details.message}"
-                        f" (traceback: {event.details.traceback})"
+                    logger.error(
+                        "Executor failed (%s): %s [%s]: %s (traceback: %s)",
+                        event.origin.value,
+                        event.details.executor_id,
+                        event.details.error_type,
+                        event.details.message,
+                        event.details.traceback,
                     )
 
                     report_collector.set_current_step(event.details.executor_id)
@@ -645,7 +649,6 @@ class MigrationProcessor:
                         # Map executor IDs to human-readable step names
                         step_display_names = {
                             "design": "Design",
-                            "yaml_conversion": "YAML",
                             "yaml": "YAML",
                             "documentation": "Documentation",
                         }
@@ -657,8 +660,7 @@ class MigrationProcessor:
                             step=event.executor_id,
                             phase=f"Initializing {step_display}",
                         )
-                        print(f"Executor invoked ({event.executor_id})")
-                        print(text2art(event.executor_id.capitalize()))
+                        logger.info("Executor invoked (%s)", event.executor_id)
 
                     report_collector.set_current_step(
                         event.executor_id, step_phase="start"
@@ -720,10 +722,17 @@ class MigrationProcessor:
                 except Exception as e:
                     logger.warning("[MEMORY] Error closing memory store: %s", e)
 
+            # Clear cached Azure OpenAI clients for this process to free
+            # connections and prevent stale state from leaking into future runs.
+            OrchestratorBase._client_cache.clear()
+
             elapsed_seconds = time.perf_counter() - start_perf
             end_dt = datetime.now()
             elapsed_mins, elapsed_secs = divmod(int(elapsed_seconds), 60)
-            print(
-                f"Workflow elapsed time: {elapsed_mins:d} mins {elapsed_secs:d} sec "
-                f"(start={start_dt.isoformat(timespec='seconds')}, end={end_dt.isoformat(timespec='seconds')})"
+            logger.info(
+                "Workflow elapsed time: %d mins %d sec (start=%s, end=%s)",
+                elapsed_mins,
+                elapsed_secs,
+                start_dt.isoformat(timespec="seconds"),
+                end_dt.isoformat(timespec="seconds"),
             )

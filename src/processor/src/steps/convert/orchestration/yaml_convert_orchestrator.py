@@ -7,6 +7,7 @@ This module renders the conversion prompt and runs a `GroupChatOrchestrator`
 to produce a structured `Yaml_ExtendedBooleanResult`.
 """
 
+import logging
 import os
 import re
 from pathlib import Path
@@ -29,6 +30,8 @@ from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
 from steps.design.models.step_output import Design_ExtendedBooleanResult
 from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
+
+logger = logging.getLogger(__name__)
 
 
 class YamlConvertOrchestrator(
@@ -233,11 +236,10 @@ class YamlConvertOrchestrator(
         self, result: OrchestrationResult[Yaml_ExtendedBooleanResult]
     ):
         """Handle orchestration completion (console summary)."""
-        print("*" * 40)
-        print("Yaml Convert Orchestration complete.")
-        print(f"Elapsed: {result.execution_time_seconds:.2f}s")
-        print(f"Final Result: {result}")
-        print("*" * 40)
+        logger.info(
+            "Yaml Convert Orchestration complete. Elapsed: %.2fs",
+            result.execution_time_seconds,
+        )
 
     async def on_agent_response_stream(self, response):
         """Forward streaming agent output to base hooks."""

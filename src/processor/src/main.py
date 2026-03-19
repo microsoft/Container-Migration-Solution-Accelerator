@@ -8,6 +8,7 @@ processing see ``main_service.py``.
 """
 
 import asyncio
+import logging
 import os
 
 from libs.agent_framework.agent_framework_helper import AgentFrameworkHelper
@@ -21,6 +22,8 @@ from libs.base.application_base import ApplicationBase
 from steps.analysis.models.step_param import Analysis_TaskParam
 from steps.migration_processor import MigrationProcessor
 from utils.agent_telemetry import TelemetryManager
+
+logger = logging.getLogger(__name__)
 
 
 class Application(ApplicationBase):
@@ -37,8 +40,8 @@ class Application(ApplicationBase):
         Initialize the application.
         This method can be overridden by subclasses to perform any necessary setup.
         """
-        print(
-            "Application initialized with configuration:",
+        logger.info(
+            "Application initialized with configuration: %s",
             self.application_context.configuration,
         )
 
@@ -88,10 +91,8 @@ class Application(ApplicationBase):
                 ),
             )
         except Exception as e:
-            # Keep it as a print to match the current style of this entrypoint.
-            print(
-                "[WARN] Cosmos checkpoint storage disabled due to import/config error:",
-                e,
+            logger.warning(
+                "Cosmos checkpoint storage disabled due to import/config error: %s", e
             )
 
     async def run(self):

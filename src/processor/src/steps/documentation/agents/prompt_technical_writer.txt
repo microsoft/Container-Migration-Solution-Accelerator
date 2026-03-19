@@ -259,7 +259,8 @@ Replace `[CURRENT_TIMESTAMP]` with the actual current date and time in this form
 ```
 
 ## CITATIONS (GENERAL RULE)
-- If you reference Microsoft documentation or Azure service behavior in the report body, include inline citations where appropriate.
+- If you reference Microsoft documentation or Azure service behavior in the report body, use inline hyperlinks (e.g., `[AKS overview](https://learn.microsoft.com/...)`).
+- Do NOT use Markdown footnote syntax (`[^1]`, `[^2]`, etc.) or generate a "Footnotes" section. Footnotes clutter the report and duplicate the References section.
 - Maintain the `## References` section as the authoritative list of all external documentation used.
 
 ## URL VALIDATION FOR NON-AZURE REFERENCES

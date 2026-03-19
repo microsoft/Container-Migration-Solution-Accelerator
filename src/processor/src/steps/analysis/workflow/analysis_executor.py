@@ -7,8 +7,9 @@ The executor adapts workflow messages into an `AnalysisOrchestrator` run and
 records step lifecycle events via `TelemetryManager`.
 """
 
+import logging
+
 from agent_framework import Executor, WorkflowContext, handler
-from art import text2art
 
 from libs.application.application_context import AppContext
 from utils.agent_telemetry import TelemetryManager
@@ -16,6 +17,8 @@ from utils.agent_telemetry import TelemetryManager
 from ..models.step_output import Analysis_BooleanExtendedResult
 from ..models.step_param import Analysis_TaskParam
 from ..orchestration.analysis_orchestrator import AnalysisOrchestrator
+
+logger = logging.getLogger(__name__)
 
 
 class AnalysisExecutor(Executor):
@@ -45,7 +48,7 @@ class AnalysisExecutor(Executor):
         # Start to logging the process
         # Due to the bug, first Executor's ExecutorInvokedEvent is not fired so I had to put it here
         #########################################################################################################
-        print("Executor invoked (analysis)")
+        logger.info("Executor invoked (analysis)")
         telemetry: TelemetryManager = await self.app_context.get_service_async(
             TelemetryManager
         )
@@ -53,7 +56,7 @@ class AnalysisExecutor(Executor):
             process_id=message.process_id, step="analysis", phase="Initializing Analysis"
         )
 
-        print(text2art("Analysis"))
+        logger.info("Starting Analysis step")
         #######################################################################################################
 
         result = await analysis_orchestrator.execute(task_param=message)

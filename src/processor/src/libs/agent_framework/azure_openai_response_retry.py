@@ -31,9 +31,9 @@ def _format_exc_brief(exc: BaseException) -> str:
 
 @dataclass(frozen=True)
 class RateLimitRetryConfig:
-    max_retries: int = 5
-    base_delay_seconds: float = 2.0
-    max_delay_seconds: float = 30.0
+    max_retries: int = 8
+    base_delay_seconds: float = 5.0
+    max_delay_seconds: float = 120.0
 
     @staticmethod
     def from_env(
@@ -54,9 +54,9 @@ class RateLimitRetryConfig:
                 return default
 
         return RateLimitRetryConfig(
-            max_retries=max(0, _int(max_retries_env, 5)),
-            base_delay_seconds=max(0.0, _float(base_delay_env, 2.0)),
-            max_delay_seconds=max(0.0, _float(max_delay_env, 30.0)),
+            max_retries=max(0, _int(max_retries_env, 8)),
+            base_delay_seconds=max(0.0, _float(base_delay_env, 5.0)),
+            max_delay_seconds=max(0.0, _float(max_delay_env, 120.0)),
         )
 
 
@@ -67,6 +67,15 @@ def _looks_like_rate_limit(error: BaseException) -> bool:
 
     status = getattr(error, "status_code", None) or getattr(error, "status", None)
     if status == 429:
+        return True
+
+    # Treat empty error messages as transient (likely connection reset or
+    # incomplete response from Azure front-end) — worth retrying.
+    if not msg or msg == str(type(error).__name__).lower():
+        return True
+
+    # Server errors (5xx) are transient and should be retried.
+    if isinstance(status, int) and 500 <= status < 600:
         return True
 
     cause = getattr(error, "__cause__", None)
@@ -250,8 +259,8 @@ class ContextTrimConfig:
     # injected into system instructions (never trimmed) and Qdrant shared memory
     # providing cross-step context, we can keep fewer conversation messages.
     max_total_chars: int = 400_000
-    max_message_chars: int = 30_000
-    keep_last_messages: int = 30
+    max_message_chars: int = 0  # Disabled — with keep_last_messages=15, per-message truncation is unnecessary
+    keep_last_messages: int = 15
     keep_head_chars: int = 12_000
     keep_tail_chars: int = 4_000
     keep_system_messages: bool = True
@@ -284,7 +293,7 @@ class ContextTrimConfig:
             enabled=_bool(enabled_env, True),
             max_total_chars=max(0, _int(max_total_chars_env, 240_000)),
             max_message_chars=max(0, _int(max_message_chars_env, 20_000)),
-            keep_last_messages=max(1, _int(keep_last_messages_env, 40)),
+            keep_last_messages=max(1, _int(keep_last_messages_env, 15)),
             keep_head_chars=max(0, _int(keep_head_chars_env, 10_000)),
             keep_tail_chars=max(0, _int(keep_tail_chars_env, 3_000)),
             keep_system_messages=_bool(keep_system_messages_env, True),
@@ -299,42 +308,18 @@ def _trim_messages(
         return list(messages)
 
     # ──────────────────────────────────────────────────────────────────────
-    # Phase 0: Smart tool-result compression.
-    # Tool outputs (read_blob_content, save_content_to_blob, etc.) are the
-    # largest context consumers. Once an agent has responded after a tool
-    # call, the raw output is redundant — the agent's response is the
-    # distilled intelligence. We compress old tool results aggressively
-    # while keeping the most recent ones intact for the current agent turn.
+    # Phase 0: Summarize large save_content_to_blob calls.
+    # Write payloads are redundant once persisted — replace with a short
+    # summary. Read tool results are never truncated so the model always
+    # has the full file content to reason about.
     # ──────────────────────────────────────────────────────────────────────
-    KEEP_RECENT_TOOL_RESULTS = 4  # Keep the N most recent tool results in full
-    TOOL_RESULT_MAX_CHARS = 500  # Truncate older tool results to this size
     SAVE_ARG_MAX_CHARS = 200  # Truncate save_content_to_blob arguments
 
-    tool_result_indices: list[int] = []
     for i, m in enumerate(messages):
-        role = _get_message_role(m)
         text = _estimate_message_text(m)
-        if role == "tool" or (role is None and _looks_like_tool_result(text)):
-            tool_result_indices.append(i)
-        # Also detect save_content_to_blob in assistant/function messages
-        elif _looks_like_save_blob_call(text):
-            if len(text) > SAVE_ARG_MAX_CHARS:
-                # Extract just the blob name and byte count
-                summary = _summarize_save_blob(text, SAVE_ARG_MAX_CHARS)
-                messages[i] = _set_message_text(m, summary)
-
-    # Compress older tool results, keep recent ones in full
-    if len(tool_result_indices) > KEEP_RECENT_TOOL_RESULTS:
-        old_indices = tool_result_indices[:-KEEP_RECENT_TOOL_RESULTS]
-        for idx in old_indices:
-            m = messages[idx]
-            text = _estimate_message_text(m)
-            if len(text) > TOOL_RESULT_MAX_CHARS:
-                truncated = (
-                    text[:TOOL_RESULT_MAX_CHARS]
-                    + f"\n[... tool output truncated from {len(text)} chars ...]"
-                )
-                messages[idx] = _set_message_text(m, truncated)
+        if _looks_like_save_blob_call(text) and len(text) > SAVE_ARG_MAX_CHARS:
+            summary = _summarize_save_blob(text, SAVE_ARG_MAX_CHARS)
+            messages[i] = _set_message_text(m, summary)
 
     # Keep last N messages; optionally keep system messages from the head.
     system_messages: list[Any] = []
@@ -354,14 +339,21 @@ def _trim_messages(
     seen_fingerprints: set[tuple[str, str]] = set()
     cleaned: list[Any] = []
 
-    for m in tail:
+    for idx, m in enumerate(tail):
         text = _estimate_message_text(m)
         fp = (text[:200], text[-200:])
         if fp in seen_fingerprints:
             continue
         seen_fingerprints.add(fp)
 
-        if cfg.max_message_chars > 0 and len(text) > cfg.max_message_chars:
+        # Never truncate the last message — the agent needs it in full
+        # to reason about the most recent tool result or instruction.
+        is_last = idx == len(tail) - 1
+        if (
+            not is_last
+            and cfg.max_message_chars > 0
+            and len(text) > cfg.max_message_chars
+        ):
             text = _truncate_text(
                 text,
                 max_chars=cfg.max_message_chars,
@@ -584,6 +576,14 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                 len(messages),
                 len(trimmed),
             )
+            # Cool down before retrying to avoid triggering 429s immediately.
+            trim_delay = self._retry_config.base_delay_seconds
+            trim_delay = min(trim_delay, self._retry_config.max_delay_seconds)
+            logger.info(
+                "[AOAI_CTX_TRIM] sleeping %ss before retry",
+                round(trim_delay, 1),
+            )
+            await asyncio.sleep(trim_delay)
             return await _retry_call(
                 lambda: parent_inner_get_response(
                     messages=trimmed, chat_options=chat_options, **kwargs
@@ -690,6 +690,18 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                     if attempt_index >= attempts - 1:
                         # No more retries available.
                         raise
+
+                    # Cool down before retrying — immediate retries after trimming
+                    # tend to trigger 429s because the API hasn't recovered yet.
+                    trim_delay = self._retry_config.base_delay_seconds * (
+                        2**attempt_index
+                    )
+                    trim_delay = min(trim_delay, self._retry_config.max_delay_seconds)
+                    logger.info(
+                        "[AOAI_CTX_TRIM_STREAM] sleeping %ss before retry",
+                        round(trim_delay, 1),
+                    )
+                    await asyncio.sleep(trim_delay)
                     continue
 
                 if not _looks_like_rate_limit(e) or attempt_index >= attempts - 1:

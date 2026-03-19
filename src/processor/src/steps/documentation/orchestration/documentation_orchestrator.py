@@ -10,6 +10,7 @@ structured `Documentation_ExtendedBooleanResult`.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
@@ -34,6 +35,8 @@ from steps.documentation.models.step_output import (
 )
 from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentationOrchestrator(
@@ -271,9 +274,10 @@ class DocumentationOrchestrator(
         self, result: OrchestrationResult[Documentation_ExtendedBooleanResult]
     ):
         """Handle orchestration completion (console summary)."""
-        print("Orchestration complete.")
-        print(f"Elapsed: {result.execution_time_seconds:.2f}s")
-        print(f"Final Result: {result}")
+        logger.info(
+            "Documentation Orchestration complete. Elapsed: %.2fs",
+            result.execution_time_seconds,
+        )
 
     async def on_agent_response_stream(self, response):
         """Forward streaming agent output to base hooks."""
