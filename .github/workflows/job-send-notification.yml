@@ -98,7 +98,7 @@ jobs:
           EMAIL_BODY=$(cat <<EOF
           {
             "body": "<p>Dear Team,</p><p>We would like to inform you that the ${ACCELERATOR_NAME} deployment has failed due to insufficient quota.</p><p><strong>Status Summary:</strong><br><table border='1' cellpadding='5' cellspacing='0'><tr><th>Stage</th><th>Status</th></tr><tr><td>Deployment</td><td>❌ FAILED (Insufficient Quota)</td></tr><tr><td>Cleanup</td><td>${CLEANUP_STATUS}</td></tr></table></p><p><strong>Issue Details:</strong><br>• Quota check failed for GPT model<br>• Required GPT Capacity: ${{ env.GPT_MIN_CAPACITY }}<br>• Checked Regions: ${{ vars.AZURE_REGIONS }}</p><p><strong>Configuration:</strong> ${CONFIG_LABEL}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please resolve the quota issue and retry the deployment.</p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "[CI/CD-Automation] [${ACCELERATOR_NAME}]"
+            "subject": "[CI/CD-Automation] [${ACCELERATOR_NAME}] Insufficient Quota"
           }
           EOF
           )
@@ -123,7 +123,7 @@ jobs:
           EMAIL_BODY=$(cat <<EOF
           {
             "body": "<p>Dear Team,</p><p>We would like to inform you that the ${ACCELERATOR_NAME} deployment has failed.</p><p><strong>Status Summary:</strong><br><table border='1' cellpadding='5' cellspacing='0'><tr><th>Stage</th><th>Status</th></tr><tr><td>Deployment</td><td>❌ FAILED (Deployment Issue)</td></tr><tr><td>Cleanup</td><td>${CLEANUP_STATUS}</td></tr></table></p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}</p><p><strong>Configuration:</strong> ${CONFIG_LABEL}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please investigate the deployment failure at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "[CI/CD-Automation] [${ACCELERATOR_NAME}]"
+            "subject": "[CI/CD-Automation] [${ACCELERATOR_NAME}] Deployment-Failed"
           }
           EOF
           )
@@ -153,7 +153,7 @@ jobs:
           EMAIL_BODY=$(cat <<EOF
           {
             "body": "<p>Dear Team,</p><p>We would like to inform you that the ${ACCELERATOR_NAME} deployment has completed successfully.</p><p><strong>Status Summary:</strong><br><table border='1' cellpadding='5' cellspacing='0'><tr><th>Stage</th><th>Status</th></tr><tr><td>Deployment</td><td>✅ SUCCESS</td></tr><tr><td>Cleanup</td><td>${CLEANUP_STATUS}</td></tr></table></p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• Web App URL: <a href='${WEBAPP_URL}'>${WEBAPP_URL}</a></p><p><strong>Configuration:</strong> ${CONFIG_LABEL}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "[CI/CD-Automation] [${ACCELERATOR_NAME}]"
+            "subject": "[CI/CD-Automation] [${ACCELERATOR_NAME}] Success"
           }
           EOF
           )
