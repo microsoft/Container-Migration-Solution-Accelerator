@@ -28,7 +28,7 @@ on:
         required: false
         type: string
         default: 'false'
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
+      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID:
         required: false
         type: string
       AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
@@ -59,7 +59,7 @@ jobs:
           INPUT_BUILD_DOCKER_IMAGE: ${{ inputs.BUILD_DOCKER_IMAGE }}
           INPUT_EXP: ${{ inputs.EXP }}
           INPUT_WAF_ENABLED: ${{ inputs.WAF_ENABLED }}
-          INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+          INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID }}
           INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
         run: |
           echo "🔍 Validating workflow input parameters..."
@@ -224,7 +224,7 @@ jobs:
           IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
           BUILD_DOCKER_IMAGE: ${{ inputs.BUILD_DOCKER_IMAGE }}
           EXP: ${{ inputs.EXP }}
-          AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+          AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID }}
           AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
         run: |
           $ErrorActionPreference = "Stop"
@@ -256,8 +256,8 @@ jobs:
             Write-Host "✅ EXP ENABLED - Setting EXP parameters..."
             
             # Set EXP variables dynamically
-            if ($env:AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID -ne "") {
-              $EXP_LOG_ANALYTICS_ID = $env:AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID
+            if ($env:AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID -ne "") {
+              $EXP_LOG_ANALYTICS_ID = $env:AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID
             } else {
               $EXP_LOG_ANALYTICS_ID = "${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID }}"
             }
