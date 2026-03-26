@@ -91,6 +91,7 @@ env:
   EXP: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.EXP || false) || false }}
   CLEANUP_RESOURCES: ${{ inputs.trigger_type != 'workflow_dispatch' || inputs.cleanup_resources }}
   BUILD_DOCKER_IMAGE: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.build_docker_image || false) || false }}
+  RG_TAGS: ${{ vars.RG_TAGS }}
 
 jobs:
   azure-setup:
@@ -279,11 +280,11 @@ jobs:
           if [[ "$INPUT_EXP" == "true" ]]; then
             EXP_ENABLED="true"
             echo "✅ EXP explicitly enabled by user input"
-          elif [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_ID" ]] || [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]]; then
+          elif [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_RID" ]] || [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]]; then
             echo "🔧 AUTO-ENABLING EXP: EXP parameter values were provided but EXP was not explicitly enabled."
             echo ""
             echo "You provided values for:"
-            [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_ID" ]] && echo "  - Azure Log Analytics Workspace ID: '$INPUT_LOG_ANALYTICS_WORKSPACE_ID'"
+            [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_RID" ]] && echo "  - Azure Log Analytics Workspace ID: '$INPUT_LOG_ANALYTICS_WORKSPACE_RID'"
             [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]] && echo "  - Azure AI Project Resource ID: '$INPUT_AI_PROJECT_RESOURCE_ID'"
             echo ""
             echo "✅ Automatically enabling EXP to use these values."
@@ -387,7 +388,7 @@ jobs:
           rg_exists=$(az group exists --name $RESOURCE_GROUP_NAME)
           if [ "$rg_exists" = "false" ]; then
             echo "📦 Resource group does not exist. Creating new resource group '$RESOURCE_GROUP_NAME' in location '$AZURE_LOCATION'..."
-            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION || { echo "❌ Error creating resource group"; exit 1; }
+            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION --tags ${{ env.RG_TAGS }} || { echo "❌ Error creating resource group"; exit 1; }
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' created successfully."
           else
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' already exists. Deploying to existing resource group."
