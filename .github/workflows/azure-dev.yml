@@ -45,8 +45,7 @@ jobs:
 
       - name: Provision and Deploy
         shell: bash
-        run: azd up --no-prompt
-        env:
-          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt || azd env select "$AZURE_ENV_NAME"
+          azd config set defaults.subscription "$AZURE_SUBSCRIPTION_ID"
+          azd up --no-prompt
