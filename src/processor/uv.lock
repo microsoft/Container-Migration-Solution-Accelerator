@@ -4,13 +4,13 @@ requires-python = ">=3.12"
 
 [manifest]
 overrides = [
-    { name = "authlib", specifier = ">=1.6.9" },
+    { name = "authlib", specifier = "==1.6.9" },
     { name = "av", specifier = "==16.1.0" },
     { name = "azure-core", specifier = "==1.38.0" },
     { name = "black", specifier = "==26.3.1" },
     { name = "cryptography", specifier = "==46.0.5" },
     { name = "pyjwt", specifier = "==2.12.0" },
-    { name = "pyopenssl", specifier = ">=26.0.0" },
+    { name = "pyopenssl", specifier = "==26.0.0" },
     { name = "python-multipart", specifier = "==0.0.22" },
     { name = "starlette", specifier = "==0.52.1" },
     { name = "urllib3", specifier = "==2.6.3" },

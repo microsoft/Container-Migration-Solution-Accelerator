@@ -20,6 +20,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                   |
 | `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                   |
 | `AZURE_ENV_IMAGETAG`            | string  | `latest`                | Specifies the container image tag to use for deployment.                              |
+| `AZURE_ENV_VM_SIZE`             | string  | `Standard_D2s_v5`      | Specifies the VM size for the jumpbox virtual machine (production deployment only).   |
 
 ## How to Set a Parameter
 
