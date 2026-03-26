@@ -2,9 +2,6 @@ name: Azure Dev Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -46,6 +43,8 @@ jobs:
       - name: Provision and Deploy
         shell: bash
         run: |
-          azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt || azd env select "$AZURE_ENV_NAME"
+          if ! azd env select "$AZURE_ENV_NAME"; then
+            azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt
+          fi
           azd config set defaults.subscription "$AZURE_SUBSCRIPTION_ID"
           azd up --no-prompt
