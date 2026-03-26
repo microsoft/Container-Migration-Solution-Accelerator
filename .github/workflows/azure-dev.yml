@@ -1,33 +1,52 @@
-name: AZD Template Validation
+name: Azure Dev Deploy
+
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
   id-token: write
-  pull-requests: write
 
 jobs:
-  template_validation:
+  deploy:
     runs-on: ubuntu-latest
-    name: azd template validation
-    environment: azd-template-gallery
+    environment: production
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: microsoft/template-validation-action@v0.4.3
+      - name: Install azd
+        uses: Azure/setup-azd@v2
+
+      - name: Login to Azure
+        uses: azure/login@v2
         with:
-          validateAzd: ${{ vars.AZD_VALIDATE }}
-          useDevContainer: ${{ vars.AZD_USE_DEV_CONTAINER }}
-        id: validation
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to AZD
+        shell: bash
+        run: |
+          azd auth login \
+            --client-id "$AZURE_CLIENT_ID" \
+            --federated-credential-provider "github" \
+            --tenant-id "$AZURE_TENANT_ID"
+
+      - name: Provision and Deploy
+        shell: bash
+        run: azd up --no-prompt
         env:
-          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          AZURE_AI_MODEL_CAPACITY: 1 # keep low to avoid potential quota issues
-          GITHUB_TOKEN: ${{ secrets.AZD_GITHUB_TOKEN }}
-
-      - name: print result
-        run: cat ${{ steps.validation.outputs.resultFile }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
