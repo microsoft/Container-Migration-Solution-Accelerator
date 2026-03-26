@@ -734,6 +734,8 @@ var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
 
+var aiFoundryAiProjectResourceName = 'proj-${solutionSuffix}'
+var aiFoundryAiProjectDescription = 'AI Foundry project for ${solutionName}'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
@@ -791,57 +793,19 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   }
 }
 
-// Temporarily disabled AI Foundry due to AML workspace creation issues
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiFoundryAiProject) {
-  name: take('avm.ptn.ai-ml.ai-foundry.${solutionSuffix}', 64)
+// ========== AI Foundry AI Services ========== //
+module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
+  name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
-    #disable-next-line BCP334
-    baseName: take(aiFoundryAiServicesResourceName, 12)
-    baseUniqueName: null
+    name: aiFoundryAiServicesResourceName
     location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
-    aiFoundryConfiguration: {
-      accountName:aiFoundryAiServicesResourceName
-      allowProjectManagement: true
-      roleAssignments: [
-        // Service Principal permissions
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        }
-        // Deployer permissions for local debugging
-        {
-          principalId: deployingUserPrincipalId
-          principalType: deployingUserType
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: deployingUserPrincipalId
-          principalType: deployingUserType
-          roleDefinitionIdOrName: 'Cognitive Services User'
-        }
-      ]
-      // Remove networking configuration to avoid AML workspace creation issues
-      networking: enablePrivateNetworking? {
-        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-      } : null
-    }
-    // Disable private endpoints temporarily to fix AML workspace issue
-    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : null
-    // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-    aiModelDeployments: [
+    tags: allTags
+    sku: 'S0'
+    kind: 'AIServices'
+    disableLocalAuth: true
+    allowProjectManagement: true
+    customSubDomainName: aiFoundryAiServicesResourceName
+    deployments: [
       {
         name: aiModelDeploymentName
         model: {
@@ -855,8 +819,102 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
         }
       }
     ]
+    networkAcls: {
+      defaultAction: 'Allow'
+      virtualNetworkRules: []
+      ipRules: []
+    }
+    managedIdentities: {
+      systemAssigned: true
+      userAssignedResourceIds: [appIdentity.outputs.resourceId]
+    }
+    roleAssignments: [
+      // Service Principal permissions
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      // Deployer permissions for local debugging
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+      }
+      {
+        roleDefinitionIdOrName: 'Cognitive Services User'
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+      }
+    ]
+    // WAF aligned configuration for Monitoring
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    // Private endpoints are deployed separately via the aiFoundryPrivateEndpoint module below
+    privateEndpoints: []
+    enableTelemetry: enableTelemetry
+  }
+}
+
+// ========== AI Foundry Private Endpoint ========== //
+module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
+  name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
+  params: {
+    name: 'pep-${aiFoundryAiServicesResourceName}'
+    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+    location: solutionLocation
     tags: allTags
     enableTelemetry: enableTelemetry
+    privateLinkServiceConnections: [
+      {
+        name: 'pep-${aiFoundryAiServicesResourceName}-connection'
+        properties: {
+          privateLinkServiceId: aiFoundryAiServices!.outputs.resourceId
+          groupIds: ['account']
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      privateDnsZoneGroupConfigs: [
+        {
+          name: 'ai-services-dns-zone-cognitiveservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-openai'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-aiservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        }
+      ]
+    }
+    subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
+  }
+}
+
+// ========== AI Foundry Project ========== //
+module aiFoundryProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
+  dependsOn: enablePrivateNetworking ? [aiFoundryPrivateEndpoint] : []
+  params: {
+    name: aiFoundryAiProjectResourceName
+    location: azureAiServiceLocation
+    tags: tags
+    desc: aiFoundryAiProjectDescription
+    //Implicit dependencies below
+    aiServicesName: aiFoundryAiServices!.outputs.name
   }
 }
 
@@ -976,7 +1034,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     publicNetworkAccess: 'Enabled'
   }
   // Add explicit dependency
-  dependsOn: useExistingAiFoundryAiProject ? [] : [aiFoundry]
+  dependsOn: useExistingAiFoundryAiProject ? [] : [aiFoundryAiServices]
 }
 
 module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if (enablePrivateNetworking) {
