@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aiohttp==3.12.15",
+    "aiohttp==3.13.3",
     "art==6.5",
     "azure-ai-agents==1.2.0b3",
     "azure-ai-inference==1.0.0b9",
@@ -14,7 +14,7 @@ dependencies = [
     "azure-appconfiguration==1.7.1",
     "azure-identity==1.24.0",
     "azure-storage-queue==12.13.0",
-    "fastmcp==2.12.2",
+    "fastmcp==2.14.2",
     "jinja2==3.1.6",
     "mcp==1.26.0",
     "openai==2.26.0",
@@ -32,6 +32,14 @@ dev = ["pre-commit>=4.0.1", "ruff>=0.8.6"]
 override-dependencies = [
     "av==16.1.0",
     "starlette==0.52.1",
+    "authlib>=1.6.9",
+    "azure-core==1.38.0",
+    "urllib3==2.6.3",
+    "black==26.3.1",
+    "python-multipart==0.0.22",
+    "cryptography==46.0.5",
+    "pyjwt==2.12.0",
+    "pyopenssl==26.0.0",
 ]
 
 [tool.ruff]

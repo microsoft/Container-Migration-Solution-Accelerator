@@ -17,6 +17,7 @@ RUN tdnf update -y && tdnf install -y \
     tar \
     ca-certificates \
     shadow-utils \
+    gawk \
     && tdnf clean all \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && mv /root/.local/bin/uv /usr/local/bin/uv
