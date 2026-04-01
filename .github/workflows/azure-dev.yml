@@ -13,7 +13,7 @@ jobs:
     name: azd template validation
     environment: azd-template-gallery
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: microsoft/template-validation-action@Latest
         with:
