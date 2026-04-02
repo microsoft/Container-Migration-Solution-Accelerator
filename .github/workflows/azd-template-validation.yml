@@ -1,7 +1,7 @@
 name: AZD Template Validation
 on:
   schedule:
-    - cron: '*/20 * * * *' # Temporary validation schedule: every 10 minutes
+    - cron: '*/30 * * * *' # Temporary validation schedule: every 30 minutes
   workflow_dispatch:
 
 permissions:
