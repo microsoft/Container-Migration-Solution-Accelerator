@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     name: azd template validation
     environment: production
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +33,6 @@ jobs:
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_AI_SERVICE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_AI_MODEL_CAPACITY: 1 # keep low to avoid potential quota issues
-          GH_TOKEN: ${{ secrets.AZD_GITHUB_TOKEN }}
 
       - name: print result
         run: cat ${{ steps.validation.outputs.resultFile }}
