@@ -1,7 +1,10 @@
 name: AZD Template Validation
 on:
+  push:
+    branches:
+      - psl-ts-schedule   
   schedule:
-    - cron: '*/30 * * * *' # Temporary validation schedule: every 30 minutes
+    - cron: '*/30 * * * *' # Temporary validation schedule
   workflow_dispatch:
 
 permissions:
