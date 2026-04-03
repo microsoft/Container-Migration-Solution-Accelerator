@@ -333,7 +333,7 @@ def print_report(results: list[ValidationResult], *, use_color: bool = True) -> 
             )
             print(f"  {tag}  {issue.param_name}: {issue.message}")
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Total: {total_errors} error(s), {total_warnings} warning(s)")
     if total_errors == 0:
         print(f"{c['OK']}All parameter mappings are valid.{c['RESET']}")
