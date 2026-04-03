@@ -2,6 +2,11 @@ on:
     push:
      branches:
        - main
+     paths-ignore:
+       - 'docs/**'
+       - '**/*.md'
+       - 'LICENSE'
+       - 'data/**'
 
 permissions:
   contents: write
