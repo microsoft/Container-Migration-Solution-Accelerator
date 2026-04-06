@@ -1229,6 +1229,10 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'APP_ENV'
             value: 'prod'
           }
+          {
+            name: 'ALLOWED_ORIGINS'
+            value: 'https://${frontEndContainerAppName}.${containerAppsEnvironment.outputs.defaultDomain}'
+          }
         ]
         resources: {
           cpu: '1'
