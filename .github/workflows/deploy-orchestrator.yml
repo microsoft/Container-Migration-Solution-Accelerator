@@ -87,21 +87,6 @@ jobs:
       cleanup_resources: ${{ inputs.cleanup_resources }}
     secrets: inherit
 
-  send-notification:
-    if: "!cancelled()"
-    needs: [docker-build, deploy]
-    uses: ./.github/workflows/job-send-notification.yml
-    with:
-      trigger_type: ${{ inputs.trigger_type }}
-      waf_enabled: ${{ inputs.waf_enabled }}
-      EXP: ${{ inputs.EXP }}
-      existing_webapp_url: ${{ inputs.existing_webapp_url }}
-      deploy_result: ${{ needs.deploy.result }}
-      WEB_APPURL: ${{ needs.deploy.outputs.WEB_APPURL || inputs.existing_webapp_url }}
-      RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
-      QUOTA_FAILED: ${{ needs.deploy.outputs.QUOTA_FAILED }}
-    secrets: inherit
-
   cleanup-deployment:
     if: "!cancelled() && needs.deploy.result == 'success' && needs.deploy.outputs.RESOURCE_GROUP_NAME != '' && inputs.existing_webapp_url == '' && (inputs.trigger_type != 'workflow_dispatch' || inputs.cleanup_resources)"
     needs: [docker-build, deploy]
@@ -116,4 +101,20 @@ jobs:
       AZURE_ENV_OPENAI_LOCATION: ${{ needs.deploy.outputs.AZURE_ENV_OPENAI_LOCATION }}
       ENV_NAME: ${{ needs.deploy.outputs.ENV_NAME }}
       IMAGE_TAG: ${{ needs.deploy.outputs.IMAGE_TAG }}
+    secrets: inherit
+
+  send-notification:
+    if: "!cancelled()"
+    needs: [docker-build, deploy, cleanup-deployment]
+    uses: ./.github/workflows/job-send-notification.yml
+    with:
+      trigger_type: ${{ inputs.trigger_type }}
+      waf_enabled: ${{ inputs.waf_enabled }}
+      EXP: ${{ inputs.EXP }}
+      existing_webapp_url: ${{ inputs.existing_webapp_url }}
+      deploy_result: ${{ needs.deploy.result }}
+      cleanup_result: ${{ needs.cleanup-deployment.result }}
+      WEB_APPURL: ${{ needs.deploy.outputs.WEB_APPURL || inputs.existing_webapp_url }}
+      RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      QUOTA_FAILED: ${{ needs.deploy.outputs.QUOTA_FAILED }}
     secrets: inherit
