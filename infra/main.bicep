@@ -1231,6 +1231,10 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'REACT_APP_MSAL_REDIRECT_URL'
             value: '/'
           }
+          {
+            name: 'ALLOWED_ORIGINS'
+            value: 'https://${frontEndContainerAppName}.${containerAppsEnvironment.outputs.defaultDomain}'
+          }
         ]
         resources: {
           cpu: '1'
