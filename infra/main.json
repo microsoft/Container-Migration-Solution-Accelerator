@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "8495628770560205121"
+      "templateHash": "10582002328170601028"
     }
   },
   "parameters": {
@@ -26120,8 +26120,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "virtualNetwork"
       ]
     },
@@ -33808,9 +33808,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -40908,6 +40908,10 @@
                   {
                     "name": "REACT_APP_MSAL_REDIRECT_URL",
                     "value": "/"
+                  },
+                  {
+                    "name": "ALLOWED_ORIGINS",
+                    "value": "[format('https://{0}.{1}', variables('frontEndContainerAppName'), reference('containerAppsEnvironment').outputs.defaultDomain.value)]"
                   }
                 ],
                 "resources": {
