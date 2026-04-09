@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "14235802001827059391"
+      "version": "0.42.1.51946",
+      "templateHash": "6983410399801343370"
     }
   },
   "parameters": {
@@ -4678,8 +4678,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "10681183203421948888"
+              "version": "0.42.1.51946",
+              "templateHash": "2245351167779444314"
             }
           },
           "definitions": {
@@ -26098,8 +26098,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "virtualNetwork"
       ]
     },
@@ -30048,8 +30048,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "8365054813170845685"
+              "version": "0.42.1.51946",
+              "templateHash": "16866311185741009453"
             }
           },
           "definitions": {
