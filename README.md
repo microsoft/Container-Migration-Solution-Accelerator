@@ -109,6 +109,8 @@ The Container Migration Solution Accelerator supports development and deployment
 
 ![Deployment Architecture](docs/images/readme/deployment-architecture.png)
 
+> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version to ensure compliance. To configure, [Click here](./docs/DeploymentGuide.md#31-choose-deployment-type-optional).
+
 > ⚠️ **Important: Check Azure OpenAI o3 Model Availability**
 > To ensure o3 model access is available in your subscription, please check [Azure OpenAI model availability](https://learn.microsoft.com/azure/ai-services/openai/concepts/models#o3-models) before you deploy the solution.
 
