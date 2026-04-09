@@ -16,7 +16,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 |------------------------------|-----------|-------------|
 | **Contributor** | Subscription level | Create and manage Azure resources |
 | **User Access Administrator** | Subscription level | Manage user access and role assignments |
-| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions |
+| **Role Based Access Control Admin** | Subscription/Resource Group level | Configure RBAC permissions |
 | **App Registration Creation** | Azure Active Directory | Create and configure authentication |
 
 **🔍 How to Check Your Permissions:**
@@ -270,6 +270,11 @@ azd auth login --tenant-id <tenant-id>
 
 > ⚠️ **Critical: Redeployment Warning**  
 > If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
+
+**NOTE:** If you are running the latest azd version (version 1.23.9), please run the following command. 
+```bash 
+azd config set provision.preflight off
+```
 
 ```shell
 azd up
