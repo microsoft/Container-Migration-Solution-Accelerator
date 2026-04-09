@@ -5,7 +5,6 @@ WORKDIR /app
 # Install system dependencies and UV using tdnf (Azure Linux package manager)
 RUN tdnf update -y && tdnf install -y \
     tar \
-    gawk \
     ca-certificates \
     shadow-utils \
     gawk \
