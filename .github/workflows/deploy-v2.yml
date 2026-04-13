@@ -11,9 +11,25 @@ on:
       - main
       - dev
       - demo
+    paths:
+      - 'src/**'
+      - 'infra/**'
+      - 'azure*.yaml'
+      - 'scripts/**'
+      - '.github/workflows/deploy-v2.yml'
+      - '.github/workflows/deploy-orchestrator.yml'
+      - '.github/workflows/job-*.yml'
   pull_request:
     branches:
       - dev
+    paths:
+      - 'src/**'
+      - 'infra/**'
+      - 'azure*.yaml'
+      - 'scripts/**'
+      - '.github/workflows/deploy-v2.yml'
+      - '.github/workflows/deploy-orchestrator.yml'
+      - '.github/workflows/job-*.yml'
   schedule:
     - cron: '0 9,21 * * *'  # Runs at 9:00 AM and 9:00 PM GMT
   workflow_dispatch:
