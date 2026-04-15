@@ -341,7 +341,7 @@ py -3.12 -m uv sync --python 3.12
 
 ### 5.4. Run the Processor
 
-#### Option A: Queue-Based Mode (Production) [Preferred for local set up]
+#### Option A: Queue-Based Mode (Production) [Preferred for local setup]
 
 Process migration requests from Azure Storage Queue:
 
@@ -635,11 +635,11 @@ Before using the application, confirm all three services are running in separate
 
 ### Terminal Status Checklist
 
-| Terminal | Service | Command | Expected Output | URL |
-|----------|---------|---------|-----------------|-----|
-| **Terminal 1** | Processor (Queue Mode) | `python main_service.py` | `INFO: No messages in main queue` (repeating every 5s) | N/A |
-| **Terminal 2** | Backend API | `python -m uvicorn main:app --host 0.0.0.0 --port 8000` | `INFO: Application startup complete` | http://localhost:8000 |
-| **Terminal 3** | Frontend | `npm run dev` | `Local: http://localhost:5173/` | http://localhost:5173 |
+| Terminal | Service | Working Directory | Command | Expected Output | URL |
+|----------|---------|-------------------|---------|-----------------|-----|
+| **Terminal 1** | Processor (Queue Mode) | `src/processor/src` | `python main_service.py` | `INFO: No messages in main queue` (repeating every 5s) | N/A |
+| **Terminal 2** | Backend API | `src/backend-api/src/app` | `python -m uvicorn main:app --host 0.0.0.0 --port 8000` | `INFO: Application startup complete` | http://localhost:8000 |
+| **Terminal 3** | Frontend | `src/frontend` | `npm run dev` | `Local: http://localhost:5173/` | http://localhost:5173 |
 
 ### Quick Verification
 
@@ -675,7 +675,7 @@ curl http://localhost:8000/health
 
 ## Step 9: Next Steps
 
-Once all services are running (as confirmed in Step 7), you can:
+Once all services are running (as confirmed in Step 8), you can:
 
 1. **Access the Application**: Open `http://localhost:5173` in your browser to explore the frontend UI
 2. **Try a Sample Workflow**: Follow [SampleWorkflow.md](SampleWorkflow.md) for a guided walkthrough of the migration process
