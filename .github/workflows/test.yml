@@ -67,6 +67,7 @@ jobs:
           cd src/backend-api
           pytest src/tests \
             -c /dev/null \
+            --rootdir=. \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:reports/coverage.xml \
