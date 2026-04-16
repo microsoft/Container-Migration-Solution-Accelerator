@@ -65,7 +65,13 @@ jobs:
         if: env.skip_backend_tests == 'false'
         run: |
           cd src/backend-api
-          pytest --junitxml=pytest.xml
+          pytest src/tests \
+            -c /dev/null \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --junitxml=pytest.xml \
+            -v
 
       - name: Pytest Coverage Comment
         if: |
