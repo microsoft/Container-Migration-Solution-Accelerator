@@ -65,7 +65,7 @@ jobs:
         if: env.skip_backend_tests == 'false'
         run: |
           cd src/backend-api
-          pytest src/tests \
+          PYTHONPATH=src pytest src/tests \
             -c /dev/null \
             --rootdir=. \
             --cov=src \
