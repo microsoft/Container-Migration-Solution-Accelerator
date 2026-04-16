@@ -65,10 +65,10 @@ jobs:
         if: env.skip_backend_tests == 'false'
         run: |
           cd src/backend-api
-          PYTHONPATH=src pytest src/tests \
+          PYTHONPATH=src/app pytest src/tests \
             -c /dev/null \
             --rootdir=. \
-            --cov=src \
+            --cov=src/app \
             --cov-report=term-missing \
             --cov-report=xml:reports/coverage.xml \
             --junitxml=pytest.xml \
