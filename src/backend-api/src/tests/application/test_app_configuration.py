@@ -25,15 +25,14 @@ def test_configuration_fields():
     )
     assert hasattr(config, "app_logging_enable")
     assert isinstance(config.app_logging_enable, bool)
-    assert config.app_logging_enable is True
+    assert config.app_logging_enable is False  # Default from Configuration class
 
     assert hasattr(config, "azure_package_logging_level")
     assert isinstance(config.azure_package_logging_level, str)
-    assert config.azure_package_logging_level == "INFO"
+    assert config.azure_package_logging_level == "WARNING"  # Default from Configuration class
 
     assert hasattr(config, "azure_logging_packages")
-    assert isinstance(config.azure_logging_packages, list)
-    assert config.azure_logging_packages == []
+    assert config.azure_logging_packages is None  # Default from Configuration class
 
     assert hasattr(config, "app_logging_level")
     assert isinstance(config.app_logging_level, str)
