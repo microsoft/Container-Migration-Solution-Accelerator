@@ -8,22 +8,22 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
-      "containerRegistryHost": {
+      "containerRegistryEndpoint": {
         "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
       },
       "azureAiServiceLocation": {
         "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
       },
-      "aiDeploymentType": {
+      "deploymentType": {
         "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
       },
-      "aiModelName": {
+      "gptModelName": {
         "value": "${AZURE_ENV_GPT_MODEL_NAME}"
       },
-      "aiModelVersion": {
+      "gptModelVersion": {
         "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
       },
-      "aiModelCapacity": {
+      "gptDeploymentCapacity": {
         "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
       },
       "existingLogAnalyticsWorkspaceId": {

@@ -58,18 +58,18 @@ param frontendImageName string = ''
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
 @description('Optional. Model deployment type. Defaults to GlobalStandard.')
-param aiDeploymentType string = 'GlobalStandard'
+param deploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using o3. Defaults to o3.')
-param aiModelName string = 'o3'
+@description('Optional. Name of the GPT model to deploy. Recommend using o3. Defaults to o3.')
+param gptModelName string = 'o3'
 
 @minLength(1)
-@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
-param aiModelVersion string = '2025-04-16'
+@description('Optional. Version of GPT model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
+param gptModelVersion string = '2025-04-16'
 
-@description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
-param aiModelCapacity int = 1
+@description('Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
+param gptDeploymentCapacity int = 1
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -707,7 +707,7 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
   }
 }
 
-var aiModelDeploymentName = aiModelName
+var aiModelDeploymentName = gptModelName
 
 var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
@@ -737,12 +737,12 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         name: aiModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
+          name: gptModelName
+          version: gptModelVersion
         }
         sku: {
-          name: aiDeploymentType
-          capacity: aiModelCapacity
+          name: deploymentType
+          capacity: gptDeploymentCapacity
         }
       }
     ]
@@ -783,12 +783,12 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
         name: aiModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
+          name: gptModelName
+          version: gptModelVersion
         }
         sku: {
-          name: aiDeploymentType
-          capacity: aiModelCapacity
+          name: deploymentType
+          capacity: gptDeploymentCapacity
         }
       }
     ]
