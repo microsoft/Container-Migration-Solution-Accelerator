@@ -21,9 +21,8 @@ def test_configuration_fields():
     assert isinstance(config.app_sample_variable, str)
     assert (
         config.app_sample_variable
-        == "Application Template Sample Variable from App Configuration Store"  # "Hello World!"  # Default value from Configuration class
+        == "Hello World!"  # Default value from Configuration class
     )
-    # 'Application Template Sample Variable from App Configuration Store'
     assert hasattr(config, "app_logging_enable")
     assert isinstance(config.app_logging_enable, bool)
     assert config.app_logging_enable is True
