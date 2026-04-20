@@ -1,7 +1,7 @@
-fastapi==0.116.1
-uvicorn[standard]==0.35.0
+fastapi==0.135.3
+uvicorn[standard]==0.42.0
 # uvicorn removed and added above to allow websocket support
 jinja2==3.1.6
-azure-identity==1.24.0
+azure-identity==1.25.3
 python-dotenv==1.1.1
-python-multipart==0.0.22
+python-multipart==0.0.26

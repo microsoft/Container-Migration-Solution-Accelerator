@@ -181,7 +181,7 @@ jobs:
           echo "✅ All input parameters validated successfully!"
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Azure Developer CLI
         uses: Azure/setup-azd@v2
