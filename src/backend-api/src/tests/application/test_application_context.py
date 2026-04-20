@@ -15,8 +15,8 @@ def test_application_context_configuration():
     assert app_context.configuration is not None
     assert (
         app_context.configuration.app_sample_variable
-        == "Application Template Sample Variable from App Configuration Store"
-    )  # "Hello World!"
+        == "Hello World!"  # Default value when App Configuration Store is not connected
+    )
 
 
 def test_application_context_credential():

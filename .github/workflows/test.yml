@@ -1,0 +1,92 @@
+name: Test Workflow with Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'src/backend-api/**/*.py'
+      - 'src/backend-api/pyproject.toml'
+      - 'src/backend-api/pytest.ini'
+      - '.github/workflows/test.yml'
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - dev
+    paths:
+      - 'src/backend-api/**/*.py'
+      - 'src/backend-api/pyproject.toml'
+      - 'src/backend-api/pytest.ini'
+      - '.github/workflows/test.yml'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  backend_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd src/backend-api
+          pip install -e .
+          pip install pytest pytest-cov
+
+      - name: Check if Backend Test Files Exist
+        id: check_backend_tests
+        run: |
+          if [ -z "$(find src/backend-api/src/tests -type f -name 'test_*.py' 2>/dev/null)" ]; then
+            echo "No backend test files found, skipping backend tests."
+            echo "skip_backend_tests=true" >> $GITHUB_ENV
+          else
+            echo "Backend test files found, running tests."
+            echo "skip_backend_tests=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run Backend Tests with Coverage
+        if: env.skip_backend_tests == 'false'
+        run: |
+          cd src/backend-api
+          PYTHONPATH=src/app pytest src/tests \
+            -c /dev/null \
+            --rootdir=. \
+            --cov=src/app \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --junitxml=pytest.xml \
+            -v
+
+      - name: Pytest Coverage Comment
+        if: |
+          always() &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.fork == false &&
+          env.skip_backend_tests == 'false'
+        uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4  # v1.6.0
+        with:
+          pytest-xml-coverage-path: src/backend-api/reports/coverage.xml
+          junitxml-path: src/backend-api/pytest.xml
+          report-only-changed-files: true
+
+      - name: Skip Backend Tests
+        if: env.skip_backend_tests == 'true'
+        run: |
+          echo "Skipping backend tests because no test files were found."
