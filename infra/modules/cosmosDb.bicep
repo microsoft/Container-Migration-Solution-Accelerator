@@ -32,20 +32,20 @@ param zoneRedundant bool
 @description('Optional. The secondary location for the Cosmos DB Account for failover and multiple writes.')
 param secondaryLocation string?
 
-import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.5.1'
+import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.7.0'
 @description('Optional. Array of role assignments to create.')
 param roleAssignments roleAssignmentType[]?
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
 
-resource sqlContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-11-15' existing = {
+resource sqlContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2025-10-15' existing = {
   name: '${name}/00000000-0000-0000-0000-000000000002'
 }
 
 var privateNetworkingEnabled = !empty(sqlPrivateDnsZoneResourceId) && !empty(privateEndpointSubnetResourceId)
 
-module cosmosAccount 'br/public:avm/res/document-db/database-account:0.15.1' = {
+module cosmosAccount 'br/public:avm/res/document-db/database-account:0.19.0' = {
   name: take('avm.res.document-db.account.${name}', 64)
   params: {
     name: name

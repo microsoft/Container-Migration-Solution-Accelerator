@@ -126,7 +126,7 @@ var existingLawSubscription = useExistingLogAnalytics ? split(existingLogAnalyti
 var existingLawResourceGroup = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : ''
 var existingLawName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
 
-resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = if (useExistingLogAnalytics) {
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = if (useExistingLogAnalytics) {
   name: existingLawName
   scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
 }
@@ -155,7 +155,7 @@ var allTags = union(
 
 var existingTags = resourceGroup().tags ?? {}
 
-resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
+resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
   name: 'default'
   properties: {
     tags: union(
@@ -188,7 +188,7 @@ var replicaLocation = replicaRegionPairs[resourceGroup().location]
 // ========== User Assigned Identity ========== //
 // WAF best practices for identity and access management: https://learn.microsoft.com/en-us/azure/well-architected/security/identity-access
 var userAssignedIdentityResourceName = 'id-${solutionSuffix}'
-module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = {
+module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.5.0' = {
   name: take('avm.res.managed-identity.user-assigned-identity.${userAssignedIdentityResourceName}', 64)
   params: {
     name: userAssignedIdentityResourceName
@@ -202,7 +202,7 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
 // WAF best practices for Log Analytics: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-log-analytics
 // WAF PSRules for Log Analytics: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#azure-monitor-logs
 var logAnalyticsWorkspaceResourceName = 'log-${solutionSuffix}'
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = if ((enableMonitoring || enablePrivateNetworking) && !useExistingLogAnalytics) {
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.15.0' = if ((enableMonitoring || enablePrivateNetworking) && !useExistingLogAnalytics) {
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
     name: logAnalyticsWorkspaceResourceName
@@ -214,7 +214,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     enableTelemetry: enableTelemetry
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
     // WAF aligned configuration for Redundancy
-    dailyQuotaGb: enableRedundancy ? 10 : null //WAF recommendation: 10 GB per day is a good starting point for most workloads
+    dailyQuotaGb: enableRedundancy ? '10' : null //WAF recommendation: 10 GB per day is a good starting point for most workloads
     replication: enableRedundancy
       ? {
           enabled: true
@@ -265,7 +265,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
 // WAF PSRules for  Application Insights: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#application-insights
 var applicationInsightsResourceName = 'appi-${solutionSuffix}'
-module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (enableMonitoring) {
+module applicationInsights 'br/public:avm/res/insights/component:0.7.1' = if (enableMonitoring) {
   name: take('avm.res.insights.component.${applicationInsightsResourceName}', 64)
   #disable-next-line no-unnecessary-dependson
   //dependsOn: [logAnalyticsWorkspace]
@@ -300,7 +300,7 @@ module virtualNetwork './modules/virtualNetwork.bicep' = if (enablePrivateNetwor
 
 // Azure Bastion Host
 var bastionHostName = 'bas-${solutionSuffix}' // Bastion host name must be between 3 and 15 characters in length and use numbers and lower-case letters only.
-module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePrivateNetworking) {
+module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (enablePrivateNetworking) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {
     name: bastionHostName
@@ -325,13 +325,13 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (enablePr
     enableTelemetry: enableTelemetry
     publicIPAddressObject: {
       name: 'pip-${bastionHostName}'
-      zones: []
+      availabilityZones: []
     }
   }
 }
 // Jumpbox Virtual Machine
 var jumpboxVmName = take('vm-jumpbox-${solutionSuffix}', 15)
-module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enablePrivateNetworking) {
+module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.22.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
     name: take(jumpboxVmName, 15) // Shorten VM name to 15 characters to avoid Azure limits
@@ -340,7 +340,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     tags: allTags
-    zone: 0
+    availabilityZone: 1
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
@@ -428,7 +428,7 @@ var aiRelatedDnsZoneIndices = [
 // - Excludes AI-related zones when using with an existing Foundry project
 // ===================================================
 @batchSize(5)
-module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
+module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.8.1' = [
   for (zone, i) in privateDnsZones: if (enablePrivateNetworking && (empty(existingFoundryProjectResourceId) || !contains(
     aiRelatedDnsZoneIndices,
     i
@@ -451,7 +451,7 @@ module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
 // ========== AVM WAF ========== //
 // ========== Storage account module ========== //
 var storageAccountName = 'st${solutionSuffix}' // Storage account name must be between 3 and 24 characters in length and use numbers and lower-case letters only.
-module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
+module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
     name: storageAccountName
@@ -525,8 +525,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       ]
     }
     queueServices: {
-      deleteRetentionPolicyEnabled: true
-      deleteRetentionPolicyDays: 7
       queues: [
         for queue in ([processQueueName, '${processQueueName}-dead-letter'] ?? []): {
           name: queue
@@ -556,7 +554,7 @@ var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().loca
 var cosmosDatabaseName = 'migration_db'
 var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
-module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
+module cosmosDb 'br/public:avm/res/document-db/database-account:0.19.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
     name: cosmosDbResourceName
@@ -630,7 +628,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
       : [
           'EnableServerless'
         ]
-    automaticFailover: enableRedundancy ? true : false
+    enableAutomaticFailover: enableRedundancy ? true : false
     failoverLocations: enableRedundancy
       ? [
           {
@@ -660,7 +658,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
       }
     ]
     // Create custom data plane role definition and assignment
-    dataPlaneRoleDefinitions: [
+    sqlRoleDefinitions: [
       {
         roleName: 'CosmosDB Data Contributor Custom'
         dataActions: [
@@ -684,7 +682,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
 
 // ========== Container Registry for developer builds ========== //
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' = {
+module containerRegistry 'br/public:avm/res/container-registry/registry:0.12.0' = {
   name: 'registryDeployment'
   params: {
     name: 'cr${solutionSuffix}'
@@ -722,7 +720,7 @@ var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
 var aiFoundryAiProjectResourceName = 'aifp-${solutionSuffix}'
 var aiFoundryAiProjectDescription = 'AI Foundry project for ${solutionName}'
 
-resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
+resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
 }
@@ -767,7 +765,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
 }
 
 // ========== AI Foundry AI Services ========== //
-module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
+module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.2' = if (!useExistingAiFoundryAiProject) {
   name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
     name: aiFoundryAiServicesResourceName
@@ -840,7 +838,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
 }
 
 // ========== AI Foundry Private Endpoint ========== //
-module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
+module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.12.0' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
   name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
   params: {
     name: 'pep-${aiFoundryAiServicesResourceName}'
@@ -914,7 +912,7 @@ module userOpenAiRoleAssignmentExisting './modules/role.bicep' = if (useExisting
 }
 
 var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices.name : aiFoundryAiServicesResourceName
-module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
+module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.2' = {
   name: take('avm.res.app-config.store.${solutionSuffix}', 64)
   params: {
     location: solutionLocation
@@ -1030,7 +1028,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
   }
 }
 
-module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if (enablePrivateNetworking) {
+module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.9.2' = if (enablePrivateNetworking) {
   name: take('avm.res.app-configuration.configuration-store-update.${solutionSuffix}', 64)
   params: {
     name: 'appcs-${solutionSuffix}'
@@ -1071,7 +1069,7 @@ var logAnalyticsWorkspaceId = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspace!.properties.customerId
   : logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
 // ========== Container App Environment ========== //
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.2' = {
+module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.13.1' = {
   name: take('avm.res.app.managed-environment.${solutionSuffix}', 64)
   params: {
     name: 'cae-${solutionSuffix}'
@@ -1080,10 +1078,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     appLogsConfiguration: enableMonitoring
       ? {
           destination: 'log-analytics'
-          logAnalyticsConfiguration: {
-            customerId: logAnalyticsWorkspaceId
-            sharedKey: logAnalyticsPrimarySharedKey
-          }
+          logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
         }
       : null
     workloadProfiles: [
@@ -1108,7 +1103,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 
 var backendContainerPort = 80
 var backendContainerAppName = take('ca-backend-api-${solutionSuffix}', 32)
-module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
+module containerAppBackend 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
   dependsOn: [applicationInsights]
@@ -1198,7 +1193,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
 }
 
 var frontEndContainerAppName = take('ca-frontend-${solutionSuffix}', 32)
-module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
+module containerAppFrontend 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${frontEndContainerAppName}', 64)
   params: {
     name: frontEndContainerAppName
@@ -1263,7 +1258,7 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
 }
 
 var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
-module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
+module containerAppProcessor 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
   dependsOn: [applicationInsights]

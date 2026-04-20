@@ -36,7 +36,7 @@ param queues string[]?
 @description('Optional. The resource ID of the log analytics workspace to send diagnostic logs to.')
 param logAnalyticsWorkspaceResourceId string?
 
-import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.6.0'
+import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.7.0'
 @description('Optional. Specifies the role assignments for the storage account.')
 param roleAssignments roleAssignmentType[]?
 
@@ -48,7 +48,7 @@ param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags =
 
 var privateNetworkingEnabled = (!empty(blobPrivateDnsZoneResourceId) || !empty(queuePrivateDnsZoneResourceId)) && !empty(privateEndpointSubnetResourceId)
 
-module storageAccount 'br/public:avm/res/storage/storage-account:0.26.2' = {
+module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
   name: take('avm.res.storage.storage-account.${name}', 64)
   params: {
     name: name

@@ -10,7 +10,7 @@ param aiServiceName string
 @allowed(['Device', 'ForeignGroup', 'Group', 'ServicePrincipal', 'User'])
 param principalType string = 'ServicePrincipal'
 
-resource cognitiveServiceExisting 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
+resource cognitiveServiceExisting 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
   name: aiServiceName
 }
 
