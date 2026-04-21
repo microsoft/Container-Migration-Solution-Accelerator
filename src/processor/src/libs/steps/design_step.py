@@ -561,9 +561,6 @@ class DesignStep(KernelProcessStep[DesignStepState], ToolTrackingMixin):
                     message_preview="Starting architecture discussion for Azure recommendations",
                 )
 
-            # Extract parameters from context_data
-            process_id = process_id
-            analysis_result = analysis_result
             source_file_folder = parameters["source_file_folder"]
             output_file_folder = parameters["output_file_folder"]
 

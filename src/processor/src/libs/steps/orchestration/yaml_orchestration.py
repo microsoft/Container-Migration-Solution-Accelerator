@@ -748,7 +748,6 @@ class YamlStepGroupChatManager(StepSpecificGroupChatManager):
 
         if not chat_history.messages:
             raise RuntimeError("No messages in the chat history.")
-            raise RuntimeError("No messages in the chat history.")
 
         chat_history.messages.insert(
             0,

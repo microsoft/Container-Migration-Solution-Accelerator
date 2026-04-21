@@ -598,7 +598,7 @@ class MigrationProcessor:
 
             # Record timeout failure in report collector
             if self._report_collector:
-                _failure_content = self._report_collector.record_failure(
+                self._report_collector.record_failure(
                     timeout_exception,
                     failure_type=FailureType.TIMEOUT,
                     severity=FailureSeverity.HIGH,

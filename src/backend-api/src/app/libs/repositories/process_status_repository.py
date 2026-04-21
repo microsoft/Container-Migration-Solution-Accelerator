@@ -320,11 +320,7 @@ class ProcessStatusRepository(RepositoryBase[ProcessStatus, str]):
                     )
                     process_duration_seconds = int((end - start).total_seconds())
                 except Exception:
-                    pass
-
-            early_failure = (
-                process_failed and process_duration_seconds < 30
-            )  # Failed in less than 30 seconds
+                    pass  # Duration calculation is best-effort; default to 0 on parse failure
 
             # Analyze each agent with enhanced insights
             for agent_name, agent_data in agents_data.items():

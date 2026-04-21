@@ -181,9 +181,6 @@ class AgentBuilder(SKLogicBase):
 
         message_content = "".join([content.content.content for content in contents])
         # Parse response based on format using dynamic Pydantic deserialization
-        # if response_format:
-        #     parsed_content = response_format(**json.loads(message_content))
-        #     message_content = str(parsed_content)
 
         # Ensure thread is not None for return type compatibility
         if thread is None:
@@ -270,13 +267,6 @@ class AgentBuilder(SKLogicBase):
             response_format=response_format,
         )
         return agent_instance
-
-
-# Note: MCP plugin creation function disabled due to compatibility
-# def create_mcp_plugin_info(plugin: MCPPluginBase, name: str) -> pluginInfo:
-#     """Create a plugin_info for an MCP plugin."""
-#     return pluginInfo(plugin=plugin, plugin_name=name, is_mcp_plugin=True)
-
 
 def create_kernel_plugin_info(plugin: KernelPlugin | object, name: str) -> pluginInfo:
     """Create a plugin_info for a Kernel plugin (KernelPlugin instance or class with @kernel_function)."""

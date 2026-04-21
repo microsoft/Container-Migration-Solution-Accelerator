@@ -554,10 +554,10 @@ This appears to be a container internal path that doesn't exist in the current e
                     ]
                     suggestions.extend([f"../{item}" for item in matching_parent_dirs])
                 except (PermissionError, OSError):
-                    pass
+                    pass  # Silently skip inaccessible parent directory suggestions
 
         except (PermissionError, OSError):
-            pass
+            pass  # Silently skip directory suggestions when access is denied
 
         error_msg = f"""[FAILED] DIRECTORY LISTING FAILED
 
@@ -1023,7 +1023,7 @@ Reason: No write permission to remove file from source directory
                 size_str = f"{size_bytes // 1024}KB"
             else:
                 size_str = f"{size_bytes // (1024 * 1024)}MB"
-        except:
+        except Exception:
             size_str = "unknown size"
 
         return f"""[SUCCESS] FILE MOVED SUCCESSFULLY
@@ -1158,7 +1158,7 @@ Status: Folder is already empty
                             filepath = os.path.join(dirpath, filename)
                             with contextlib.suppress(Exception):
                                 total_size += os.path.getsize(filepath)
-                except:
+                except Exception:  # Ignore errors calculating directory size during cleanup
                     pass
 
     except PermissionError as e:
@@ -1363,7 +1363,7 @@ Reason: No write permission to rename file in this directory
                 size_str = f"{size_bytes // 1024}KB"
             else:
                 size_str = f"{size_bytes // (1024 * 1024)}MB"
-        except:
+        except Exception:
             size_str = "unknown size"
 
         return f"""[SUCCESS] FILE RENAMED SUCCESSFULLY
@@ -1492,7 +1492,7 @@ def get_workspace_info() -> dict[str, any]:
                 discovered_directories[category] = matching_dirs
 
     except PermissionError:
-        pass
+        pass  # Skip directory discovery when access is denied
 
     # Check parent directory info (if accessible)
     parent_info = None
@@ -1519,7 +1519,7 @@ def get_workspace_info() -> dict[str, any]:
                 parent_info["accessible"] = False
                 parent_info["error"] = "Permission denied"
     except Exception:
-        pass
+        pass  # Gracefully handle unexpected errors during directory discovery
 
     return {
         "workspace_structure": workspace_info,

@@ -212,7 +212,7 @@ async def _refresh_credentials_if_needed(service: ChatCompletionClientBase, exce
 
                 # The token provider is typically a callable that takes a scope
                 # Calling it will force the underlying credential to refresh if needed
-                fresh_token = await service._ad_token_provider(azure_openai_scope)
+                await service._ad_token_provider(azure_openai_scope)
                 logger.info("[AUTH] Successfully triggered token refresh via AD token provider")
                 return True
 

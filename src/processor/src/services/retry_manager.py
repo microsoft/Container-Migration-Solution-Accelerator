@@ -283,7 +283,11 @@ class RetryManager:
             f"in {total_elapsed:.2f}s. Last error: {last_exception}"
         )
 
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        raise RuntimeError(
+            f"{operation_name} failed after {self.max_retries + 1} attempts with no captured exception"
+        )
 
     def get_metrics(self) -> RetryMetrics:
         """Get current retry metrics"""

@@ -9,7 +9,7 @@ Following SK Process Framework best practices:
 - Step-specific group chat orchestration
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from jinja2 import Template
 from pydantic import Field
@@ -24,9 +24,6 @@ from semantic_kernel.processes.kernel_process import (
 )
 
 from libs.steps.base_step_state import BaseStepState
-
-if TYPE_CHECKING:
-    from libs.models.failure_context import StepFailureState
 
 from libs.base.KernelAgent import semantic_kernel_agent
 from libs.steps.orchestration.documentation_orchestration import (

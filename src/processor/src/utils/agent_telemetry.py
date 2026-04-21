@@ -367,9 +367,6 @@ class TelemetryManager:
 
     async def update_process_status(self, process_id: str, status: str):
         """Update the overall process status."""
-        # if self.current_process:
-        #     self.current_process.status = status
-        #     self.current_process.last_update_time = _get_utc_timestamp()
         current_process: ProcessStatus | None = None
 
         if self.repository:
@@ -378,15 +375,6 @@ class TelemetryManager:
                 current_process.last_update_time = _get_utc_timestamp()
                 current_process.status = status
                 await self.repository.update_async(current_process)
-
-        # if current_process:
-        #     current_process.status = status
-        #     current_process.last_update_time = _get_utc_timestamp()
-        #     if self.repository:
-        #         try:
-        #             await self.repository.update_async(self.current_process)
-        #         except Exception as e:
-        #             logger.error(f"Error updating process status: {e}")
 
     async def set_agent_idle(self, process_id: str, agent_name: str):
         """Set an agent to idle state."""
@@ -445,15 +433,6 @@ class TelemetryManager:
                     )
                 except Exception as e:
                     logger.error(f"Error updating phase transition: {e}")
-
-    # async def _cleanup_phase_agents(self, process_id: str, previous_phase: str):
-    #     """Remove or mark inactive agents not relevant to current phase."""
-    #     if not self.current_process:
-    #         return
-
-    #     # Note: Removed fake orchestration agent cleanup since we no longer create them
-    #     # Phase orchestrators are Python classes, not agents to be tracked
-    #     logger.debug(f"[TELEMETRY] Phase cleanup completed: {previous_phase}")
 
     async def _initialize_phase_agents(self, process_id: str, phase: str):
         """Initialize agents relevant to the new phase."""
@@ -532,6 +511,7 @@ class TelemetryManager:
         """Get the current process status."""
         if self.repository:
             return await self.repository.get_async(process_id)
+        return None
 
     async def get_process_outcome(self, process_id: str) -> str:
         """Get a human-readable process outcome."""

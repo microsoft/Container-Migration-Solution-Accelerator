@@ -27,9 +27,6 @@ from semantic_kernel.processes.kernel_process import (
 
 from libs.steps.base_step_state import BaseStepState
 
-if TYPE_CHECKING:
-    from libs.models.failure_context import StepFailureState
-
 from libs.base.KernelAgent import semantic_kernel_agent
 from libs.steps.orchestration.models.yaml_result import (
     ConvertedFile,

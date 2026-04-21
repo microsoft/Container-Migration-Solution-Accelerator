@@ -14,10 +14,9 @@ import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import PanelRight from "../components/Panels/PanelRight";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
 import { HistoryRegular, HistoryFilled, bundleIcon } from "@fluentui/react-icons";
-import { CircleCheck, X } from "lucide-react";
+import { CircleCheck } from "lucide-react";
 import Lottie from 'lottie-react';
 import documentLoader from "../../public/images/loader.json";
-import { getApiUrl, headerBuilder } from '../api/config';
 import { apiService } from '../services/ApiService';
 import ProgressModal from "../commonComponents/ProgressModal/progressModal";
 
@@ -158,7 +157,6 @@ const ProcessPage: React.FC = () => {
 
     const baseMessage = phaseMessages[phase] || `${phase} phase in progress`;
     const agentInfo = active_agent_count && total_agents ? ` (${active_agent_count}/${total_agents} agents active)` : '';
-    const healthIcon = health_status?.includes('🟢') ? ' 🟢' : '';
 
     return `${phase} phase: ${baseMessage}${agentActivity}${agentInfo}`;
   };

@@ -11,7 +11,7 @@ Following SK Process Framework best practices:
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from jinja2 import Template
 from pydantic import BaseModel, Field, ValidationError
@@ -25,9 +25,6 @@ from semantic_kernel.processes.kernel_process import (
     KernelProcessStepContext,
     KernelProcessStepState,
 )
-
-if TYPE_CHECKING:
-    from libs.models.failure_context import StepFailureState
 
 from libs.application.application_context import AppContext
 from libs.base.KernelAgent import semantic_kernel_agent
@@ -45,18 +42,6 @@ from .base_step_state import BaseStepState
 from .orchestration.models.analysis_result import Analysis_ExtendedBooleanResult
 
 logger = create_migration_logger(__name__)
-
-
-# class AnalysisStepState(KernelBaseModel):
-#     """State for the Analysis step following best practices."""
-
-#     platform_detected: str = ""
-#     files_discovered: list = []
-#     analysis_completed: bool = False
-#     final_result: dict[str, Any] | None = (
-#         None  # Store complete result for main.py access
-#     )
-
 
 class AnalysisStepState(BaseStepState):
     """State for the Analysis step following best practices."""
@@ -957,16 +942,7 @@ class AnalysisStep(KernelProcessStep[AnalysisStepState], ToolTrackingMixin):
                 logger.info(
                     f"[TIMING] Orchestration completed in {self.state.orchestration_duration:.2f} seconds"
                 )
-            # else:
-            #     # Fallback for legacy timing
-            #     orchestration_end_time = time.time()
-            #     orchestration_duration = (
-            #         orchestration_end_time - orchestration_start_time
-            #     )
-            #     logger.info(
-            #         f"[TIMING] Orchestration completed in {orchestration_duration:.2f} seconds"
-            #     )
-
+            
             # Track successful orchestration invocation
             await self.telemetry.update_agent_activity(
                 process_id,
@@ -1239,20 +1215,6 @@ class AnalysisStep(KernelProcessStep[AnalysisStepState], ToolTrackingMixin):
 
             # Calculate time to failure (setup + error handling time)
             time_to_failure = self.state.total_execution_duration or 0.0
-
-            # # Handle timing based on orchestration phase
-            # if self.state.orchestration_start_time is not None:
-            #     # Orchestration was started - capture orchestration end timing
-            #     self.state.set_orchestration_end()
-            #     self.state.set_execution_end()
-
-            #     timing_context = f"orchestration phase (ran {self.state.orchestration_duration or 0.0:.2f}s)"
-            #     total_time = self.state.total_execution_duration or 0.0
-            # else:
-            #     # Orchestration never started - only execution timing
-            #     self.state.set_execution_end()
-            #     timing_context = "pre-orchestration setup"
-            #     total_time = self.state.total_execution_duration or 0.0
 
             # Create failure context for orchestration-level errors
             failure_collector = StepFailureCollector()

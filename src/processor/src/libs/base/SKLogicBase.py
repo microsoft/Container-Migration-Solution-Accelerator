@@ -100,7 +100,7 @@ class SKLogicBase(ABC, SKBaseModel):
         response_format: None = None,
     ) -> tuple[str, ChatHistoryAgentThread | AssistantAgentThread | AzureAIAgentThread]:
         """When response_format is None, returns string response."""
-        ...
+        pass
 
     @overload
     async def execute_thread(
@@ -113,7 +113,7 @@ class SKLogicBase(ABC, SKBaseModel):
         response_format: type[T] = ...,
     ) -> tuple[T, ChatHistoryAgentThread | AssistantAgentThread | AzureAIAgentThread]:
         """When response_format is provided, returns typed Pydantic BaseModel response."""
-        ...
+        pass
 
     @abstractmethod
     async def execute_thread(

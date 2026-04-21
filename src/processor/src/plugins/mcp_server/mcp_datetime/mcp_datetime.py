@@ -539,7 +539,6 @@ convert_timezone('{datetime_str}', '{from_tz}', '{to_tz}')  # Uses ISO format"""
         )
 
         return "\n".join(error_report)
-        return f"Error converting timezone: {str(e)}"
 
 
 @mcp.tool()
@@ -853,7 +852,6 @@ Error: {str(e)}
 [PROCESSING] EXAMPLE WORKING CALLS:
 calculate_time_difference('2023-12-25 10:00:00', '2023-12-25 15:30:00', 'hours')
 calculate_time_difference('2023-12-25', '2023-12-26', 'days')"""
-        return f"Error calculating time difference: {str(e)}"
 
 
 @mcp.tool()

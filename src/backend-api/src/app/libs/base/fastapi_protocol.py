@@ -17,7 +17,7 @@ class FastAPIWithContext(Protocol):
 
     # Include essential FastAPI methods for type checking
     def include_router(self, *args, **kwargs) -> None:
-        ...
+        pass
 
 
 def add_app_context_to_fastapi(

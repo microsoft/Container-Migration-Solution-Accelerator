@@ -200,7 +200,7 @@ class PluginContext:
             if isinstance(plugin, MCPPluginBase):
                 return "mcp"
         except NameError:
-            pass
+            pass  # MCPPluginBase not imported; skip MCP type check
 
         if hasattr(plugin, "__aenter__") and hasattr(plugin, "__aexit__"):
             # Assume it's an MCP plugin if it has async context manager methods
@@ -212,7 +212,7 @@ class PluginContext:
                 # Semantic Kernel's KernelPlugin type
                 return "kernel"
         except NameError:
-            pass
+            pass  # KernelPlugin not imported; skip Semantic Kernel check
 
         if hasattr(plugin, "name") and hasattr(plugin, "functions"):
             # Plugin-like interface (already a KernelPlugin or similar)

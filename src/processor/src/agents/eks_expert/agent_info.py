@@ -1,13 +1,6 @@
 from agents.agent_info_util import MigrationPhase, load_prompt_text
 from utils.agent_builder import AgentType, agent_info
 
-# class AgentInfo(agent_info):
-#     agent_name = "EKS_Expert"
-#     agent_type = AgentType.ChatCompletionAgent
-#     agent_instruction = "You are an expert in EKS (Amazon Elastic Kubernetes Service). providing detailed and accurate information"
-#     agent_system_prompt = load_prompt_text("./prompt3.txt")
-
-
 def get_agent_info(phase: MigrationPhase | str | None = None) -> agent_info:
     """Get EKS Expert agent info with optional phase-specific prompt.
 

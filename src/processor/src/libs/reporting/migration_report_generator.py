@@ -93,7 +93,7 @@ class MigrationReportCollector:
                 if os.path.exists(file_path):
                     file_size = os.path.getsize(file_path)
             except Exception:
-                pass
+                pass  # File size is optional; proceed with None if unavailable
 
             self._file_contexts[file_name] = FileContext(
                 file_name=file_name,
@@ -202,7 +202,6 @@ class MigrationReportCollector:
 
     def _classify_failure_type(self, exception: Exception) -> FailureType:
         """Automatically classify failure type based on exception."""
-        exception_name = type(exception).__name__
         error_message = str(exception).lower()
 
         # Network and connectivity

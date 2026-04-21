@@ -62,10 +62,6 @@ class ApplicationBase(ABC):
 
         self.app_context.set_configuration(Configuration())
 
-        # This allows explicit debug_mode control from main_service.py
-        # if not self.debug_mode:
-        #     self.debug_mode = self.app_context.configuration.app_logging_enable
-
     @abstractmethod
     def run(self):
         raise NotImplementedError("Run method not implemented")

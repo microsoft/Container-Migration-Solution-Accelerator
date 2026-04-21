@@ -110,7 +110,7 @@ def parse_parameters_env_vars(json_path: Path) -> dict[str, list[str]]:
         data = json.loads(sanitized)
         params = data.get("parameters", {})
     except json.JSONDecodeError:
-        pass
+        pass  # Fall through with empty params if JSON is malformed
 
     # Walk each top-level parameter and scan its entire serialized value
     # for ${VAR} references from the original text.

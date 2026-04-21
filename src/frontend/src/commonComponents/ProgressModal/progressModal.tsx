@@ -48,7 +48,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
     const currentPhaseIndex = phases.indexOf(apiData.phase);
     
     if (currentPhaseIndex === -1) return 0;
-    if (processingCompleted && !migrationError) return 100;
+    if (processingCompleted) return 100;
     
     // Each phase represents 25% of the progress
     const baseProgress = (currentPhaseIndex / phases.length) * 100;
