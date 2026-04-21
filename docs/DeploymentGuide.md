@@ -465,7 +465,11 @@ Now that your deployment is complete and tested, explore these resources to enha
 
 ## Advanced: Deploy Local Changes
 
-If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files:
+If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files so that `azd up` builds Docker images from your local source code instead of pulling pre-built images from the GitHub repository.
+
+**How it works:**
+- The custom `azure.yaml` defines three services (backend, processor, frontend) with `remoteBuild: true`, which instructs `azd` to build Docker images from your local `src/` directories and push them to Azure Container Registry (ACR).
+- The custom `main.bicep` accepts image name parameters (`backendImageName`, `processorImageName`, `frontendImageName`) that `azd` passes automatically after building the images.
 
 > **Note:** To set up and run the application locally for development, see the [Local Development Setup Guide](./LocalDevelopmentSetup.md).
 
@@ -484,11 +488,35 @@ If you've made local modifications to the code and want to deploy them to Azure,
 ### Step 3: Deploy Changes
 
 > ⚠️ **Critical: Redeployment Warning**  
-> If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
+> If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must create a fresh environment before deploying to avoid conflicts and deployment failures.
 
-Run the deployment command:
+**Create a fresh environment:**
+```shell
+# Create a new named environment (3-16 characters, alphanumeric only)
+azd env new <new-environment-name>
+```
+
+> **Note:** When prompted "Set new environment as default environment?", select **Y**. This eliminates the need to run `azd env select` separately.
+
+**Run the deployment:**
 ```shell
 azd up
 ```
 
-> **Note:** These custom files are configured to deploy your local code changes instead of pulling from the GitHub repository.
+> **Note:** During the packaging phase, you may see `"No artifacts were found"` for each service. This is expected — because `remoteBuild: true` is configured, Docker images are built remotely on Azure Container Registry, not on your local machine. Your local code is still being deployed.
+
+**⚠️ Deployment Issues:** If `azd up` fails on the first attempt (e.g., with a `ResourceNotFound` error), try running `azd up` again. Transient errors can occur due to resource propagation delays, and a retry typically resolves them. For other errors, try a different region or see the [Troubleshooting Guide](./TroubleShootingSteps.md).
+
+### Step 4: Revert Configuration Files
+
+After your custom deployment is complete, revert the renames to restore the original configuration:
+
+**In the root directory:**
+1. Rename `azure.yaml` to `azure_custom.yaml`
+2. Rename `azure_custom2.yaml` to `azure.yaml`
+
+**In the `infra` directory:**
+1. Rename `main.bicep` to `main_custom.bicep`
+2. Rename `main_custom2.bicep` to `main.bicep`
+
+> **Note:** This restores the original files so that standard deployments and git status remain clean.
