@@ -268,6 +268,7 @@ class AgentBuilder(SKLogicBase):
         )
         return agent_instance
 
+
 def create_kernel_plugin_info(plugin: KernelPlugin | object, name: str) -> pluginInfo:
     """Create a plugin_info for a Kernel plugin (KernelPlugin instance or class with @kernel_function)."""
     return pluginInfo(plugin=plugin, plugin_name=name, is_mcp_plugin=False)

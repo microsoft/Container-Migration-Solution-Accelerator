@@ -1,6 +1,7 @@
 from agents.agent_info_util import MigrationPhase, load_prompt_text
 from utils.agent_builder import AgentType, agent_info
 
+
 def get_agent_info(phase: MigrationPhase | str | None = None) -> agent_info:
     """Get Azure Expert agent info with optional phase-specific prompt.
 

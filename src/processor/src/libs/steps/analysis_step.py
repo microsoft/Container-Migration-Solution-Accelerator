@@ -43,6 +43,7 @@ from .orchestration.models.analysis_result import Analysis_ExtendedBooleanResult
 
 logger = create_migration_logger(__name__)
 
+
 class AnalysisStepState(BaseStepState):
     """State for the Analysis step following best practices."""
 
@@ -942,7 +943,7 @@ class AnalysisStep(KernelProcessStep[AnalysisStepState], ToolTrackingMixin):
                 logger.info(
                     f"[TIMING] Orchestration completed in {self.state.orchestration_duration:.2f} seconds"
                 )
-            
+
             # Track successful orchestration invocation
             await self.telemetry.update_agent_activity(
                 process_id,
