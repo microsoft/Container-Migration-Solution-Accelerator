@@ -59,8 +59,8 @@ param aiDeploymentLocation string = azureAiServiceLocation
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
 
-@description('Optional. The image tag to use for container images. Defaults to "latest".')
-param imageTag string = 'latest'
+@description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
+param imageTag string = 'latest_v2'
 
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
