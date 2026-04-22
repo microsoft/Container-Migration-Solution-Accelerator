@@ -236,7 +236,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     enableTelemetry: enableTelemetry
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
     // WAF aligned configuration for Redundancy
-    dailyQuotaGb: enableRedundancy ? '10' : null //WAF recommendation: 10 GB per day is a good starting point for most workloads
+    dailyQuotaGb: enableRedundancy ? '10' : '-1' //WAF recommendation: 10 GB per day is a good starting point for most workloads
     replication: enableRedundancy
       ? {
           enabled: true
@@ -362,7 +362,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.22.0' = if (enable
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     tags: allTags
-    availabilityZone: 1
+    availabilityZone: -1
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'

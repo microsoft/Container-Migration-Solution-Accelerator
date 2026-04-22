@@ -214,7 +214,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     enableTelemetry: enableTelemetry
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
     // WAF aligned configuration for Redundancy
-    dailyQuotaGb: enableRedundancy ? '10' : null //WAF recommendation: 10 GB per day is a good starting point for most workloads
+    dailyQuotaGb: enableRedundancy ? '10' : '-1' //WAF recommendation: 10 GB per day is a good starting point for most workloads
     replication: enableRedundancy
       ? {
           enabled: true
@@ -340,7 +340,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.22.0' = if (enable
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     tags: allTags
-    availabilityZone: 1
+    availabilityZone: -1 // Jumpbox is not AZ dependent, and setting to -1 allows it to be deployed in any region without hitting AZ capacity issues. This is the recommended setting for jumpboxes by Azure WAF.
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
