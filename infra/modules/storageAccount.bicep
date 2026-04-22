@@ -73,8 +73,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
       ]
     }
     queueServices: {
-      deleteRetentionPolicyEnabled: true
-      deleteRetentionPolicyDays: 7
       queues: [
         for queue in (queues ?? []): {
           name: queue

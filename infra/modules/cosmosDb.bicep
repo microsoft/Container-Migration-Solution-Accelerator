@@ -60,7 +60,7 @@ module cosmosAccount 'br/public:avm/res/document-db/database-account:0.19.0' = {
       virtualNetworkRules: []
     }
     zoneRedundant: zoneRedundant
-    automaticFailover: !empty(secondaryLocation)
+    enableAutomaticFailover: !empty(secondaryLocation)
     failoverLocations: !empty(secondaryLocation)
       ? [
           {
@@ -112,7 +112,7 @@ module cosmosAccount 'br/public:avm/res/document-db/database-account:0.19.0' = {
         name: databaseName
       }
     ]
-    dataPlaneRoleAssignments: !empty(dataAccessIdentityPrincipalId) ? [
+    sqlRoleAssignments: !empty(dataAccessIdentityPrincipalId) ? [
       {
         principalId: dataAccessIdentityPrincipalId!
         roleDefinitionId: sqlContributorRoleDefinition.id
