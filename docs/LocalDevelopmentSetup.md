@@ -179,7 +179,25 @@ Create `.vscode/settings.json` and copy the following JSON:
 }
 ```
 
-## Step 3: Azure Authentication Setup
+## Step 3: Deploy Azure Infrastructure (Required)
+
+> **⚠️ Important**: Before proceeding, you must deploy the Azure infrastructure that the local services connect to (App Configuration, Cosmos DB, Storage Account, AI Services, etc.). The local services do **not** run standalone — they require deployed Azure resources.
+
+If you haven't already deployed the infrastructure, follow the [Deployment Guide](DeploymentGuide.md) or run:
+
+```bash
+# Authenticate with Azure Developer CLI
+azd auth login
+
+# Deploy infrastructure and application
+azd up
+```
+
+During `azd up`, you'll be prompted for environment name, subscription, region, and resource group. After deployment completes (~5-7 minutes), note the resource group name — you'll need it for the next steps.
+
+> **Note**: You only need the **infrastructure** deployed. For local development, you'll run the Processor, Backend API, and Frontend locally instead of using the deployed Container Apps.
+
+## Step 4: Azure Authentication Setup
 
 Before configuring services, authenticate with Azure:
 
@@ -210,6 +228,8 @@ For reference, see the image below:
 To run the application locally, your Azure account needs the following role assignments on the deployed resources:
 
 #### App Configuration Access
+
+**Linux/macOS:**
 ```bash
 # Get your principal ID
 PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
@@ -221,7 +241,18 @@ az role assignment create \
   --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.AppConfiguration/configurationStores/<appconfig-name>"
 ```
 
+**Windows PowerShell:**
+```powershell
+# Get your principal ID
+$PRINCIPAL_ID = az ad signed-in-user show --query id -o tsv
+
+# Assign App Configuration Data Reader role
+az role assignment create --assignee $PRINCIPAL_ID --role "App Configuration Data Reader" --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.AppConfiguration/configurationStores/<appconfig-name>"
+```
+
 #### Cosmos DB Access
+
+**Linux/macOS:**
 ```bash
 # Assign Cosmos DB Built-in Data Contributor role
 az cosmosdb sql role assignment create \
@@ -232,6 +263,11 @@ az cosmosdb sql role assignment create \
   --scope "/"
 ```
 
+**Windows PowerShell:**
+```powershell
+az cosmosdb sql role assignment create --account-name <cosmos-account-name> --resource-group <resource-group> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id $PRINCIPAL_ID --scope "/"
+```
+
 #### Other Required Roles
 Depending on the features you use, you may also need:
 - **Storage Blob Data Contributor** - For Azure Storage operations
@@ -240,7 +276,7 @@ Depending on the features you use, you may also need:
 
 **Note**: RBAC permission changes can take 5-10 minutes to propagate. If you encounter "Forbidden" errors after assigning roles, wait a few minutes and try again.
 
-## Step 4: Processor Setup & Run Instructions
+## Step 5: Processor Setup & Run Instructions
 
 > **📋 Terminal Reminder**: Open a **dedicated terminal window (Terminal 1)** for the Processor service. All commands in this section assume you start from the **repository root directory**.
 
@@ -248,25 +284,27 @@ The Processor handles the actual migration logic and can run in two modes:
 - **Queue-based mode** (`main_service.py`): Processes migration requests from Azure Storage Queue (production)
 - **Direct execution mode** (`main.py`): Runs migrations directly without queue (development/testing)
 
-### 4.1. Navigate to Processor Directory
+### 5.1. Navigate to Processor Directory
 
 ```bash
 cd src/processor
 ```
 
-### 4.2. Configure Processor Environment Variables
+### 5.2. Configure Processor Environment Variables
+
+Create a `.env` file in the `src/processor/src` directory (NOT in `src/processor` root).
 
 Create a `.env` file in the [src/processor/src/](../src/processor/src/) directory (NOT in [src/processor/](../src/processor/) root):
 
 ```bash
-cd src
-# Create .env file
-touch .env  # Linux
-# or
-New-Item .env  # Windows PowerShell
+# Linux/macOS
+cp .env.example src/.env
+
+# Windows PowerShell
+Copy-Item .env.example src\.env
 ```
 
-Add the following to the `.env` file:
+Edit `src/.env` and set the App Configuration URL:
 
 ```bash
 APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
@@ -274,7 +312,7 @@ APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
 
 > **⚠️ Important**: The `.env` file must be located in [src/processor/src/](../src/processor/src/) directory, not in [src/processor/](../src/processor/) root. The application looks for the `.env` file in the same directory as `main.py` and `main_service.py`.
 
-### 4.3. Install Processor Dependencies
+### 5.3. Install Processor Dependencies
 
 ```bash
 # Create and activate virtual environment
@@ -301,24 +339,15 @@ py -3.12 -m uv sync --prerelease=allow
 
 > **⚠️ Important**: This repo currently depends on a prerelease/dev version of Microsoft Agent Framework. Always run `uv sync --prerelease=allow` (or `py -3.12 -m uv sync --prerelease=allow` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
 
-### 4.4. Run the Processor
+### 5.4. Run the Processor
 
-#### Option A: Direct Execution Mode (Production)
-
-Run migrations directly without queue infrastructure:
-
-```bash
-cd src
-python main.py
-```
-
-
-#### Option B: Queue-Based Mode (Development/Testing) [Preferred for local set up]
+#### Option A: Queue-Based Mode (Production) [Preferred for local setup]
 
 Process migration requests from Azure Storage Queue:
 
 **Important**: This mode requires the **Storage Queue Data Contributor** role on the Azure Storage Account. Assign it using:
 
+**Linux/macOS:**
 ```bash
 # Get your principal ID and subscription ID
 PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
@@ -329,9 +358,17 @@ az role assignment create \
   --role "Storage Queue Data Contributor" \
   --assignee $PRINCIPAL_ID \
   --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>"
-
-# Note: Permission changes take 5-10 minutes to propagate
 ```
+
+**Windows PowerShell:**
+```powershell
+$PRINCIPAL_ID = az ad signed-in-user show --query id -o tsv
+$SUBSCRIPTION_ID = az account show --query id -o tsv
+
+az role assignment create --role "Storage Queue Data Contributor" --assignee $PRINCIPAL_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>"
+```
+
+> **Note**: Permission changes take 5-10 minutes to propagate.
 
 Run the queue service:
 
@@ -343,25 +380,36 @@ python main_service.py
 This mode provides:
 - Automatic retry logic with exponential backoff
 - Production-ready error handling
-- Local development and testing
-- Running single migrations
-- Debugging migration logic
 - Message polling with "No messages in main queue" logs
 
-## Step 5: Backend API Setup & Run Instructions
+#### Option B: Direct Execution Mode (Development/Testing)
+
+Run migrations directly without queue infrastructure:
+
+```bash
+cd src
+python main.py
+```
+
+This mode is useful for:
+- Running single migrations
+- Debugging migration logic
+- Quick testing without queue setup
+
+## Step 6: Backend API Setup & Run Instructions
 
 > **📋 Terminal Reminder**: Open a **second dedicated terminal window (Terminal 2)** for the Backend API. Keep Terminal 1 (Processor) running. All commands assume you start from the **repository root directory**.
 
 The Backend API provides REST endpoints for the frontend and handles API requests.
 
-### 5.1. Navigate to Backend API Directory
+### 6.1. Navigate to Backend API Directory
 
 ```bash
 # From repository root
 cd src/backend-api
 ```
 
-### 5.2. Configure Backend API Environment Variables
+### 6.2. Configure Backend API Environment Variables
 
 Create a `.env` file in the [src/backend-api/src/app/](../src/backend-api/src/app/) directory:
 
@@ -374,9 +422,13 @@ cp .env.example .env  # Linux
 Copy-Item .env.example .env  # Windows PowerShell
 ```
 
-Edit the `.env` file with your Azure configuration values.
+Edit the `.env` file and set the App Configuration URL (same value as the Processor):
 
-### 5.3. Install Backend API Dependencies
+```bash
+APP_CONFIGURATION_URL=https://[Your app configuration service name].azconfig.io
+```
+
+### 6.3. Install Backend API Dependencies
 
 ```bash
 # Navigate back to backend-api root
@@ -394,40 +446,45 @@ source .venv/bin/activate  # Linux/WSL2
 uv sync --python 3.12 --prerelease=allow
 ```
 
-### 5.4. Run the Backend API
+### 6.4. Run the Backend API
 
 ```bash
 # Make sure you're in the backend-api/src/app directory
 cd src/app
 
 # Run with uvicorn
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+> **⚠️ Windows Note**: Do **not** use the `--reload` flag on Windows. The file watcher monitors `.venv` directories and causes repeated crash loops. If you need auto-reload on Linux/macOS, use:
+> ```bash
+> python -m uvicorn main:app --reload --reload-exclude ".venv" --host 0.0.0.0 --port 8000
+> ```
 
 The Backend API will start at:
 - API: `http://localhost:8000`
 - API Documentation: `http://localhost:8000/docs`
 
-## Step 6: Frontend (UI) Setup & Run Instructions
+## Step 7: Frontend (UI) Setup & Run Instructions
 
 > **📋 Terminal Reminder**: Open a **third dedicated terminal window (Terminal 3)** for the Frontend. Keep Terminals 1 (Processor) and 2 (Backend API) running. All commands assume you start from the **repository root directory**.
 
 The UI is located under [src/frontend/](../src/frontend/).
 
-### 6.1. Navigate to Frontend Directory
+### 7.1. Navigate to Frontend Directory
 
 ```bash
 # From repository root
 cd src/frontend
 ```
 
-### 6.2. Install UI Dependencies
+### 7.2. Install UI Dependencies
 
 ```bash
 npm install
 ```
 
-### 6.3. Configure UI Environment Variables
+### 7.3. Configure UI Environment Variables
 
 Create a `.env` file in the [src/frontend/](../src/frontend/) directory:
 
@@ -441,8 +498,8 @@ Copy-Item .env.example .env  # Windows PowerShell
 Edit the `.env` file with your Azure AD configuration:
 
 ```bash
-# Required: Your Azure AD app registration client ID
-VITE_APP_WEB_CLIENT_ID=your-client-id-here
+# Required: Your Azure AD app registration client ID (frontend app registration)
+VITE_APP_WEB_CLIENT_ID=your-frontend-client-id-here
 
 # Required: Your Azure AD tenant authority
 VITE_APP_WEB_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
@@ -452,56 +509,53 @@ VITE_APP_REDIRECT_URL=http://localhost:5173
 VITE_APP_POST_REDIRECT_URL=http://localhost:5173
 
 # Required: Scopes for login and token acquisition
-# For local development, use User.Read scope
-VITE_APP_WEB_SCOPE=User.Read
-VITE_APP_API_SCOPE=User.Read
+# Use the user_impersonation scope from your app registrations
+VITE_APP_WEB_SCOPE=api://your-frontend-client-id/user_impersonation
+VITE_APP_API_SCOPE=api://your-backend-api-client-id/user_impersonation
 
-# API URL (for when backend is available)
+# Required: Backend API URL
 VITE_API_URL=http://localhost:8000/api
+
+# Required: Enable/disable MSAL authentication
+# Set to "false" for local development without Azure AD login
+# Set to "true" to enable Azure AD authentication
+VITE_ENABLE_AUTH=false
 ```
 
-> **⚠️ Important Authentication Setup Notes:**
+> **⚠️ Important Notes:**
 >
-> 1. **Scope Configuration for Local Development:**
->    - Use `User.Read` for both `VITE_APP_WEB_SCOPE` and `VITE_APP_API_SCOPE`
->    - This is a standard Microsoft Graph scope that works for basic authentication testing
->    - For production, you'll need custom API scopes like `api://your-api-id/access_as_user`
+> 1. **`VITE_ENABLE_AUTH` controls authentication:**
+>    - Set to `false` to bypass Azure AD login and access the UI directly (easiest for local dev)
+>    - Set to `true` if you need to test the full MSAL authentication flow
+>    - The deployed app always uses authentication; this setting is for local development convenience
 >
-> 2. **Azure AD App Registration Required:**
->    - You must have an Azure AD app registration with a **Client ID** and **Tenant ID**
->    - See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for detailed setup instructions
+> 2. **Scope Configuration:**
+>    - The `user_impersonation` scope is created automatically during `azd up` deployment
+>    - Find your client IDs in Azure Portal → App registrations (look for `ca-frontend-*` and `ca-backend-api-*`)
+>    - See [ConfigureAppAuthentication.md](ConfigureAppAuthentication.md) for detailed setup
 >
-> 3. **App Registration Configuration in Azure Portal:**
->    - Go to **Azure Portal → Azure Active Directory → App registrations → Your App**
->    - Under **Authentication**, add a platform:
->      - Select **Single-page application (SPA)**
->      - Add redirect URI: `http://localhost:5173`
->    - Enable **Implicit grant and hybrid flows**:
->      - ✅ Check **Access tokens**
->      - ✅ Check **ID tokens**
+> 3. **App Registration for Authentication (if `VITE_ENABLE_AUTH=true`):**
+>    - Go to **Azure Portal → Microsoft Entra ID → App registrations → Your frontend app**
+>    - Under **Authentication**, add a **Single-page application (SPA)** platform
+>    - Add redirect URI: `http://localhost:5173`
 >    - Click **Save**
 >
 > 4. **Common Error: AADSTS900561**
 >    - If you see "The endpoint only accepts POST requests. Received a GET request"
->    - This means your app registration platform type is incorrect
->    - Ensure it's configured as **Single-page application (SPA)**, not "Web"
+>    - Ensure the platform type is **Single-page application (SPA)**, not "Web"
 >    - Clear browser cache or use incognito mode after fixing
 >
 > 5. **Restart Required:**
 >    - After updating `.env`, **stop and restart** the frontend dev server (`npm run dev`)
 >    - Vite caches environment variables at startup and won't pick up changes until restarted
 
-### 6.4. Build the UI
-
-```bash
-npm run build
-```
-
-### 6.5. Start Development Server
+### 7.4. Start Development Server
 
 ```bash
 npm run dev
 ```
+
+> **Note**: You do **not** need to run `npm run build` for local development. `npm run dev` starts a development server with hot module replacement (HMR).
 
 The app will start at:
 
@@ -575,7 +629,7 @@ Get-ChildItem Env:AZURE*  # Windows PowerShell
 cat .env | grep -v '^#' | grep '='  # Should show key=value pairs
 ```
 
-## Step 7: Verify All Services Are Running
+## Step 8: Verify All Services Are Running
 
 Before using the application, confirm all three services are running in separate terminals:
 
@@ -593,7 +647,7 @@ Before using the application, confirm all three services are running in separate
 ```bash
 # In a new terminal (Terminal 4)
 curl http://localhost:8000/health
-# Expected: {"status":"healthy"} or similar
+# Expected: {"message":"I'm alive!"}
 ```
 
 **2. Check Frontend:**
@@ -619,9 +673,9 @@ curl http://localhost:8000/health
 - Try `http://localhost:port` instead of `http://127.0.0.1:port`
 - Ensure services show "startup complete" messages
 
-## Step 8: Next Steps
+## Step 9: Next Steps
 
-Once all services are running (as confirmed in Step 7), you can:
+Once all services are running (as confirmed in Step 8), you can:
 
 1. **Access the Application**: Open `http://localhost:5173` in your browser to explore the frontend UI
 2. **Try a Sample Workflow**: Follow [SampleWorkflow.md](SampleWorkflow.md) for a guided walkthrough of the migration process

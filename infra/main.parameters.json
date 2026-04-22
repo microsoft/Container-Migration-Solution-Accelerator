@@ -8,14 +8,17 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
-      "secondaryLocation": {
-        "value": "${AZURE_SECONDARY_LOCATION}"
-      },
       "containerRegistryHost": {
         "value": "${AZURE_CONTAINER_REGISTRY_HOST}"
       },
+      "azureAiServiceLocation": {
+        "value": "${AZURE_AI_SERVICE_LOCATION}"
+      },
       "aiDeploymentLocation": {
         "value": "${AZURE_AI_DEPLOYMENT_LOCATION}"
+      },
+      "azureAiServiceLocation": {
+        "value": "${AZURE_AI_SERVICE_LOCATION}"
       },
       "aiDeploymentType": {
         "value": "${AZURE_AI_DEPLOYMENT_TYPE}"

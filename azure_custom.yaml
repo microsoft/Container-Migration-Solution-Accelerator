@@ -16,7 +16,7 @@ requiredVersions:
   # Require a recent version of azd that supports the packaging
   # functionality used here.  Versions less than 1.17.1 had a bug in
   # remoteBuild.
-  azd: ">=1.18.2"
+  azd: '>=1.18.2 != 1.23.9'
 
 infra:
   parameters:
