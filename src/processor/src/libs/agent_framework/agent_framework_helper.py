@@ -147,7 +147,8 @@ class AgentFrameworkHelper:
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
-    ) -> "AzureOpenAIChatClient": ...
+    ) -> "AzureOpenAIChatClient":
+        ...
 
     @overload
     @staticmethod
@@ -170,7 +171,8 @@ class AgentFrameworkHelper:
         async_client: object | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
-    ) -> "AzureOpenAIAssistantsClient": ...
+    ) -> "AzureOpenAIAssistantsClient":
+        ...
 
     @overload
     @staticmethod
@@ -191,7 +193,8 @@ class AgentFrameworkHelper:
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
-    ) -> "AzureOpenAIResponsesClient": ...
+    ) -> "AzureOpenAIResponsesClient":
+        ...
 
     @overload
     @staticmethod
@@ -213,7 +216,8 @@ class AgentFrameworkHelper:
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
         retry_config: RateLimitRetryConfig | None = None,
-    ) -> AzureOpenAIResponseClientWithRetry: ...
+    ) -> AzureOpenAIResponseClientWithRetry:
+        ...
 
     @overload
     @staticmethod
@@ -229,7 +233,8 @@ class AgentFrameworkHelper:
         async_credential: object | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
-    ) -> "AzureAIAgentClient": ...
+    ) -> "AzureAIAgentClient":
+        ...
 
     @staticmethod
     def create_client(

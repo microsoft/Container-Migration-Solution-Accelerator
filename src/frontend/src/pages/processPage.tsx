@@ -118,6 +118,8 @@ const ProcessPage: React.FC = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
   const [processingCompleted, setProcessingCompleted] = useState(false);
   const stepsContainerRef = useRef<HTMLDivElement>(null);
+  // Track the last seen phase to prevent duplicate phase messages
+  const [lastSeenPhase, setLastSeenPhase] = useState<string>("");
 
   // Progress modal state
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -125,38 +127,44 @@ const ProcessPage: React.FC = () => {
 
   // Error state management
   const [migrationError, setMigrationError] = useState(false);
-  const [errorDetails, setErrorDetails] = useState<{reason?: string; step?: string; details?: string}>({});
+
+  // Helper function to clean phase name - removes "PHASE X - " prefix
+  const cleanPhaseName = (phase: string): string => {
+    if (!phase) return "";
+    // Remove "PHASE X - " prefix (e.g., "PHASE 3 - SOURCE PLATFORM REVIEW" -> "SOURCE PLATFORM REVIEW")
+    return phase.replace(/^PHASE\s*\d+\s*-\s*/i, '').trim();
+  };
 
   // Helper function to generate phase message from API data
-  const getPhaseMessage = (apiResponse: any) => {
+  // Returns message with agent activity but without phase number prefixes
+  const getPhaseMessage = (apiResponse: any): string => {
     if (!apiResponse) return "";
 
-    const { step, phase, active_agent_count, total_agents, health_status, agents } = apiResponse;
+    const { phase, active_agent_count, total_agents, agents } = apiResponse;
 
-    // Map step identifiers to human-readable step names
-    const stepDisplayNames: Record<string, string> = {
-      'analysis': 'Analysis',
-      'design': 'Design',
-      'yaml_conversion': 'YAML',
-      'yaml': 'YAML',
-      'documentation': 'Documentation'
-    };
+    // Clean the phase name to remove "PHASE X - " prefix
+    const cleanedPhase = cleanPhaseName(phase);
 
-    const stepMessages: Record<string, string> = {
-      'analysis': 'Analyzing workloads and dependencies, existing container images and configurations',
-      'design': 'Designing target environment mappings to align with Azure AKS',
-      'yaml_conversion': 'Converting container specifications and orchestration configs to Azure format',
-      'yaml': 'Converting container specifications and orchestration configs to Azure format',
-      'documentation': 'Generating migration report and deployment files'
+    // Handle unknown/start phases with friendly initialization message
+    const initializationPhases = ['unknown', 'start', '', undefined, null];
+    if (initializationPhases.includes(phase?.toLowerCase()) || initializationPhases.includes(cleanedPhase?.toLowerCase())) {
+      return 'Initialization phase in progress';
+    }
+
+    const phaseMessages: Record<string, string> = {
+      'Analysis': 'Analyzing workloads and dependencies, existing container images and configurations',
+      'Design': 'Designing target environment mappings to align with Azure AKS',
+      'YAML': 'Converting container specifications and orchestration configs to Azure format',
+      'Documentation': 'Generating migration report and deployment files'
     };
 
     // Extract active agent information from agents array
-    const activeAgents = agents?.filter(agent =>
+    const activeAgents = agents?.filter((agent: string) =>
       agent.includes('speaking') || agent.includes('thinking')
     ) || [];
 
-    const speakingAgent = activeAgents.find(agent => agent.includes('speaking'));
-    const thinkingAgent = activeAgents.find(agent => agent.includes('thinking'));
+    const speakingAgent = activeAgents.find((agent: string) => agent.includes('speaking'));
+    const thinkingAgent = activeAgents.find((agent: string) => agent.includes('thinking'));
 
     let agentActivity = "";
     if (speakingAgent) {
@@ -167,16 +175,12 @@ const ProcessPage: React.FC = () => {
       agentActivity = ` - ${agentName} is thinking`;
     }
 
-    const stepKey = (step || '').toLowerCase();
-    const stepName = stepDisplayNames[stepKey] || (step ? step.charAt(0).toUpperCase() + step.slice(1) : 'Processing');
-
-    // Use step-level description if phase matches the step, otherwise show sub-phase
-    const baseMessage = stepMessages[stepKey] || `${phase} phase in progress`;
-    // If phase differs from the step-level name, show the sub-phase as detail
-    const phaseDetail = (phase && phase !== stepDisplayNames[stepKey]) ? `${phase} - ` : '';
+    // Use predefined message if available, otherwise use cleaned phase name
+    const baseMessage = phaseMessages[phase] || phaseMessages[cleanedPhase] || `${cleanedPhase} phase in progress`;
     const agentInfo = active_agent_count && total_agents ? ` (${active_agent_count}/${total_agents} agents active)` : '';
 
-    return `${stepName}: ${phaseDetail}${baseMessage}${agentActivity}${agentInfo}`;
+    // Return message without phase number prefix
+    return `${baseMessage}${agentActivity}${agentInfo}`;
   };
 
   // Polling function to check batch status
@@ -201,43 +205,34 @@ const ProcessPage: React.FC = () => {
         setShowProgressModal(true);
       }
 
-      // Check if last_update_time has changed - only update if there's new activity
-      if (response.last_update_time && response.last_update_time !== lastUpdateTime) {
-        console.log('New activity detected! Last update time changed from', lastUpdateTime, 'to', response.last_update_time);
-
-        // Update the stored last update time
+      // Update the stored last update time
+      if (response.last_update_time) {
         setLastUpdateTime(response.last_update_time);
+      }
 
-        // Update current phase and generate step message
-        if (response.step || response.phase) {
-          const newPhaseMessage = getPhaseMessage(response);
-
-          // Add the new message to steps ONLY if it's different from the last message
-          const stepDisplayNames: Record<string, string> = {
-            'analysis': 'Analysis',
-            'design': 'Design',
-            'yaml_conversion': 'YAML',
-            'yaml': 'YAML',
-            'documentation': 'Documentation'
-          };
-          const stepKey = (response.step || '').toLowerCase();
-          const stepLabel = stepDisplayNames[stepKey] || response.step || response.phase || 'Processing';
-          // Show phase name (sub-phase) in the title for real-time detail, fall back to step name
-          setCurrentPhase(response.phase || stepLabel);
-          setPhaseSteps(prev => {
-            // Check if the new message is different from the last message
-            const lastMessage = prev[prev.length - 1];
-            if (lastMessage !== newPhaseMessage) {
-              console.log('Adding new unique message:', newPhaseMessage);
-              return [...prev, newPhaseMessage];
-            } else {
-              console.log('Skipping duplicate message even though timestamp changed:', newPhaseMessage);
-              return prev;
-            }
-          });
-        }
-      } else if (response.last_update_time) {
-        console.log('No new activity - last update time unchanged:', response.last_update_time);
+      // Update current phase - only add a new message when the phase actually changes
+      // This prevents duplicate messages from agent activity changes within the same phase
+      if (response.phase && response.phase !== lastSeenPhase) {
+        console.log('Phase transition detected:', lastSeenPhase, '->', response.phase);
+        
+        const newPhaseMessage = getPhaseMessage(response);
+        setCurrentPhase(response.phase);
+        setLastSeenPhase(response.phase);
+        
+        // Add the phase message only on phase transition
+        setPhaseSteps(prev => {
+          // Double-check to avoid any duplicate messages
+          if (!prev.includes(newPhaseMessage)) {
+            console.log('Adding new phase message:', newPhaseMessage);
+            return [...prev, newPhaseMessage];
+          }
+          console.log('Skipping duplicate phase message:', newPhaseMessage);
+          return prev;
+        });
+      } else if (response.phase) {
+        // Phase unchanged, just update current phase state for display
+        setCurrentPhase(response.phase);
+        console.log('Same phase, no new message added:', response.phase);
       }
 
       // Check for completion and navigate to batch-view
@@ -326,13 +321,77 @@ const ProcessPage: React.FC = () => {
   */
 
   // Handle modal cancellation
-  const handleCancelProcessing = () => {
-    // TODO: Add API call to cancel processing if needed
-    console.log('User cancelled processing');
-    setShowProgressModal(false);
-    setProcessingState('IDLE');
-    // Optionally navigate back to landing or previous page
-    navigate('/');
+  const handleCancelProcessing = async () => {
+    console.log('=== handleCancelProcessing called ===');
+    console.log('batchId:', batchId);
+    
+    // Call API to cancel the process
+    if (batchId) {
+      try {
+        console.log('Calling apiService.cancelProcess with batchId:', batchId);
+        const result = await apiService.cancelProcess(batchId, 'User cancelled from UI');
+        console.log('Cancel request result:', result);
+        
+        // Poll for cancel status every 3 seconds until kill_state is "executed"
+        const pollCancelStatus = async () => {
+          const maxAttempts = 60; // Max 3 minutes of polling (60 * 3 seconds)
+          let attempts = 0;
+          
+          const poll = async (): Promise<void> => {
+            attempts++;
+            console.log(`Polling cancel status, attempt ${attempts}...`);
+            
+            try {
+              const status = await apiService.getCancelStatus(batchId);
+              console.log('Cancel status response:', status);
+              
+              if (status.kill_state === 'executed') {
+                console.log('Process cancellation completed successfully');
+                return;
+              }
+              
+              if (status.kill_state === 'failed') {
+                console.error('Process cancellation failed');
+                return;
+              }
+              
+              // Continue polling if not completed and under max attempts
+              if (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+                return poll();
+              } else {
+                console.warn('Max polling attempts reached for cancel status');
+              }
+            } catch (error) {
+              console.error('Error polling cancel status:', error);
+              // Don't throw, just stop polling on error
+            }
+          };
+          
+          await poll();
+        };
+        
+        // Start polling in the background (don't await to avoid blocking navigation)
+        pollCancelStatus();
+        
+        // Navigate to home page immediately after kill is requested
+        setShowProgressModal(false);
+        setProcessingState('IDLE');
+        navigate('/');
+        
+      } catch (error) {
+        console.error('Failed to cancel process:', error);
+        // Still navigate to home page even if API call fails
+        setShowProgressModal(false);
+        setProcessingState('IDLE');
+        navigate('/');
+      }
+    } else {
+      console.warn('No batchId available, skipping cancel API call');
+      setShowProgressModal(false);
+      setProcessingState('IDLE');
+      navigate('/');
+    }
   };
 
   // Effect to show modal automatically when processing is detected
