@@ -62,8 +62,20 @@ class Application_Base(ABC):
 
             # Configure Azure package logging levels only if packages are specified
             if self.application_context.configuration.azure_logging_packages:
-                azure_level = getattr(logging, self.application_context.configuration.azure_package_logging_level.upper(), logging.WARNING)
-                for logger_name in filter(None, (pkg.strip() for pkg in self.application_context.configuration.azure_logging_packages.split(','))):
+                azure_level = getattr(
+                    logging,
+                    self.application_context.configuration.azure_package_logging_level.upper(),
+                    logging.WARNING,
+                )
+                for logger_name in filter(
+                    None,
+                    (
+                        pkg.strip()
+                        for pkg in self.application_context.configuration.azure_logging_packages.split(
+                            ","
+                        )
+                    ),
+                ):
                     logging.getLogger(logger_name).setLevel(azure_level)
 
         # Initialize the application
