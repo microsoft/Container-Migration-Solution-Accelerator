@@ -103,8 +103,20 @@ def _looks_like_context_length(error: BaseException) -> bool:
 
     status = getattr(error, "status_code", None) or getattr(error, "status", None)
     if status in (400, 413):
-        # Many SDKs surface context-length failures as 400/413 with a descriptive message.
-        return True
+        # Only treat 400/413 as context-length if the message actually mentions it.
+        # Generic 400s (e.g. "No tool output found") must NOT trigger trim retries.
+        context_keywords = [
+            "context window",
+            "context length",
+            "too many tokens",
+            "prompt is too long",
+            "input is too long",
+            "reduce the length",
+            "maximum.*length",
+            "token limit",
+        ]
+        if any(kw in msg for kw in context_keywords):
+            return True
 
     cause = getattr(error, "__cause__", None)
     if cause and cause is not error:
