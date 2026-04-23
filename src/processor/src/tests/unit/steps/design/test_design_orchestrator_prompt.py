@@ -110,7 +110,7 @@ def test_design_orchestrator_renders_expected_folder_params(monkeypatch):
             ),
             summary="ok",
             expert_insights=[],
-            analysis_file="p1/converted/analysis.json",
+            analysis_file="p1/output/analysis.json",
         )
         msg = Analysis_BooleanExtendedResult(process_id="p1", output=output)
 

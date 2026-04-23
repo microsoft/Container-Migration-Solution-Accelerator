@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Abstract base class for agents that depend on AgentFrameworkHelper."""
+
 from abc import ABC
 
 from libs.agent_framework.agent_framework_helper import AgentFrameworkHelper

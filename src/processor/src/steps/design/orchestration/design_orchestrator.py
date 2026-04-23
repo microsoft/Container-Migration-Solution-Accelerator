@@ -7,6 +7,7 @@ This module renders the design prompt, prepares MCP tools (including Mermaid),
 and runs a `GroupChatOrchestrator` to produce `Design_ExtendedBooleanResult`.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -91,6 +92,7 @@ class DesignOrchestrator(
                 on_workflow_complete=self.on_orchestration_complete,
                 on_agent_response_stream=self.on_agent_response_stream,
             )
+            await self.flush_agent_memories()
             return orchestration_result
 
     async def prepare_mcp_tools(
@@ -107,7 +109,10 @@ class DesignOrchestrator(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
         fetch_mcp_tool = MCPStdioTool(
-            name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
+            name="Fetch MCP Tool",
+            command="uvx",
+            args=["mcp-server-fetch"],
+            env={**os.environ, "UV_NO_PROGRESS": "1"},
         )
 
         blob_io_mcp_tool = get_blob_file_mcp()
@@ -221,27 +226,9 @@ class DesignOrchestrator(
         agent_infos.append(coordinator_agent_info)
 
         # ResultGenerator: Generates structured Design_ExtendedBooleanResult AFTER GroupChat completes
-        result_generator_instruction = """
-    You are a Result Generator.
-
-    ROLE & RESPONSIBILITY (do not exceed scope):
-    - You do NOT decide whether the step succeeded/failed and you do NOT introduce new blockers.
-    - The step outcome has already happened via stakeholder discussion and coordinator termination.
-    - Your only job is to serialize the final outcome into the required schema exactly.
-
-    RULES:
-    - Output MUST be valid JSON only (no markdown, no prose).
-    - Do NOT call tools.
-    - Do NOT verify file existence.
-    - Do NOT add new requirements.
-    - Only summarize what participants explicitly said/did.
-    - Keep `reason` short (one sentence).
-
-    WHAT TO DO:
-    1) Review the conversation (excluding the Coordinator).
-    2) Extract the final, agreed design summary, key decisions, and the expected output artifact paths.
-    3) Emit JSON that conforms exactly to `Design_ExtendedBooleanResult`.
-"""
+        result_generator_instruction = self.read_prompt_file(
+            str(Path(__file__).parent / "prompt_resultgenerator.txt")
+        )
         result_generator_info = AgentInfo(
             agent_name="ResultGenerator",
             agent_instruction=result_generator_instruction,

@@ -32,6 +32,13 @@ All issues found must use priority levels:
 ### **3. Multi-Line Sign-Off with Notes**
 Always use the format shown in the sign-off section below (role on first line, SIGN-OFF: status on second line, notes as indented bullets).
 
+**CONVERSION SIGN-OFF SCOPE (CRITICAL):**
+You are reviewing STRUCTURAL correctness of converted YAMLs, NOT environment-specific values.
+Do NOT FAIL because placeholder or assumed values are used for environment-specific config.
+
+Valid FAIL: invalid YAML syntax, missing apiVersion/kind/metadata, broken multi-doc structure, missing files.
+Invalid FAIL: "GPU labels are assumed", "storage name is placeholder" — these are expected for converted output.
+
 **Non‑negotiable target**
 - Target platform is **Azure Kubernetes Service (AKS)** only.
 

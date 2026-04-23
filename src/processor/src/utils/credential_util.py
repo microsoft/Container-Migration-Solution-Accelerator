@@ -60,8 +60,6 @@ def get_bearer_token_provider():
     Returns:
         A callable suitable for SDK clients that accept a token provider.
     """
-    # credential = get_azure_credential()
-    # return identity_get_bearer_token_provider(credential)
     credential = get_azure_credential()
     return identity_get_bearer_token_provider(
         credential, "https://cognitiveservices.azure.com/.default"

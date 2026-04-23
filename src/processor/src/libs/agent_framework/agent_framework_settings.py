@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Pydantic-based settings for Agent Framework LLM service configuration."""
+
 import os
 
 from pydantic import Field, model_validator

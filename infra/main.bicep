@@ -36,7 +36,7 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports GPT5.1 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment.')
 param azureAiServiceLocation string
 
 @allowed([
@@ -59,8 +59,8 @@ param aiDeploymentLocation string = azureAiServiceLocation
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
 
-@description('Optional. The image tag to use for container images. Defaults to "latest".')
-param imageTag string = 'latest'
+@description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
+param imageTag string = 'latest_v2'
 
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
@@ -68,15 +68,30 @@ param imageTag string = 'latest'
 param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
+@description('Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1.')
 param aiModelName string = 'gpt-5.1'
 
 @minLength(1)
-@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
+@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
 param aiModelVersion string = '2025-11-13'
 
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param aiModelCapacity int = 500
+
+@minLength(1)
+@description('Optional. Name of the embedding model to deploy. Defaults to text-embedding-3-large.')
+param aiEmbeddingModelName string = 'text-embedding-3-large'
+
+@description('Optional. Version of the embedding model. Defaults to 1.')
+param aiEmbeddingModelVersion string = '1'
+
+@minLength(1)
+@allowed(['Standard', 'GlobalStandard'])
+@description('Optional. Embedding model deployment type. Defaults to GlobalStandard.')
+param aiEmbeddingDeploymentType string = 'GlobalStandard'
+
+@description('Optional. Embedding model deployment token capacity. Defaults to 500.')
+param aiEmbeddingModelCapacity int = 500
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -174,16 +189,20 @@ var allTags = union(
   tags
 )
 
+var existingTags = resourceGroup().tags ?? {}
+
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
-    tags: {
-      ...resourceGroup().tags
-      ...tags
-      TemplateName: 'Container Migration'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: deployerIdentityName
-    }
+    tags: union(
+      existingTags,
+      tags,
+      {
+        TemplateName: 'Container Migration'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+        CreatedBy: deployerIdentityName
+      }
+    )
   }
 }
 
@@ -353,7 +372,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
     name: take(jumpboxVmName, 15) // Shorten VM name to 15 characters to avoid Azure limits
-    vmSize: vmSize ?? 'Standard_DS2_v2'
+    vmSize: vmSize ?? 'Standard_D2s_v5'
     location: location
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
@@ -737,6 +756,8 @@ var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
 
+var aiFoundryAiProjectResourceName = 'proj-${solutionSuffix}'
+var aiFoundryAiProjectDescription = 'AI Foundry project for ${solutionName}'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
@@ -759,6 +780,18 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         sku: {
           name: aiDeploymentType
           capacity: aiModelCapacity
+        }
+      }
+      {
+        name: aiEmbeddingModelName
+        model: {
+          format: 'OpenAI'
+          name: aiEmbeddingModelName
+          version: aiEmbeddingModelVersion
+        }
+        sku: {
+          name: aiEmbeddingDeploymentType
+          capacity: aiEmbeddingModelCapacity
         }
       }
     ]
@@ -794,57 +827,19 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   }
 }
 
-// Temporarily disabled AI Foundry due to AML workspace creation issues
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiFoundryAiProject) {
-  name: take('avm.ptn.ai-ml.ai-foundry.${solutionSuffix}', 64)
+// ========== AI Foundry AI Services ========== //
+module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
+  name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
-    #disable-next-line BCP334
-    baseName: take(aiFoundryAiServicesResourceName, 12)
-    baseUniqueName: null
+    name: aiFoundryAiServicesResourceName
     location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
-    aiFoundryConfiguration: {
-      accountName:aiFoundryAiServicesResourceName
-      allowProjectManagement: true
-      roleAssignments: [
-        // Service Principal permissions
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        }
-        // Deployer permissions for local debugging
-        {
-          principalId: deployingUserPrincipalId
-          principalType: deployingUserType
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: deployingUserPrincipalId
-          principalType: deployingUserType
-          roleDefinitionIdOrName: 'Cognitive Services User'
-        }
-      ]
-      // Remove networking configuration to avoid AML workspace creation issues
-      networking: enablePrivateNetworking? {
-        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-      } : null
-    }
-    // Disable private endpoints temporarily to fix AML workspace issue
-    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : null
-    // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-    aiModelDeployments: [
+    tags: allTags
+    sku: 'S0'
+    kind: 'AIServices'
+    disableLocalAuth: true
+    allowProjectManagement: true
+    customSubDomainName: aiFoundryAiServicesResourceName
+    deployments: [
       {
         name: aiModelDeploymentName
         model: {
@@ -857,9 +852,115 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
           capacity: aiModelCapacity
         }
       }
+      {
+        name: aiEmbeddingModelName
+        model: {
+          format: 'OpenAI'
+          name: aiEmbeddingModelName
+          version: aiEmbeddingModelVersion
+        }
+        sku: {
+          name: aiEmbeddingDeploymentType
+          capacity: aiEmbeddingModelCapacity
+        }
+      }
     ]
+    networkAcls: {
+      defaultAction: 'Allow'
+      virtualNetworkRules: []
+      ipRules: []
+    }
+    managedIdentities: {
+      systemAssigned: true
+      userAssignedResourceIds: [appIdentity.outputs.resourceId]
+    }
+    roleAssignments: [
+      // Service Principal permissions
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      // Deployer permissions for local debugging
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+      }
+      {
+        roleDefinitionIdOrName: 'Cognitive Services User'
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserType
+      }
+    ]
+    // WAF aligned configuration for Monitoring
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    // Private endpoints are deployed separately via the aiFoundryPrivateEndpoint module below
+    privateEndpoints: []
+    enableTelemetry: enableTelemetry
+  }
+}
+
+// ========== AI Foundry Private Endpoint ========== //
+module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
+  name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
+  params: {
+    name: 'pep-${aiFoundryAiServicesResourceName}'
+    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+    location: solutionLocation
     tags: allTags
     enableTelemetry: enableTelemetry
+    privateLinkServiceConnections: [
+      {
+        name: 'pep-${aiFoundryAiServicesResourceName}-connection'
+        properties: {
+          privateLinkServiceId: aiFoundryAiServices!.outputs.resourceId
+          groupIds: ['account']
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      privateDnsZoneGroupConfigs: [
+        {
+          name: 'ai-services-dns-zone-cognitiveservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-openai'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-aiservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        }
+      ]
+    }
+    subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
+  }
+}
+
+// ========== AI Foundry Project ========== //
+module aiFoundryProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
+  dependsOn: enablePrivateNetworking ? [aiFoundryPrivateEndpoint] : []
+  params: {
+    name: aiFoundryAiProjectResourceName
+    location: azureAiServiceLocation
+    tags: tags
+    desc: aiFoundryAiProjectDescription
+    //Implicit dependencies below
+    aiServicesName: aiFoundryAiServices!.outputs.name
   }
 }
 
@@ -904,6 +1005,10 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       {
         name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME'
         value: aiModelDeploymentName
+      }
+      {
+        name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME'
+        value: aiEmbeddingModelName
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
@@ -984,7 +1089,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
     publicNetworkAccess: 'Enabled'
   }
   // Add explicit dependency
-  dependsOn: useExistingAiFoundryAiProject ? [] : [aiFoundry]
+  dependsOn: useExistingAiFoundryAiProject ? [] : [aiFoundryAiServices]
 }
 
 module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-store:0.6.3' = if (enablePrivateNetworking) {
@@ -1186,6 +1291,10 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'REACT_APP_MSAL_REDIRECT_URL'
             value: '/'
+          }
+          {
+            name: 'ALLOWED_ORIGINS'
+            value: 'https://${frontEndContainerAppName}.${containerAppsEnvironment.outputs.defaultDomain}'
           }
         ]
         resources: {

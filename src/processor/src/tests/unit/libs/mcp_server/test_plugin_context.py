@@ -17,17 +17,15 @@ Why this exists:
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 import unittest
 
 
 # When executed as a script (`python src/tests/test_plugin_context.py`), Python does
 # not automatically include `src/` on the import path. Add it so imports like
 # `from libs...` work consistently both in unittest and pytest contexts.
-_SRC_DIR = Path(__file__).resolve().parents[1]
-if str(_SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(_SRC_DIR))
+# _SRC_DIR = Path(__file__).resolve().parents[1]
+# if str(_SRC_DIR) not in sys.path:
+#     sys.path.insert(0, str(_SRC_DIR))
 
 
 class TestMcpToolFactories(unittest.TestCase):

@@ -18,6 +18,14 @@ Rules:
 ## REQUIRED: EXPLICIT SIGN-OFF LINE (DO NOT SKIP)
 If the Coordinator asks you to sign off (PASS/FAIL), you MUST end your message with the following format:
 
+**DESIGN SIGN-OFF SCOPE (CRITICAL):**
+Your sign-off evaluates whether the DESIGN is complete and technically sound.
+Do NOT FAIL for reasons that require external stakeholder confirmation.
+Capture stakeholder-dependent items in Assumptions/Open Questions with best-practice defaults, then PASS.
+
+Valid FAIL: missing Rancher-to-AKS mappings, unresolved conflicts, design_result.md not readable.
+Invalid FAIL: "stakeholder confirmation pending" — these are external actions.
+
 **Format (multi-line with notes):**
 ```
 **Rancher Expert:**

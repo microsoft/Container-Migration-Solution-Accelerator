@@ -17,6 +17,7 @@ RUN tdnf update -y && tdnf install -y \
     tar \
     ca-certificates \
     shadow-utils \
+    gawk \
     && tdnf clean all \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && mv /root/.local/bin/uv /usr/local/bin/uv
@@ -28,13 +29,14 @@ RUN curl -fsSLo /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-
     && tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
     && rm -f /tmp/node.tar.gz \
     && node --version \
-    && npm --version
+    && npm --version \
+    && npm install -g mermaid
 
 # Copy pyproject.toml and uv.lock first for better caching
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using UV
-RUN uv sync --frozen --python 3.12 --prerelease=allow
+RUN uv sync --frozen --python 3.12
 
 # Copy the entire source code
 COPY src/ ./src/
@@ -56,4 +58,4 @@ ENV APP_CONFIGURATION_URL=""
 EXPOSE 8080
 
 # Simple command - let Docker handle restarts
-CMD ["uv", "run", "--prerelease=allow", "python", "src/main_service.py"]
+CMD ["uv", "run", "python", "src/main_service.py"]

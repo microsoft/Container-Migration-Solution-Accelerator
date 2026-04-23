@@ -29,21 +29,21 @@ const scrollbarStyles = `
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
@@ -57,17 +57,17 @@ const scrollbarStyles = `
   .main-content::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   .main-content::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
-  
+
   .main-content::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
   }
-  
+
   .main-content::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
@@ -77,11 +77,11 @@ const scrollbarStyles = `
     .bg-gray-50 {
       padding: 2rem !important;
     }
-    
+
     .text-2xl {
       font-size: 2.5rem !important;
     }
-    
+
     .text-lg {
       font-size: 1.5rem !important;
     }
@@ -252,10 +252,18 @@ const ProcessPage: React.FC = () => {
       if (response.status === 'failed' || response.status === 'error') {
         console.log('Migration failed! Status:', response.status);
         setMigrationError(true);
+        setErrorDetails({
+          reason: response.failure_reason || '',
+          step: response.failure_step || '',
+          details: response.failure_details || '',
+        });
         setProcessingState('IDLE');
         setProcessingCompleted(true); // Stop polling
-        // Add error message to steps
-        setPhaseSteps(prev => [...prev, "❌ Migration failed - stopping process..."]);
+        // Add error message with failure reason to steps
+        const failureMsg = response.failure_reason
+          ? `❌ Migration failed at ${response.failure_step || 'unknown'} step: ${response.failure_reason}`
+          : "❌ Migration failed - stopping process...";
+        setPhaseSteps(prev => [...prev, failureMsg]);
       }
     } catch (error) {
       console.error('Error polling batch status:', error);
@@ -285,23 +293,23 @@ const ProcessPage: React.FC = () => {
   // Progressive step display that keeps appending cycles
   useEffect(() => {
     let stepTimer: ReturnType<typeof setTimeout>;
-    
+
     const addNextStep = () => {
       setVisibleStepsCount(prev => {
         const newCount = prev + 1;
-        
+
         // After every 4 steps, increment the cycle count
         if (newCount % 4 === 0) {
           setTotalCycles(prevCycles => prevCycles + 1);
         }
-        
+
         return newCount;
       });
-      
+
       // Schedule next step in 5 seconds
       stepTimer = setTimeout(addNextStep, 5000);
     };
-    
+
     // Start the first step after 5 seconds
     stepTimer = setTimeout(addNextStep, 5000);
 
@@ -501,7 +509,13 @@ const ProcessPage: React.FC = () => {
                 >
                   The migration stopped before completion and no results were generated.
                   <br />
-                  Please check the logs using Process ID: {batchId} for more details.
+                  {errorDetails.step && (
+                    <><strong>Failed step:</strong> {errorDetails.step}<br /></>
+                  )}
+                  {errorDetails.reason && (
+                    <><strong>Reason:</strong> {errorDetails.reason.length > 300 ? errorDetails.reason.substring(0, 300) + '...' : errorDetails.reason}<br /></>
+                  )}
+                  <span style={{ fontSize: '12px', color: '#666' }}>Process ID: {batchId}</span>
                 </MessageBar>
               </div>
             )}

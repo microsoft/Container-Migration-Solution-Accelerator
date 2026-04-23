@@ -28,9 +28,9 @@ def test_app_context_dependency_injection():
     assert app_context.is_registered(IHttpService)
 
     # Test service resolution
-    data_service = app_context.get_typed_service(IDataService)
-    logger_service = app_context.get_typed_service(ILoggerService)
-    http_service = app_context.get_typed_service(IHttpService)
+    data_service = app_context.get_service(IDataService)
+    logger_service = app_context.get_service(ILoggerService)
+    http_service = app_context.get_service(IHttpService)
 
     assert isinstance(data_service, InMemoryDataService)
     assert isinstance(logger_service, ConsoleLoggerService)
@@ -42,8 +42,8 @@ def test_singleton_lifetime():
     app_context = AppContext()
     app_context.add_singleton(IDataService, InMemoryDataService)
 
-    instance1 = app_context.get_typed_service(IDataService)
-    instance2 = app_context.get_typed_service(IDataService)
+    instance1 = app_context.get_service(IDataService)
+    instance2 = app_context.get_service(IDataService)
 
     assert instance1 is instance2
     assert id(instance1) == id(instance2)
@@ -54,8 +54,8 @@ def test_transient_lifetime():
     app_context = AppContext()
     app_context.add_transient(IHttpService, HttpClientService)
 
-    instance1 = app_context.get_typed_service(IHttpService)
-    instance2 = app_context.get_typed_service(IHttpService)
+    instance1 = app_context.get_service(IHttpService)
+    instance2 = app_context.get_service(IHttpService)
 
     assert instance1 is not instance2
     assert id(instance1) != id(instance2)
@@ -77,7 +77,7 @@ def test_service_with_mock():
     app_context.add_singleton(ILoggerService, mock_factory)
 
     # Get service and test
-    logger_service = app_context.get_typed_service(ILoggerService)
+    logger_service = app_context.get_service(ILoggerService)
     assert logger_service is mock_logger
 
     # Test mock functionality
@@ -90,7 +90,7 @@ def test_service_not_registered():
     app_context = AppContext()
 
     with pytest.raises(KeyError, match="Service IDataService is not registered"):
-        app_context.get_typed_service(IDataService)
+        app_context.get_service(IDataService)
 
 
 def test_get_registered_services():
@@ -128,7 +128,7 @@ def test_factory_registration():
     # Register with factory function
     app_context.add_singleton(IDataService, lambda: InMemoryDataService())
 
-    data_service = app_context.get_typed_service(IDataService)
+    data_service = app_context.get_service(IDataService)
     assert isinstance(data_service, InMemoryDataService)
 
 
@@ -143,7 +143,7 @@ def test_instance_registration():
     app_context.add_singleton(IDataService, existing_instance)
 
     # Get service
-    retrieved_instance = app_context.get_typed_service(IDataService)
+    retrieved_instance = app_context.get_service(IDataService)
 
     assert retrieved_instance is existing_instance
 
@@ -161,11 +161,11 @@ def test_concrete_class_registration():
     assert app_context.is_registered(HttpClientService)
 
     # Test service resolution
-    data_service1 = app_context.get_typed_service(InMemoryDataService)
-    data_service2 = app_context.get_typed_service(InMemoryDataService)
+    data_service1 = app_context.get_service(InMemoryDataService)
+    data_service2 = app_context.get_service(InMemoryDataService)
 
-    http_service1 = app_context.get_typed_service(HttpClientService)
-    http_service2 = app_context.get_typed_service(HttpClientService)
+    http_service1 = app_context.get_service(HttpClientService)
+    http_service2 = app_context.get_service(HttpClientService)
 
     # Test types
     assert isinstance(data_service1, InMemoryDataService)

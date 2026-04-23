@@ -5,7 +5,8 @@ metadata:
     template: container-migration-solution-accelerator@1.0
 
 requiredVersions:
-  azd: '>=1.18.2'
+  azd: '>=1.18.2 != 1.23.9'
+  bicep: '>= 0.33.0'
 
 hooks:
   postdeploy:

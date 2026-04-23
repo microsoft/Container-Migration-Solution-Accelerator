@@ -11,8 +11,8 @@ falls back to CLI credentials for local development.
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "fastmcp>=2.12.5",
-#   "azure-identity>=1.23.0"
+#   "fastmcp~=2.14.5",
+#   "azure-identity~=1.25.0"
 # ]
 # ///
 
@@ -51,20 +51,23 @@ def get_azure_credential():
     credential_attempts: list[tuple[str, object]] = []
 
     try:
-        logging.info(
-            "[AUTH] Local development - trying AzureDeveloperCliCredential (azd auth login)"
-        )
-        credential_attempts.append(
-            ("AzureDeveloperCliCredential", AzureDeveloperCliCredential())
-        )
-    except Exception as e:
-        logging.warning(f"[AUTH] AzureDeveloperCliCredential failed: {e}")
-
-    try:
         logging.info("[AUTH] Trying AzureCliCredential (az login)")
         credential_attempts.append(("AzureCliCredential", AzureCliCredential()))
     except Exception as e:
         logging.warning(f"[AUTH] AzureCliCredential failed: {e}")
+
+    try:
+        logging.info(
+            "[AUTH] Local development - trying AzureDeveloperCliCredential (azd auth login)"
+        )
+        credential_attempts.append(
+            (
+                "AzureDeveloperCliCredential",
+                AzureDeveloperCliCredential(),
+            )
+        )
+    except Exception as e:
+        logging.warning(f"[AUTH] AzureDeveloperCliCredential failed: {e}")
 
     if credential_attempts:
         name, credential = credential_attempts[0]

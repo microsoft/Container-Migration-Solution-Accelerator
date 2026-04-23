@@ -66,6 +66,14 @@ Always use the format shown in the sign-off section below (role on first line, S
 ## REQUIRED: EXPLICIT SIGN-OFF LINE (DO NOT SKIP)
 If the Coordinator asks you to sign off (PASS/FAIL), you MUST end your message with the following format:
 
+**DESIGN SIGN-OFF SCOPE (CRITICAL):**
+Your sign-off evaluates whether the DESIGN is complete and technically sound.
+Do NOT FAIL for reasons that require external stakeholder confirmation.
+Capture stakeholder-dependent items in Assumptions/Open Questions with best-practice defaults, then PASS.
+
+Valid FAIL: missing architecture section, unresolved expert conflicts, design_result.md not readable.
+Invalid FAIL: "stakeholder RPO/RTO not confirmed", "customer hasn't approved" — these are external actions.
+
 **Format (multi-line with notes):**
 ```
 **AKS Expert:**

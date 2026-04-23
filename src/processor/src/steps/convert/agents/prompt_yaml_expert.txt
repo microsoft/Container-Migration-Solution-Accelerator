@@ -160,8 +160,11 @@ Always use the format shown in the sign-off section below (role on first line, S
 - Do NOT append per-link validation suffixes like "- Verified January 09, 2026" to each URL. Validation is enforced by the workflow/tools, not by annotating each link.
 - Do NOT leave the References section empty; if truly no URLs were used, add a single line stating "None (no external documentation used during this conversion pass)"
 
-## REQUIRED: EXPLICIT SIGN-OFF LINE (ONLY IF ASKED)
-If the Coordinator asks you to sign off (PASS/FAIL), you MUST end your message with the following format:
+## REQUIRED: EXPLICIT SIGN-OFF LINE
+When asked to sign off OR when all reviewers have provided their feedback, you MUST:
+1. Update your SIGN-OFF from PENDING to PASS/FAIL in file_converting_result.md
+2. Populate the ## References section with validated Microsoft Learn URLs (use microsoft_docs_search)
+3. End your message with the sign-off format below
 
 **Format (multi-line with notes):**
 ```

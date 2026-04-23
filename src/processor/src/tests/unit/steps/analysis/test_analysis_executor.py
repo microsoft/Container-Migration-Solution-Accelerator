@@ -15,7 +15,7 @@ class _FakeTelemetry:
     def __init__(self):
         self.transitions: list[tuple[str, str, str]] = []
 
-    async def transition_to_phase(self, process_id: str, step: str, phase: str):
+    async def transition_to_phase(self, process_id: str, phase: str, step: str):
         self.transitions.append((process_id, step, phase))
 
 
@@ -77,12 +77,12 @@ def test_analysis_executor_sends_message_on_soft_completion(monkeypatch):
             container_name="c1",
             source_file_folder="p1/source",
             workspace_file_folder="p1/workspace",
-            output_file_folder="p1/converted",
+            output_file_folder="p1/output",
         )
 
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "analysis", "start")]
+        assert telemetry.transitions == [("p1", "analysis", "Initializing Analysis")]
         assert len(ctx.sent) == 1
         assert len(ctx.yielded) == 0
         assert isinstance(ctx.sent[0], Analysis_BooleanExtendedResult)
@@ -128,12 +128,12 @@ def test_analysis_executor_yields_output_on_hard_termination(monkeypatch):
             container_name="c1",
             source_file_folder="p1/source",
             workspace_file_folder="p1/workspace",
-            output_file_folder="p1/converted",
+            output_file_folder="p1/output",
         )
 
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "analysis", "start")]
+        assert telemetry.transitions == [("p1", "analysis", "Initializing Analysis")]
         assert len(ctx.sent) == 0
         assert len(ctx.yielded) == 1
         assert isinstance(ctx.yielded[0], Analysis_BooleanExtendedResult)

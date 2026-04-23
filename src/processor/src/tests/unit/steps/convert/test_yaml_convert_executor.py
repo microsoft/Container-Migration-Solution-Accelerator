@@ -15,7 +15,7 @@ class _FakeTelemetry:
     def __init__(self):
         self.transitions: list[tuple[str, str, str]] = []
 
-    async def transition_to_phase(self, process_id: str, step: str, phase: str):
+    async def transition_to_phase(self, process_id: str, phase: str, step: str):
         self.transitions.append((process_id, step, phase))
 
 
@@ -71,7 +71,7 @@ def test_yaml_convert_executor_sends_message_on_soft_completion(monkeypatch):
         message = Design_ExtendedBooleanResult(process_id="p1")
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "yaml", "start")]
+        assert telemetry.transitions == [("p1", "yaml", "YAML")]
         assert len(ctx.sent) == 1
         assert len(ctx.yielded) == 0
         assert isinstance(ctx.sent[0], Yaml_ExtendedBooleanResult)
@@ -112,7 +112,7 @@ def test_yaml_convert_executor_yields_output_on_hard_termination(monkeypatch):
         message = Design_ExtendedBooleanResult(process_id="p1")
         await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
 
-        assert telemetry.transitions == [("p1", "yaml", "start")]
+        assert telemetry.transitions == [("p1", "yaml", "YAML")]
         assert len(ctx.sent) == 0
         assert len(ctx.yielded) == 1
         assert isinstance(ctx.yielded[0], Yaml_ExtendedBooleanResult)

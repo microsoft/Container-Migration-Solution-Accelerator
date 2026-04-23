@@ -1,7 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Direct-execution entry point for the migration processor.
+
+Used for local development and debugging. For production queue-based
+processing see ``main_service.py``.
+"""
+
 import asyncio
+import logging
 import os
 
 from libs.agent_framework.agent_framework_helper import AgentFrameworkHelper
@@ -15,6 +22,8 @@ from libs.base.application_base import ApplicationBase
 from steps.analysis.models.step_param import Analysis_TaskParam
 from steps.migration_processor import MigrationProcessor
 from utils.agent_telemetry import TelemetryManager
+
+logger = logging.getLogger(__name__)
 
 
 class Application(ApplicationBase):
@@ -31,37 +40,26 @@ class Application(ApplicationBase):
         Initialize the application.
         This method can be overridden by subclasses to perform any necessary setup.
         """
-        print(
-            "Application initialized with configuration:",
+        logger.info(
+            "Application initialized with configuration: %s",
             self.application_context.configuration,
         )
 
         self.register_services()
 
     def register_services(self):
-        # Additional initialization logic can be added here
-        # Initialize AgentFrameworkHelper and add it to the application context
         self.application_context.add_singleton(
             AgentFrameworkHelper, AgentFrameworkHelper()
         )
-        # Initialize AgentFrameworkHelper with LLM settings from application context
         self.application_context.get_service(AgentFrameworkHelper).initialize(
             self.application_context.llm_settings
         )
 
-        # Initialize middlewares - All Middlewares below are registered as a singleton
-        # -------------------------------------------------------------------------
-        # InputObserverMiddleware(Agent Level)
-        # LoggingFunctionMiddleware(Agent Level)
-        # DebuggingMiddleware(Run Level)
         (
-            # Register DebuggingMiddleware as a singleton
             self.application_context.add_singleton(
                 DebuggingMiddleware, DebuggingMiddleware
             )
-            # Register LoggingFunctionMiddleware as a singleton
             .add_singleton(LoggingFunctionMiddleware, LoggingFunctionMiddleware)
-            # Register InputObserverMiddleware as a singleton
             .add_singleton(InputObserverMiddleware, InputObserverMiddleware)
             .add_singleton(Mem0AsyncMemoryManager, Mem0AsyncMemoryManager)
             .add_async_singleton(
@@ -93,10 +91,8 @@ class Application(ApplicationBase):
                 ),
             )
         except Exception as e:
-            # Keep it as a print to match the current style of this entrypoint.
-            print(
-                "[WARN] Cosmos checkpoint storage disabled due to import/config error:",
-                e,
+            logger.warning(
+                "Cosmos checkpoint storage disabled due to import/config error: %s", e
             )
 
     async def run(self):
@@ -109,7 +105,7 @@ class Application(ApplicationBase):
             process_id="e7fc15e2-13c9-4587-b8ed-6f3015990229",
             container_name="processes",
             source_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/source",
-            output_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/converted",
+            output_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/output",
             workspace_file_folder="e7fc15e2-13c9-4587-b8ed-6f3015990229/workspace",
         )
         await migration_processor.run(input_data=input_data)

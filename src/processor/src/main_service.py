@@ -90,7 +90,7 @@ class QueueMigrationServiceApp(ApplicationBase):
         configure_application_logging(debug_mode=self.debug_mode)
 
         if self.debug_mode:
-            print("🐛 Debug logging enabled - level set to DEBUG")
+            logger.debug("Debug logging enabled - level set to DEBUG")
             logger.debug("🔇 Verbose third-party logging suppressed to reduce noise")
 
     def initialize(self):
@@ -101,8 +101,8 @@ class QueueMigrationServiceApp(ApplicationBase):
         (agent framework helpers, telemetry, process control, and the migration
         processor).
         """
-        print(
-            "Application initialized with configuration:",
+        logger.info(
+            "Application initialized with configuration: %s",
             self.application_context.configuration,
         )
         self.register_services()
@@ -119,30 +119,17 @@ class QueueMigrationServiceApp(ApplicationBase):
         - `MigrationProcessor` (transient per message)
         """
 
-        # Additional initialization logic can be added here
-        # -------------------------------------------------------------------------
-        # Initialize AgentFrameworkHelper and add it to the application context
-        # -------------------------------------------------------------------------
         self.application_context.add_singleton(
             AgentFrameworkHelper, AgentFrameworkHelper()
         )
-        # Initialize AgentFrameworkHelper with LLM settings from application context
         self.application_context.get_service(AgentFrameworkHelper).initialize(
             self.application_context.llm_settings
         )
 
-        # -------------------------------------------------------------------------
-        # Initialize middlewares - All Middlewares below are registered as a singleton
-        # -------------------------------------------------------------------------
-        # InputObserverMiddleware(Agent Level)
-        # LoggingFunctionMiddleware(Agent Level)
-        # DebuggingMiddleware(Run Level)
         (
-            # Register DebuggingMiddleware as a singleton
             self.application_context.add_singleton(
                 DebuggingMiddleware, DebuggingMiddleware
             )
-            # Register LoggingFunctionMiddleware as a singleton
             .add_singleton(LoggingFunctionMiddleware, LoggingFunctionMiddleware)
             .add_singleton(InputObserverMiddleware, InputObserverMiddleware)
             .add_singleton(Mem0AsyncMemoryManager, Mem0AsyncMemoryManager)
@@ -179,10 +166,8 @@ class QueueMigrationServiceApp(ApplicationBase):
                 ),
             )
         except Exception as e:
-            # Keep it as a print to match the current style of this entrypoint.
-            print(
-                "[WARN] Cosmos checkpoint storage disabled due to import/config error:",
-                e,
+            logger.warning(
+                "Cosmos checkpoint storage disabled due to import/config error: %s", e
             )
         # Only log initialization if debug mode is explicitly enabled
         if self.debug_mode:
@@ -285,18 +270,18 @@ class QueueMigrationServiceApp(ApplicationBase):
 
         # Debug print to see what we're getting (only if debug mode is enabled)
         if self.debug_mode:
-            print("DEBUG - Environment variables:")
-            print(
-                f"  VISIBILITY_TIMEOUT_MINUTES: {visibility_timeout} (type: {type(visibility_timeout)})"
+            logger.debug("DEBUG - Environment variables:")
+            logger.debug(
+                "  VISIBILITY_TIMEOUT_MINUTES: %s (type: %s)", visibility_timeout, type(visibility_timeout)
             )
-            print(
-                f"  POLL_INTERVAL_SECONDS: {poll_interval} (type: {type(poll_interval)})"
+            logger.debug(
+                "  POLL_INTERVAL_SECONDS: %s (type: %s)", poll_interval, type(poll_interval)
             )
-            print(
-                f"  MESSAGE_TIMEOUT_MINUTES: {message_timeout} (type: {type(message_timeout)})"
+            logger.debug(
+                "  MESSAGE_TIMEOUT_MINUTES: %s (type: %s)", message_timeout, type(message_timeout)
             )
-            print(
-                f"  CONCURRENT_WORKERS: {concurrent_workers} (type: {type(concurrent_workers)})"
+            logger.debug(
+                "  CONCURRENT_WORKERS: %s (type: %s)", concurrent_workers, type(concurrent_workers)
             )
 
         config = QueueServiceConfig(

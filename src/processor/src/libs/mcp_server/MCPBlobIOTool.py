@@ -173,7 +173,5 @@ def get_blob_file_mcp() -> MCPStdioTool:
             "run",
             "mcp_blob_io_operation.py",
         ],
-        env=dict(
-            os.environ
-        ),  # passing all env vars so the separated MCP instance has access to same environment values, particularly for Azure
+        env={**os.environ, "UV_NO_PROGRESS": "1"},
     )

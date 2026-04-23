@@ -7,8 +7,9 @@ This module renders the conversion prompt and runs a `GroupChatOrchestrator`
 to produce a structured `Yaml_ExtendedBooleanResult`.
 """
 
+import logging
+import os
 import re
-
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
@@ -23,13 +24,14 @@ from libs.agent_framework.groupchat_orchestrator import (
     AgentResponse,
     GroupChatOrchestrator,
 )
-
 from libs.base.orchestrator_base import OrchestrationResult, OrchestratorBase
 from libs.mcp_server.MCPBlobIOTool import get_blob_file_mcp
 from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
 from steps.design.models.step_output import Design_ExtendedBooleanResult
 from utils.datetime_util import get_current_timestamp_utc
 from utils.prompt_util import TemplateUtility
+
+logger = logging.getLogger(__name__)
 
 
 class YamlConvertOrchestrator(
@@ -99,6 +101,7 @@ class YamlConvertOrchestrator(
                 on_workflow_complete=self.on_orchestration_complete,
                 on_agent_response_stream=self.on_agent_response_stream,
             )
+            await self.flush_agent_memories()
             return orchestration_result
 
     async def prepare_mcp_tools(
@@ -114,7 +117,10 @@ class YamlConvertOrchestrator(
             name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp"
         )
         fetch_mcp_tool = MCPStdioTool(
-            name="Fetch MCP Tool", command="uvx", args=["mcp-server-fetch"]
+            name="Fetch MCP Tool",
+            command="uvx",
+            args=["mcp-server-fetch"],
+            env={**os.environ, "UV_NO_PROGRESS": "1"},
         )
         blob_io_mcp_tool = get_blob_file_mcp()
 
@@ -210,27 +216,9 @@ class YamlConvertOrchestrator(
         agent_infos.append(coordinator_agent_info)
 
         # Result generator
-        result_generator_instruction = """
-    You are a Result Generator.
-
-    ROLE & RESPONSIBILITY (do not exceed scope):
-    - You do NOT decide whether the step succeeded/failed and you do NOT introduce new blockers.
-    - The step outcome has already happened via stakeholder discussion and coordinator termination.
-    - Your only job is to serialize the final outcome into the required schema exactly.
-
-    RULES:
-    - Output MUST be valid JSON only.
-    - Do NOT call tools.
-    - Do NOT verify file existence.
-    - Do NOT invent missing files, blockers, or metrics.
-    - Only summarize what participants explicitly stated.
-    - Keep `reason` short (one sentence).
-
-    WHAT TO DO:
-    1) Review the conversation (excluding the Coordinator).
-    2) Extract conversion results (converted files, concerns, metrics, and report path) as stated.
-    3) Emit JSON that conforms exactly to `Yaml_ExtendedBooleanResult`.
-"""
+        result_generator_instruction = self.read_prompt_file(
+            str(Path(__file__).parent / "prompt_resultgenerator.txt")
+        )
         result_generator_info = AgentInfo(
             agent_name="ResultGenerator",
             agent_instruction=result_generator_instruction,
@@ -248,18 +236,19 @@ class YamlConvertOrchestrator(
         self, result: OrchestrationResult[Yaml_ExtendedBooleanResult]
     ):
         """Handle orchestration completion (console summary)."""
-        print("*" * 40)
-        print("Yaml Convert Orchestration complete.")
-        print(f"Elapsed: {result.execution_time_seconds:.2f}s")
-        print(f"Final Result: {result}")
-        print("*" * 40)
+        logger.info(
+            "Yaml Convert Orchestration complete. Elapsed: %.2fs",
+            result.execution_time_seconds,
+        )
 
     async def on_agent_response_stream(self, response):
         """Forward streaming agent output to base hooks."""
         await super().on_agent_response_stream(response)
 
 
-def _parse_conversion_report_quality_gates(markdown: str) -> tuple[dict[str, str], bool]:
+def _parse_conversion_report_quality_gates(
+    markdown: str,
+) -> tuple[dict[str, str], bool]:
     """Parse sign-offs and open-blocker status from the conversion report markdown.
 
     Note:

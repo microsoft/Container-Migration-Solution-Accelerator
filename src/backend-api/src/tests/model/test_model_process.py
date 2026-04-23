@@ -8,7 +8,8 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from routers.model.model_process import FileInfo, enlist_process_queue_response  # noqa: E402
+from routers.models.files import FileInfo  # noqa: E402
+from routers.models.processes import enlist_process_queue_response  # noqa: E402
 
 
 class TestFileInfo:
@@ -100,9 +101,10 @@ class TestEnlistProcessQueueResponse:
         ]
 
         response = enlist_process_queue_response(
+            user_id="test-user",
             message="Files uploaded successfully",
             process_id="123e4567-e89b-12d3-a456-426614174000",
-            files=files,
+            files=[f.model_dump() for f in files],
         )
 
         assert response.message == "Files uploaded successfully"
@@ -121,7 +123,8 @@ class TestEnlistProcessQueueResponse:
         ]
 
         response = enlist_process_queue_response(
-            message="Test message", process_id="test-id", files=files
+            user_id="test-user",
+            message="Test message", process_id="test-id", files=[f.model_dump() for f in files]
         )
 
         # Test the to_base64 method
@@ -149,7 +152,8 @@ class TestEnlistProcessQueueResponse:
         ]
 
         response = enlist_process_queue_response(
-            message="Files with secret content", process_id="secret-test", files=files
+            user_id="test-user",
+            message="Files with secret content", process_id="secret-test", files=[f.model_dump() for f in files]
         )
 
         # Get base64 and decode
@@ -187,9 +191,10 @@ class TestEnlistProcessQueueResponse:
         ]
 
         response = enlist_process_queue_response(
+            user_id="test-user",
             message="Multiple EKS files uploaded",
             process_id="eks-migration-123",
-            files=files,
+            files=[f.model_dump() for f in files],
         )
 
         base64_result = response.to_base64()
@@ -225,6 +230,7 @@ class TestEnlistProcessQueueResponse:
     def test_to_base64_empty_files_list(self):
         """Test to_base64 with empty files list"""
         response = enlist_process_queue_response(
+            user_id="test-user",
             message="No files uploaded", process_id="empty-process", files=[]
         )
 
@@ -248,9 +254,10 @@ class TestEnlistProcessQueueResponse:
         ]
 
         response = enlist_process_queue_response(
+            user_id="test-user",
             message="Special chars: éñüíçødé",
             process_id="unicode-test-123",
-            files=files,
+            files=[f.model_dump() for f in files],
         )
 
         # Should handle special characters without error
@@ -278,7 +285,8 @@ class TestEnlistProcessQueueResponse:
             )
 
         response = enlist_process_queue_response(
-            message="Bulk file upload", process_id="bulk-upload-test", files=files
+            user_id="test-user",
+            message="Bulk file upload", process_id="bulk-upload-test", files=[f.model_dump() for f in files]
         )
 
         base64_result = response.to_base64()
@@ -306,6 +314,7 @@ class TestEnlistProcessQueueResponse:
     def test_to_base64_edge_cases(self, message, process_id):
         """Test to_base64 with edge cases"""
         response = enlist_process_queue_response(
+            user_id="test-user",
             message=message, process_id=process_id, files=[]
         )
 
@@ -353,9 +362,10 @@ spec:
         ]
 
         response = enlist_process_queue_response(
+            user_id="test-user",
             message="EKS migration files processed successfully",
             process_id="eks-migration-d173cea5-b1a5-4fab-929c-7379165cc96e",
-            files=eks_files,
+            files=[f.model_dump() for f in eks_files],
         )
 
         # Convert to base64 for queue message

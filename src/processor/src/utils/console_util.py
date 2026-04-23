@@ -12,7 +12,6 @@ Notes:
 """
 
 
-# Color and icon utility functions for enhanced display
 class ConsoleColors:
     """ANSI color codes for terminal output"""
 
@@ -57,8 +56,6 @@ def get_role_style(name=None):
         Tuple of (role_display, content_color).
     """
 
-    # Role-based styling
-    # Agent-specific styling
     agent_styles = {
         "Chief Architect": (
             f"{ConsoleColors.BOLD}{ConsoleColors.MAGENTA}Chief Architect{ConsoleColors.RESET}",

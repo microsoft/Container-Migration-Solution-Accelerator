@@ -4,11 +4,11 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "fastmcp>=2.12.5",
-#    "httpx>=0.27.0,<1.0",
-#    "azure-core >=1.36.0",
-#    "azure-storage-blob>=12.27.1",
-#    "azure-identity>=1.23.0"
+#   "fastmcp~=2.14.5",
+#    "httpx~=0.28.1",
+#    "azure-core~=1.38.0",
+#    "azure-storage-blob~=12.28.0",
+#    "azure-identity~=1.25.0"
 # ]
 # ///
 import os
@@ -368,7 +368,12 @@ def list_blobs_in_container(
         container_client = client.get_container_client(container_name)
 
         # Set up name prefix for folder filtering
-        name_starts_with = folder_path if folder_path else None
+        # Ensure prefix ends with / so relative_path computation is correct
+        # (without trailing /, relative_path starts with "/" and gets wrongly
+        # excluded by the non-recursive subfolder check)
+        name_starts_with = None
+        if folder_path:
+            name_starts_with = folder_path if folder_path.endswith("/") else folder_path + "/"
 
         try:
             blobs = container_client.list_blobs(name_starts_with=name_starts_with)
@@ -382,8 +387,8 @@ def list_blobs_in_container(
                     continue
 
                 # Skip if not recursive and blob is in a subfolder
-                if not recursive and folder_path:
-                    relative_path = blob.name[len(folder_path) :]
+                if not recursive and name_starts_with:
+                    relative_path = blob.name[len(name_starts_with) :]
                     if "/" in relative_path:
                         continue
                 elif not recursive and not folder_path:

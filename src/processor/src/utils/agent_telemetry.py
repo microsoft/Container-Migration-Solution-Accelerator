@@ -9,7 +9,7 @@ No global variables, no locks - just clean async/await based functions with a te
 
 Usage:
     telemetry = TelemetryManager(app_context)
-    await telemetry.init_process("process_id", "analysis", "step_1")
+    await telemetry.init_process(process_id="process_id", phase="start", step="analysis")
     await telemetry.update_agent_activity("agent_name", "thinking", "Processing data...")
 """
 
@@ -389,7 +389,7 @@ class TelemetryManager:
 
         # Ensure initial step timing is seeded immediately. This makes lap timing robust
         # even if the workflow emits step "invoked" events late.
-        if (phase or "").strip().lower() == "start" and (step or "").strip():
+        if (step or "").strip():
             timing = new_process.step_timings.get(step) or {}
             timing["started_at"] = (
                 timing.get("started_at") or new_process.started_at_time
@@ -678,6 +678,30 @@ class TelemetryManager:
                     agent_name,
                 )
 
+    async def update_phase(self, process_id: str, phase: str):
+        """Update only the phase display name without changing step or step timing.
+
+        Used when the Coordinator's instruction indicates a sub-phase transition
+        (e.g. "PHASE 2 PLATFORM ENHANCEMENT: ...") within the current step.
+        """
+        if not self.repository:
+            return
+
+        try:
+            current_process = await self.repository.get_async(process_id)
+            if not current_process:
+                return
+
+            current_process.phase = phase
+            current_process.last_update_time = _get_utc_timestamp()
+            await self.repository.update_async(current_process)
+        except Exception:
+            logger.exception(
+                "Error updating phase (process_id=%s, phase=%s)",
+                process_id,
+                phase,
+            )
+
     async def transition_to_phase(self, process_id: str, phase: str, step: str):
         """Clean transition between phases with proper agent cleanup."""
         current_process: ProcessStatus | None = None
@@ -693,8 +717,8 @@ class TelemetryManager:
                 current_process.step = step
                 current_process.last_update_time = _get_utc_timestamp()
 
-                # Record step start timing on phase=start.
-                if (phase or "").strip().lower() == "start" and step:
+                # Record step start timing on phase transition.
+                if step:
                     timing = current_process.step_timings.get(step) or {}
                     timing["started_at"] = (
                         timing.get("started_at") or _get_utc_timestamp()
@@ -1280,7 +1304,7 @@ class TelemetryManager:
                 # Provide a compact, UI-friendly "finalized" section inside final_outcome.
                 # Keep it small: counts + pointers, not full file contents.
                 container = _get_process_blob_container_name()
-                output_folder = f"{process_id}/converted"
+                output_folder = f"{process_id}/output"
                 conversion_report_file = None
                 try:
                     yaml_step = (current_process.step_results or {}).get("yaml")
@@ -1384,7 +1408,7 @@ class TelemetryManager:
                             blob_name = f"debug/traceback_{failed_step}_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.txt"
                             artifact = await _upload_text_to_process_blob(
                                 process_id=process_id,
-                                folder_path=f"{process_id}/converted",
+                                folder_path=f"{process_id}/output",
                                 blob_name=blob_name,
                                 content=tb,
                             )

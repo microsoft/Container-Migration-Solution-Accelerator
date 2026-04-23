@@ -1,3 +1,8 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""UTC timestamp formatting for report footers."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone

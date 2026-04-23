@@ -1,5 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+
+"""Abstract bootstrap base class that loads config and wires the application context."""
+
 import inspect
 import logging
 import os

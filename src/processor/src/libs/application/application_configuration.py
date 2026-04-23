@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Pydantic settings models for application and environment configuration."""
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

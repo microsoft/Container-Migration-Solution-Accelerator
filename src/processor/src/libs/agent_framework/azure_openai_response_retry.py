@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Azure OpenAI Responses client wrapper with rate-limit-aware retry logic."""
+
 from __future__ import annotations
 
 import asyncio
@@ -29,9 +31,9 @@ def _format_exc_brief(exc: BaseException) -> str:
 
 @dataclass(frozen=True)
 class RateLimitRetryConfig:
-    max_retries: int = 5
-    base_delay_seconds: float = 2.0
-    max_delay_seconds: float = 30.0
+    max_retries: int = 8
+    base_delay_seconds: float = 5.0
+    max_delay_seconds: float = 120.0
 
     @staticmethod
     def from_env(
@@ -52,9 +54,9 @@ class RateLimitRetryConfig:
                 return default
 
         return RateLimitRetryConfig(
-            max_retries=max(0, _int(max_retries_env, 5)),
-            base_delay_seconds=max(0.0, _float(base_delay_env, 2.0)),
-            max_delay_seconds=max(0.0, _float(max_delay_env, 30.0)),
+            max_retries=max(0, _int(max_retries_env, 8)),
+            base_delay_seconds=max(0.0, _float(base_delay_env, 5.0)),
+            max_delay_seconds=max(0.0, _float(max_delay_env, 120.0)),
         )
 
 
@@ -65,6 +67,15 @@ def _looks_like_rate_limit(error: BaseException) -> bool:
 
     status = getattr(error, "status_code", None) or getattr(error, "status", None)
     if status == 429:
+        return True
+
+    # Treat empty error messages as transient (likely connection reset or
+    # incomplete response from Azure front-end) — worth retrying.
+    if not msg or msg == str(type(error).__name__).lower():
+        return True
+
+    # Server errors (5xx) are transient and should be retried.
+    if isinstance(status, int) and 500 <= status < 600:
         return True
 
     cause = getattr(error, "__cause__", None)
@@ -108,6 +119,42 @@ def _safe_str(val: Any) -> str:
     if isinstance(val, str):
         return val
     return str(val)
+
+
+def _looks_like_tool_result(text: str) -> bool:
+    """Heuristic: detect tool/function result messages by content patterns."""
+    if not text or len(text) < 50:
+        return False
+    # Common patterns in tool results from blob operations
+    indicators = [
+        '"blob_name"',
+        '"container_name"',
+        '"folder_path"',
+        '"content":',
+        '"size":',
+        '"last_modified":',
+        "BlobProperties",
+        "Successfully saved",
+        "# ",
+        "## ",  # Markdown headers from read_blob_content
+    ]
+    return any(ind in text[:500] for ind in indicators)
+
+
+def _looks_like_save_blob_call(text: str) -> bool:
+    """Detect save_content_to_blob tool calls with large content arguments."""
+    if not text:
+        return False
+    return "save_content_to_blob" in text[:200] and len(text) > 1000
+
+
+def _summarize_save_blob(text: str, max_chars: int) -> str:
+    """Extract blob name and size from save_content_to_blob call."""
+    import re
+
+    blob_match = re.search(r'"blob_name"\s*:\s*"([^"]+)"', text)
+    blob_name = blob_match.group(1) if blob_match else "unknown"
+    return f"[saved {blob_name} to blob storage ({len(text)} chars)]"
 
 
 def _truncate_text(
@@ -208,14 +255,14 @@ class ContextTrimConfig:
     """
 
     enabled: bool = True
-    # GPT-5.x class models typically support larger context windows. These defaults
-    # intentionally allow more history before trimming, while still guarding
-    # against accidental multi-hundred-KB blobs being injected into a single call.
-    max_total_chars: int = 240_000
-    max_message_chars: int = 20_000
-    keep_last_messages: int = 40
-    keep_head_chars: int = 10_000
-    keep_tail_chars: int = 3_000
+    # GPT-5.1 supports 272K input tokens (~800K chars). With workspace context
+    # injected into system instructions (never trimmed) and Qdrant shared memory
+    # providing cross-step context, we can keep fewer conversation messages.
+    max_total_chars: int = 400_000
+    max_message_chars: int = 0  # Disabled — with keep_last_messages=15, per-message truncation is unnecessary
+    keep_last_messages: int = 15
+    keep_head_chars: int = 12_000
+    keep_tail_chars: int = 4_000
     keep_system_messages: bool = True
     retry_on_context_error: bool = True
 
@@ -246,7 +293,7 @@ class ContextTrimConfig:
             enabled=_bool(enabled_env, True),
             max_total_chars=max(0, _int(max_total_chars_env, 240_000)),
             max_message_chars=max(0, _int(max_message_chars_env, 20_000)),
-            keep_last_messages=max(1, _int(keep_last_messages_env, 40)),
+            keep_last_messages=max(1, _int(keep_last_messages_env, 15)),
             keep_head_chars=max(0, _int(keep_head_chars_env, 10_000)),
             keep_tail_chars=max(0, _int(keep_tail_chars_env, 3_000)),
             keep_system_messages=_bool(keep_system_messages_env, True),
@@ -259,6 +306,20 @@ def _trim_messages(
 ) -> list[Any]:
     if not cfg.enabled:
         return list(messages)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Phase 0: Summarize large save_content_to_blob calls.
+    # Write payloads are redundant once persisted — replace with a short
+    # summary. Read tool results are never truncated so the model always
+    # has the full file content to reason about.
+    # ──────────────────────────────────────────────────────────────────────
+    SAVE_ARG_MAX_CHARS = 200  # Truncate save_content_to_blob arguments
+
+    for i, m in enumerate(messages):
+        text = _estimate_message_text(m)
+        if _looks_like_save_blob_call(text) and len(text) > SAVE_ARG_MAX_CHARS:
+            summary = _summarize_save_blob(text, SAVE_ARG_MAX_CHARS)
+            messages[i] = _set_message_text(m, summary)
 
     # Keep last N messages; optionally keep system messages from the head.
     system_messages: list[Any] = []
@@ -278,14 +339,21 @@ def _trim_messages(
     seen_fingerprints: set[tuple[str, str]] = set()
     cleaned: list[Any] = []
 
-    for m in tail:
+    for idx, m in enumerate(tail):
         text = _estimate_message_text(m)
         fp = (text[:200], text[-200:])
         if fp in seen_fingerprints:
             continue
         seen_fingerprints.add(fp)
 
-        if cfg.max_message_chars > 0 and len(text) > cfg.max_message_chars:
+        # Never truncate the last message — the agent needs it in full
+        # to reason about the most recent tool result or instruction.
+        is_last = idx == len(tail) - 1
+        if (
+            not is_last
+            and cfg.max_message_chars > 0
+            and len(text) > cfg.max_message_chars
+        ):
             text = _truncate_text(
                 text,
                 max_chars=cfg.max_message_chars,
@@ -482,12 +550,40 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
             ):
                 raise
 
-            trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+            trimmed = _trim_messages(
+                messages,
+                cfg=ContextTrimConfig(
+                    enabled=True,
+                    max_total_chars=max(
+                        50_000, self._context_trim_config.max_total_chars - 80_000
+                    ),
+                    max_message_chars=max(
+                        3_000, self._context_trim_config.max_message_chars - 6_000
+                    ),
+                    keep_last_messages=max(
+                        6, self._context_trim_config.keep_last_messages - 12
+                    ),
+                    keep_head_chars=max(
+                        1_000, self._context_trim_config.keep_head_chars - 4_000
+                    ),
+                    keep_tail_chars=self._context_trim_config.keep_tail_chars,
+                    keep_system_messages=True,
+                    retry_on_context_error=True,
+                ),
+            )
             logger.warning(
                 "[AOAI_CTX_TRIM] retrying after context-length error; count=%s -> %s",
                 len(messages),
                 len(trimmed),
             )
+            # Cool down before retrying to avoid triggering 429s immediately.
+            trim_delay = self._retry_config.base_delay_seconds
+            trim_delay = min(trim_delay, self._retry_config.max_delay_seconds)
+            logger.info(
+                "[AOAI_CTX_TRIM] sleeping %ss before retry",
+                round(trim_delay, 1),
+            )
+            await asyncio.sleep(trim_delay)
             return await _retry_call(
                 lambda: parent_inner_get_response(
                     messages=trimmed, chat_options=chat_options, **kwargs
@@ -548,22 +644,64 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                     except Exception:
                         pass
 
-                # One-shot retry for context-length failures.
+                # Progressive retry for context-length failures.
                 if (
                     self._context_trim_config.enabled
                     and self._context_trim_config.retry_on_context_error
                     and _looks_like_context_length(e)
                 ):
-                    trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+                    # Make trimming progressively more aggressive on each retry
+                    # GPT-5.1: 272K input tokens ≈ 800K chars. Scale down from 600K default.
+                    scale = attempt_index + 1
+                    aggressive_cfg = ContextTrimConfig(
+                        enabled=True,
+                        max_total_chars=max(
+                            30_000,
+                            self._context_trim_config.max_total_chars - scale * 100_000,
+                        ),
+                        max_message_chars=max(
+                            2_000,
+                            self._context_trim_config.max_message_chars - scale * 8_000,
+                        ),
+                        keep_last_messages=max(
+                            4,
+                            self._context_trim_config.keep_last_messages - scale * 8,
+                        ),
+                        keep_head_chars=max(
+                            500,
+                            self._context_trim_config.keep_head_chars - scale * 3_000,
+                        ),
+                        keep_tail_chars=max(
+                            500,
+                            self._context_trim_config.keep_tail_chars - scale * 1_000,
+                        ),
+                        keep_system_messages=True,
+                        retry_on_context_error=True,
+                    )
+                    trimmed = _trim_messages(effective_messages, cfg=aggressive_cfg)
                     logger.warning(
-                        "[AOAI_CTX_TRIM_STREAM] retrying after context-length error; count=%s -> %s",
-                        len(messages),
+                        "[AOAI_CTX_TRIM_STREAM] retrying after context-length error (attempt %s); count=%s -> %s, budget=%s",
+                        attempt_index + 1,
+                        len(effective_messages),
                         len(trimmed),
+                        aggressive_cfg.max_total_chars,
                     )
                     effective_messages = trimmed
                     if attempt_index >= attempts - 1:
                         # No more retries available.
                         raise
+
+                    # Cool down before retrying — immediate retries after trimming
+                    # tend to trigger 429s because the API hasn't recovered yet.
+                    trim_delay = self._retry_config.base_delay_seconds * (
+                        2**attempt_index
+                    )
+                    trim_delay = min(trim_delay, self._retry_config.max_delay_seconds)
+                    logger.info(
+                        "[AOAI_CTX_TRIM_STREAM] sleeping %ss before retry",
+                        round(trim_delay, 1),
+                    )
+                    await asyncio.sleep(trim_delay)
                     continue
 
                 if not _looks_like_rate_limit(e) or attempt_index >= attempts - 1:
