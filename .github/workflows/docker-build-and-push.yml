@@ -71,7 +71,7 @@ jobs:
           DATE="${{ steps.date.outputs.date }}"
           GITHUB_RUN_NUMBER="${{ github.run_number }}"
           if [[ "$BRANCH" == "main" ]]; then
-            BASE_TAG="latest"
+            BASE_TAG="latest_v2"
           elif [[ "$BRANCH" == "dev" ]]; then
             BASE_TAG="dev"
           elif [[ "$BRANCH" == "demo" ]]; then
