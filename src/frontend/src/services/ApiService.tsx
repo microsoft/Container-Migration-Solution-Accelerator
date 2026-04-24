@@ -121,6 +121,11 @@ export const apiService = {
   upload: (url, formData) => fetchWithAuth(url, 'POST', formData),
   downloadBlob: (url) => fetchBlobWithAuth(url), // For blob downloads
   login: (url, body) => fetchWithoutAuth(url, 'POST', body), // For login without auth
+  // Process cancellation methods
+  cancelProcess: (processId: string, reason?: string) => 
+    fetchWithAuth(`/process/cancel/${processId}`, 'POST', reason ? { reason } : null),
+  getCancelStatus: (processId: string) => 
+    fetchWithAuth(`/process/cancel/${processId}/status`, 'GET'),
 };
 
 export default apiService;
