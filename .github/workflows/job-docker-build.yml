@@ -67,6 +67,7 @@ jobs:
           context: ./src/backend-api
           file: ./src/backend-api/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
@@ -79,6 +80,7 @@ jobs:
           context: ./src/processor
           file: ./src/processor/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
@@ -91,6 +93,7 @@ jobs:
           context: ./src/frontend
           file: ./src/frontend/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
