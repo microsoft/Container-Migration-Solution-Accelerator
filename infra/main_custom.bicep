@@ -1165,7 +1165,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
       }
     ]
     ingressTargetPort: backendContainerPort
-    ingressExternal: true
+    ingressExternal: enablePrivateNetworking ? false : true
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1
@@ -1229,7 +1229,13 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
         env: [
           {
             name: 'API_URL'
-            value: 'https://${containerAppBackend.outputs.fqdn}'
+            value: '/api'
+          }
+          {
+            name: 'BACKEND_API_URL'
+            value: enablePrivateNetworking
+              ? 'https://${backendContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
+              : 'https://${containerAppBackend.outputs.fqdn}'
           }
           {
             name: 'APP_ENV'
@@ -1382,7 +1388,9 @@ output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.logi
 output SERVICE_BACKEND_NAME string = containerAppBackend.outputs.name
 
 @description('Backend service container app URI')
-output SERVICE_BACKEND_URI string = 'https://${containerAppBackend.outputs.fqdn}'
+output SERVICE_BACKEND_URI string = enablePrivateNetworking
+  ? 'https://${backendContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
+  : 'https://${containerAppBackend.outputs.fqdn}'
 
 @description('Processor service container app name')  
 output SERVICE_PROCESSOR_NAME string = containerAppProcessor.outputs.name

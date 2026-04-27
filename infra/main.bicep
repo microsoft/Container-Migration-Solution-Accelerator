@@ -1220,7 +1220,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
       }
     ]
     ingressTargetPort: backendContainerPort
-    ingressExternal: true
+    ingressExternal: enablePrivateNetworking ? false : true // WAF: internal-only ingress for backend API
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1
@@ -1278,7 +1278,14 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
         env: [
           {
             name: 'API_URL'
-            value: 'https://${containerAppBackend.outputs.fqdn}'
+            // Frontend calls same-origin /api; frontend server proxies to backend.
+            value: '/api'
+          }
+          {
+            name: 'BACKEND_API_URL'
+            value: enablePrivateNetworking
+              ? 'https://${backendContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
+              : 'https://${containerAppBackend.outputs.fqdn}'
           }
           {
             name: 'APP_ENV'

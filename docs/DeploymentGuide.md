@@ -191,6 +191,8 @@ Review the configuration options below. You can customize any settings that meet
 | **Framework**          | Basic configuration               | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
 | **Features**           | Core functionality                | Reliability, security, operational excellence                                           |
 
+When you use the production WAF configuration for Container Migration, only the frontend Container App stays publicly reachable through Application Gateway/WAF. The backend API and processor Container Apps stay on internal ingress inside the Container Apps environment, and the existing VNet subnet/NSG rules continue to limit traffic to internal paths.
+
 **To use production configuration:**
 
 Copy the contents from the production configuration file to your main parameters file:

@@ -1,16 +1,19 @@
 import os
 
+import httpx
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = FastAPI()
+
+BACKEND_API_URL = os.getenv("BACKEND_API_URL", "").rstrip("/")
 
 # Read allowed origins from environment; fall back to same-origin only
 _allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
@@ -70,6 +73,43 @@ async def get_config(request: Request):
         "ENABLE_AUTH": os.getenv("ENABLE_AUTH", "false"),
     }
     return config
+
+
+@app.api_route("/api/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+async def proxy_api(full_path: str, request: Request):
+    if not BACKEND_API_URL:
+        return JSONResponse(status_code=503, content={"detail": "Backend API URL is not configured"})
+
+    target_url = f"{BACKEND_API_URL}/api/{full_path}"
+    if request.url.query:
+        target_url = f"{target_url}?{request.url.query}"
+
+    headers = dict(request.headers)
+    headers.pop("host", None)
+    headers.pop("content-length", None)
+
+    body = await request.body()
+
+    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+        proxied = await client.request(
+            method=request.method,
+            url=target_url,
+            headers=headers,
+            content=body,
+        )
+
+    passthrough_headers = {
+        key: value
+        for key, value in proxied.headers.items()
+        if key.lower() not in {"content-encoding", "transfer-encoding", "connection"}
+    }
+
+    return Response(
+        content=proxied.content,
+        status_code=proxied.status_code,
+        headers=passthrough_headers,
+        media_type=proxied.headers.get("content-type"),
+    )
 
 
 @app.get("/{full_path:path}")
