@@ -71,7 +71,7 @@ jobs:
           DATE="${{ steps.date.outputs.date }}"
           GITHUB_RUN_NUMBER="${{ github.run_number }}"
           if [[ "$BRANCH" == "main" ]]; then
-            BASE_TAG="latest"
+            BASE_TAG="latest_v2"
           elif [[ "$BRANCH" == "dev" ]]; then
             BASE_TAG="dev"
           elif [[ "$BRANCH" == "demo" ]]; then
@@ -92,6 +92,7 @@ jobs:
           context: ./src/backend-api
           file: ./src/backend-api/Dockerfile
           push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          provenance: false
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
@@ -102,6 +103,7 @@ jobs:
           context: ./src/processor
           file: ./src/processor/Dockerfile
           push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          provenance: false
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
@@ -112,6 +114,7 @@ jobs:
           context: ./src/frontend
           file: ./src/frontend/Dockerfile
           push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          provenance: false
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/frontend:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/frontend:${{ env.DATE_TAG }}

@@ -7,10 +7,20 @@ resolution-markers = [
     "python_full_version < '3.13'",
 ]
 
+[options]
+prerelease-mode = "allow"
+
 [manifest]
 overrides = [
+    { name = "aiohttp", specifier = "==3.13.4" },
     { name = "av", specifier = "==16.0.0" },
+    { name = "azure-core", specifier = "==1.38.0" },
+    { name = "black", specifier = "==26.3.1" },
+    { name = "cryptography", specifier = "==46.0.7" },
+    { name = "pyjwt", specifier = "==2.12.0" },
+    { name = "pyopenssl", specifier = "==26.0.0" },
     { name = "starlette", specifier = "==0.49.1" },
+    { name = "urllib3", specifier = "==2.6.3" },
 ]
 
 [[package]]
@@ -195,7 +205,7 @@ requires-dist = [
     { name = "aiofiles", specifier = "==24.1.0" },
     { name = "azure-ai-agents", specifier = "==1.2.0b3" },
     { name = "azure-appconfiguration", specifier = "==1.7.1" },
-    { name = "azure-identity", specifier = "==1.24.0" },
+    { name = "azure-identity", specifier = "==1.25.0" },
     { name = "azure-monitor-opentelemetry", specifier = "==1.7.0" },
     { name = "azure-search-documents", specifier = "==11.6.0b12" },
     { name = "azure-storage-blob", specifier = "==12.26.0" },
@@ -213,7 +223,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
 ]
 
@@ -416,7 +426,7 @@ wheels = [
 
 [[package]]
 name = "azure-identity"
-version = "1.24.0"
+version = "1.25.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -1648,7 +1658,7 @@ dependencies = [
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pyjwt", extra = ["crypto"] },
+    { name = "pyjwt" },
     { name = "python-multipart" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "sse-starlette" },
@@ -1686,7 +1696,7 @@ version = "1.35.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
-    { name = "pyjwt", extra = ["crypto"] },
+    { name = "pyjwt" },
     { name = "requests" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3c/aa/5a646093ac218e4a329391d5a31e5092a89db7d2ef1637a90b82cd0b6f94/msal-1.35.1.tar.gz", hash = "sha256:70cac18ab80a053bff86219ba64cfe3da1f307c74b009e2da57ef040eb1b5656", size = 165658, upload_time = "2026-03-04T23:38:51.812Z" }

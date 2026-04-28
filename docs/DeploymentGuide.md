@@ -6,18 +6,20 @@ This guide walks you through deploying the Container Migration Solution Accelera
 
 🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
+> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version to ensure compliance. To configure, [Click here](#31-choose-deployment-type-optional).
+
 ## Step 1: Prerequisites & Setup
 
 ### 1.1 Azure Account Requirements
 
 Ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the following permissions:
 
-| **Required Permission/Role** | **Scope** | **Purpose** |
-|------------------------------|-----------|-------------|
-| **Contributor** | Subscription level | Create and manage Azure resources |
-| **User Access Administrator** | Subscription level | Manage user access and role assignments |
-| **Role Based Access Control Admin** | Subscription/Resource Group level | Configure RBAC permissions |
-| **App Registration Creation** | Azure Active Directory | Create and configure authentication |
+| **Required Permission/Role**  | **Scope**                         | **Purpose**                             |
+| ----------------------------- | --------------------------------- | --------------------------------------- |
+| **Contributor**               | Subscription level                | Create and manage Azure resources       |
+| **User Access Administrator** | Subscription level                | Manage user access and role assignments |
+| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions              |
+| **App Registration Creation** | Azure Active Directory            | Create and configure authentication     |
 
 **🔍 How to Check Your Permissions:**
 
@@ -51,7 +53,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 - [Azure App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/)
 - [Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/)
 - [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues/)
-- [o3 Model Capacity](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure)
+- [GPT-5.1 Model Capacity](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure)
 
 **Recommended Regions:** East US, East US2, Australia East, UK South, France Central
 
@@ -77,12 +79,12 @@ Select one of the following options to deploy the Container Migration Solution A
 
 ### Environment Comparison
 
-| **Option** | **Best For** | **Prerequisites** | **Setup Time** |
-|------------|--------------|-------------------|----------------|
-| **GitHub Codespaces** | Quick deployment, no local setup required | GitHub account | ~3-5 minutes |
-| **VS Code Dev Containers** | Fast deployment with local tools | Docker Desktop, VS Code | ~5-10 minutes |
-| **VS Code Web** | Quick deployment, no local setup required | Azure account | ~2-4 minutes |
-| **Local Environment** | Enterprise environments, full control | All tools individually | ~15-30 minutes |
+| **Option**                 | **Best For**                              | **Prerequisites**       | **Setup Time** |
+| -------------------------- | ----------------------------------------- | ----------------------- | -------------- |
+| **GitHub Codespaces**      | Quick deployment, no local setup required | GitHub account          | ~3-5 minutes   |
+| **VS Code Dev Containers** | Fast deployment with local tools          | Docker Desktop, VS Code | ~5-10 minutes  |
+| **VS Code Web**            | Quick deployment, no local setup required | Azure account           | ~2-4 minutes   |
+| **Local Environment**      | Enterprise environments, full control     | All tools individually  | ~15-30 minutes |
 
 **💡 Recommendation:** For fastest deployment, start with **GitHub Codespaces** - no local installation required.
 
@@ -180,14 +182,14 @@ Review the configuration options below. You can customize any settings that meet
 
 ### 3.1 Choose Deployment Type (Optional)
 
-| **Aspect** | **Development/Testing (Default)** | **Production** |
-|------------|-----------------------------------|----------------|
-| **Configuration File** | `main.parameters.json` (sandbox) | Copy `main.waf.parameters.json` to `main.parameters.json` |
-| **Security Controls** | Minimal (for rapid iteration) | Enhanced (production best practices) |
-| **Cost** | Lower costs | Cost optimized |
-| **Use Case** | POCs, development, testing | Production workloads |
-| **Framework** | Basic configuration | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
-| **Features** | Core functionality | Reliability, security, operational excellence |
+| **Aspect**             | **Development/Testing (Default)** | **Production**                                                                          |
+| ---------------------- | --------------------------------- | --------------------------------------------------------------------------------------- |
+| **Configuration File** | `main.parameters.json` (sandbox)  | Copy `main.waf.parameters.json` to `main.parameters.json`                               |
+| **Security Controls**  | Minimal (for rapid iteration)     | Enhanced (production best practices)                                                    |
+| **Cost**               | Lower costs                       | Cost optimized                                                                          |
+| **Use Case**           | POCs, development, testing        | Production workloads                                                                    |
+| **Framework**          | Basic configuration               | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
+| **Features**           | Core functionality                | Reliability, security, operational excellence                                           |
 
 **To use production configuration:**
 
@@ -283,7 +285,7 @@ azd up
 **During deployment, you'll be prompted for:**
 1. **Environment name** (e.g., "conmig") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
-3. **Azure AI Foundry deployment region** - Select a region with available o3 model quota for AI operations
+3. **Azure AI Foundry deployment region** - Select a region with available GPT-5.1 model quota for AI operations
 4. **Primary location** - Select the region where your infrastructure resources will be deployed
 5. **Resource group** selection (create new or use existing)
 
@@ -321,7 +323,7 @@ After successful deployment:
 Follow the detailed workflow to test the migration functionality:
 
 **Quick Test Steps:**
-1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples)
+1. Download sample YAML files from the [`/data`](../data/) folder (EKS or GKE samples). You can also upload manifests from other supported source platforms (e.g., OpenShift/Rancher/Tanzu/on-prem Kubernetes).
 2. Upload the files to the application
 3. Click **Start Processing** to begin the migration
 4. Monitor the batch processing status (typically takes 20-30 minutes)
@@ -463,7 +465,11 @@ Now that your deployment is complete and tested, explore these resources to enha
 
 ## Advanced: Deploy Local Changes
 
-If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files:
+If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files so that `azd up` builds Docker images from your local source code instead of pulling pre-built images from the GitHub repository.
+
+**How it works:**
+- The custom `azure.yaml` defines three services (backend, processor, frontend) with `remoteBuild: true`, which instructs `azd` to build Docker images from your local `src/` directories and push them to Azure Container Registry (ACR).
+- The custom `main.bicep` accepts image name parameters (`backendImageName`, `processorImageName`, `frontendImageName`) that `azd` passes automatically after building the images.
 
 > **Note:** To set up and run the application locally for development, see the [Local Development Setup Guide](./LocalDevelopmentSetup.md).
 
@@ -482,11 +488,35 @@ If you've made local modifications to the code and want to deploy them to Azure,
 ### Step 3: Deploy Changes
 
 > ⚠️ **Critical: Redeployment Warning**  
-> If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
+> If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must create a fresh environment before deploying to avoid conflicts and deployment failures.
 
-Run the deployment command:
+**Create a fresh environment:**
+```shell
+# Create a new named environment (3-16 characters, alphanumeric only)
+azd env new <new-environment-name>
+```
+
+> **Note:** When prompted "Set new environment as default environment?", select **Y**. This eliminates the need to run `azd env select` separately.
+
+**Run the deployment:**
 ```shell
 azd up
 ```
 
-> **Note:** These custom files are configured to deploy your local code changes instead of pulling from the GitHub repository.
+> **Note:** During the packaging phase, you may see `"No artifacts were found"` for each service. This is expected — because `remoteBuild: true` is configured, Docker images are built remotely on Azure Container Registry, not on your local machine. Your local code is still being deployed.
+
+**⚠️ Deployment Issues:** If `azd up` fails on the first attempt (e.g., with a `ResourceNotFound` error), try running `azd up` again. Transient errors can occur due to resource propagation delays, and a retry typically resolves them. For other errors, try a different region or see the [Troubleshooting Guide](./TroubleShootingSteps.md).
+
+### Step 4: Revert Configuration Files
+
+After your custom deployment is complete, revert the renames to restore the original configuration:
+
+**In the root directory:**
+1. Rename `azure.yaml` to `azure_custom.yaml`
+2. Rename `azure_custom2.yaml` to `azure.yaml`
+
+**In the `infra` directory:**
+1. Rename `main.bicep` to `main_custom.bicep`
+2. Rename `main_custom2.bicep` to `main.bicep`
+
+> **Note:** This restores the original files so that standard deployments and git status remain clean.
