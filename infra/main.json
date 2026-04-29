@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "11219559543155133570"
+      "version": "0.36.177.2456",
+      "templateHash": "6661423266739154339"
     }
   },
   "parameters": {
@@ -32,7 +32,7 @@
         "azd": {
           "type": "location"
         },
-        "description": "Required. Azure region for container apps, storage, and other services. Choose a region close to your users."
+        "description": "Required. Azure region for container apps, storage, Cosmos DB, and other services. Choose a region close to your users."
       },
       "minLength": 3
     },
@@ -59,26 +59,6 @@
           ]
         },
         "description": "Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment."
-      }
-    },
-    "aiDeploymentLocation": {
-      "type": "string",
-      "defaultValue": "[parameters('azureAiServiceLocation')]",
-      "allowedValues": [
-        "australiaeast",
-        "eastus",
-        "eastus2",
-        "francecentral",
-        "japaneast",
-        "norwayeast",
-        "southindia",
-        "swedencentral",
-        "uksouth",
-        "westus",
-        "westus3"
-      ],
-      "metadata": {
-        "description": "Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance."
       }
     },
     "containerRegistryHost": {
@@ -209,13 +189,6 @@
         "description": "Optional. Enable scalability for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false."
       }
     },
-    "cosmosLocation": {
-      "type": "string",
-      "defaultValue": "eastus2",
-      "metadata": {
-        "description": "Optional. CosmosDB Location"
-      }
-    },
     "existingLogAnalyticsWorkspaceId": {
       "type": "string",
       "defaultValue": "",
@@ -260,7 +233,6 @@
     }
   },
   "variables": {
-    "solutionLocation": "[if(empty(parameters('location')), resourceGroup().location, parameters('location'))]",
     "deployerInfo": "[deployer()]",
     "deployingUserPrincipalId": "[variables('deployerInfo').objectId]",
     "deployingUserType": "[if(contains(variables('deployerInfo'), 'userPrincipalName'), 'User', 'ServicePrincipal')]",
@@ -346,8 +318,8 @@
     "aiServicesName": "[if(variables('useExistingAiFoundryAiProject'), variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiServicesResourceName'))]",
     "backendContainerPort": 80,
     "backendContainerAppName": "[take(format('ca-backend-api-{0}', variables('solutionSuffix')), 32)]",
-    "frontEndContainerAppName": "[take(format('ca-frontend-{0}', variables('solutionSuffix')), 32)]",
-    "processorContainerAppName": "[take(format('ca-processor-{0}', variables('solutionSuffix')), 32)]"
+    "processorContainerAppName": "[take(format('ca-processor-{0}', variables('solutionSuffix')), 32)]",
+    "frontEndContainerAppName": "[take(format('ca-frontend-{0}', variables('solutionSuffix')), 32)]"
   },
   "resources": {
     "existingLogAnalyticsWorkspace": {
@@ -378,7 +350,7 @@
     },
     "appIdentity": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.managed-identity.user-assigned-identity.{0}', variables('userAssignedIdentityResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -390,7 +362,7 @@
             "value": "[variables('userAssignedIdentityResourceName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "tags": {
             "value": "[variables('allTags')]"
@@ -861,7 +833,7 @@
     "logAnalyticsWorkspace": {
       "condition": "[and(or(parameters('enableMonitoring'), parameters('enablePrivateNetworking')), not(variables('useExistingLogAnalytics')))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.operational-insights.workspace.{0}', variables('logAnalyticsWorkspaceResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -873,7 +845,7 @@
             "value": "[variables('logAnalyticsWorkspaceResourceName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "skuName": {
             "value": "PerGB2018"
@@ -3967,7 +3939,7 @@
     "applicationInsights": {
       "condition": "[parameters('enableMonitoring')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.insights.component.{0}', variables('applicationInsightsResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -3979,7 +3951,7 @@
             "value": "[variables('applicationInsightsResourceName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "tags": {
             "value": "[variables('allTags')]"
@@ -4698,7 +4670,7 @@
     "virtualNetwork": {
       "condition": "[parameters('enablePrivateNetworking')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('module.virtual-network.{0}', variables('solutionSuffix')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -4735,8 +4707,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "2245351167779444314"
+              "version": "0.36.177.2456",
+              "templateHash": "14325184480475687154"
             }
           },
           "definitions": {
@@ -5180,7 +5152,7 @@
               },
               "condition": "[not(empty(tryGet(parameters('subnets')[copyIndex()], 'networkSecurityGroup')))]",
               "type": "Microsoft.Resources/deployments",
-              "apiVersion": "2025-04-01",
+              "apiVersion": "2022-09-01",
               "name": "[take(format('avm.res.network.network-security-group.{0}.{1}', tryGet(parameters('subnets')[copyIndex()], 'networkSecurityGroup', 'name'), parameters('resourceSuffix')), 64)]",
               "properties": {
                 "expressionEvaluationOptions": {
@@ -5832,7 +5804,7 @@
             },
             "virtualNetwork": {
               "type": "Microsoft.Resources/deployments",
-              "apiVersion": "2025-04-01",
+              "apiVersion": "2022-09-01",
               "name": "[take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)]",
               "properties": {
                 "expressionEvaluationOptions": {
@@ -7559,7 +7531,7 @@
     "bastionHost": {
       "condition": "[parameters('enablePrivateNetworking')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.network.bastion-host.{0}', variables('bastionHostName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -8865,7 +8837,7 @@
     "jumpboxVM": {
       "condition": "[parameters('enablePrivateNetworking')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.compute.virtual-machine.{0}', variables('jumpboxVmName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -17198,7 +17170,7 @@
       },
       "condition": "[and(parameters('enablePrivateNetworking'), or(empty(parameters('existingFoundryProjectResourceId')), not(contains(variables('aiRelatedDnsZoneIndices'), copyIndex()))))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[format('dns-zone-{0}', copyIndex())]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -20365,7 +20337,7 @@
     },
     "storageAccount": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.storage.storage-account.{0}', variables('storageAccountName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -20377,7 +20349,7 @@
             "value": "[variables('storageAccountName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "managedIdentities": {
             "value": {
@@ -26162,7 +26134,7 @@
     },
     "cosmosDb": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.document-db.database-account.{0}', variables('cosmosDbResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -26174,7 +26146,7 @@
             "value": "[variables('cosmosDbResourceName')]"
           },
           "location": {
-            "value": "[parameters('cosmosLocation')]"
+            "value": "[parameters('location')]"
           },
           "tags": {
             "value": "[variables('allTags')]"
@@ -26232,7 +26204,7 @@
           "zoneRedundant": "[if(parameters('enableRedundancy'), createObject('value', true()), createObject('value', false()))]",
           "capabilitiesToAdd": "[if(parameters('enableRedundancy'), createObject('value', null()), createObject('value', createArray('EnableServerless')))]",
           "automaticFailover": "[if(parameters('enableRedundancy'), createObject('value', true()), createObject('value', false()))]",
-          "failoverLocations": "[if(parameters('enableRedundancy'), createObject('value', createArray(createObject('failoverPriority', 0, 'isZoneRedundant', true(), 'locationName', variables('solutionLocation')), createObject('failoverPriority', 1, 'isZoneRedundant', true(), 'locationName', variables('cosmosDbHaLocation')))), createObject('value', createArray(createObject('locationName', variables('solutionLocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('enableRedundancy')))))]",
+          "failoverLocations": "[if(parameters('enableRedundancy'), createObject('value', createArray(createObject('failoverPriority', 0, 'isZoneRedundant', true(), 'locationName', parameters('location')), createObject('failoverPriority', 1, 'isZoneRedundant', true(), 'locationName', variables('cosmosDbHaLocation')))), createObject('value', createArray(createObject('locationName', parameters('location'), 'failoverPriority', 0, 'isZoneRedundant', parameters('enableRedundancy')))))]",
           "roleAssignments": {
             "value": [
               {
@@ -30045,7 +30017,7 @@
     "existingAiFoundryAiServicesDeployments": {
       "condition": "[variables('useExistingAiFoundryAiProject')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('module.ai-services-model-deployments.{0}', variables('aiFoundryAiServicesResourceName')), 64)]",
       "subscriptionId": "[variables('aiFoundryAiServicesSubscriptionId')]",
       "resourceGroup": "[variables('aiFoundryAiServicesResourceGroupName')]",
@@ -30123,8 +30095,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16866311185741009453"
+              "version": "0.36.177.2456",
+              "templateHash": "15406919741214273256"
             }
           },
           "definitions": {
@@ -30431,7 +30403,7 @@
               },
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'name'), guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].principalId, coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId))]",
               "properties": {
                 "roleDefinitionId": "[coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId]",
@@ -30453,7 +30425,7 @@
     "aiFoundryAiServices": {
       "condition": "[not(variables('useExistingAiFoundryAiProject'))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.cognitive-services.account.{0}', variables('aiFoundryAiServicesResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -33103,7 +33075,7 @@
     "aiFoundryPrivateEndpoint": {
       "condition": "[and(parameters('enablePrivateNetworking'), not(variables('useExistingAiFoundryAiProject')))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('pep-{0}-deployment', variables('aiFoundryAiServicesResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -33118,7 +33090,7 @@
             "value": "[format('nic-{0}', variables('aiFoundryAiServicesResourceName'))]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "tags": {
             "value": "[variables('allTags')]"
@@ -33873,8 +33845,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
@@ -33882,7 +33854,7 @@
     "aiFoundryProject": {
       "condition": "[not(variables('useExistingAiFoundryAiProject'))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('module.ai-project.{0}', variables('aiFoundryAiProjectResourceName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -33912,8 +33884,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16351752584270870112"
+              "version": "0.36.177.2456",
+              "templateHash": "9521962578302996488"
             }
           },
           "parameters": {
@@ -34006,7 +33978,7 @@
     },
     "appConfiguration": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.app-config.store.{0}', variables('solutionSuffix')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -34015,7 +33987,7 @@
         "mode": "Incremental",
         "parameters": {
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "name": {
             "value": "[format('appcs-{0}', variables('solutionSuffix'))]"
@@ -36351,7 +36323,7 @@
     "avmAppConfigUpdated": {
       "condition": "[parameters('enablePrivateNetworking')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.app-configuration.configuration-store-update.{0}', variables('solutionSuffix')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -36363,7 +36335,7 @@
             "value": "[format('appcs-{0}', variables('solutionSuffix'))]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "managedIdentities": {
             "value": {
@@ -38368,7 +38340,7 @@
     },
     "containerAppsEnvironment": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.app.managed-environment.{0}', variables('solutionSuffix')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -38387,7 +38359,7 @@
               "systemAssigned": true
             }
           },
-          "appLogsConfiguration": "[if(parameters('enableMonitoring'), createObject('value', createObject('destination', 'log-analytics', 'logAnalyticsConfiguration', createObject('customerId', if(variables('useExistingLogAnalytics'), reference('existingLogAnalyticsWorkspace').customerId, reference('logAnalyticsWorkspace').outputs.logAnalyticsWorkspaceId.value), 'sharedKey', if(variables('useExistingLogAnalytics'), listKeys('existingLogAnalyticsWorkspace', '2020-08-01').primarySharedKey, listOutputsWithSecureValues('logAnalyticsWorkspace', '2025-04-01').primarySharedKey)))), createObject('value', null()))]",
+          "appLogsConfiguration": "[if(parameters('enableMonitoring'), createObject('value', createObject('destination', 'log-analytics', 'logAnalyticsConfiguration', createObject('customerId', if(variables('useExistingLogAnalytics'), reference('existingLogAnalyticsWorkspace').customerId, reference('logAnalyticsWorkspace').outputs.logAnalyticsWorkspaceId.value), 'sharedKey', if(variables('useExistingLogAnalytics'), listKeys('existingLogAnalyticsWorkspace', '2020-08-01').primarySharedKey, listOutputsWithSecureValues('logAnalyticsWorkspace', '2022-09-01').primarySharedKey)))), createObject('value', null()))]",
           "workloadProfiles": {
             "value": [
               {
@@ -39289,7 +39261,7 @@
     },
     "containerAppBackend": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.app.container-app.{0}', variables('backendContainerAppName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -39301,7 +39273,7 @@
             "value": "[variables('backendContainerAppName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "environmentResourceId": {
             "value": "[reference('containerAppsEnvironment').outputs.resourceId.value]"
@@ -39318,7 +39290,7 @@
               {
                 "name": "backend-api",
                 "image": "[format('{0}/backend-api:{1}', parameters('containerRegistryHost'), parameters('imageTag'))]",
-                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value)), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
+                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'PROCESSOR_CONTROL_URL', 'value', format('https://{0}.internal.{1}', variables('processorContainerAppName'), reference('containerAppsEnvironment').outputs.defaultDomain.value))), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 1,
                   "memory": "2.0Gi"
@@ -40936,7 +40908,7 @@
     },
     "containerAppFrontend": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.app.container-app.{0}', variables('frontEndContainerAppName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -40948,7 +40920,7 @@
             "value": "[variables('frontEndContainerAppName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "environmentResourceId": {
             "value": "[reference('containerAppsEnvironment').outputs.resourceId.value]"
@@ -42584,7 +42556,7 @@
     },
     "containerAppProcessor": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2022-09-01",
       "name": "[take(format('avm.res.app.container-app.{0}', variables('processorContainerAppName')), 64)]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -42596,7 +42568,7 @@
             "value": "[variables('processorContainerAppName')]"
           },
           "location": {
-            "value": "[variables('solutionLocation')]"
+            "value": "[parameters('location')]"
           },
           "environmentResourceId": {
             "value": "[reference('containerAppsEnvironment').outputs.resourceId.value]"
@@ -42613,7 +42585,7 @@
               {
                 "name": "processor",
                 "image": "[format('{0}/processor:{1}', parameters('containerRegistryHost'), parameters('imageTag'))]",
-                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value)), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
+                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'CONTROL_API_ENABLED', 'value', '1'), createObject('name', 'CONTROL_API_PORT', 'value', '8080')), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 2,
                   "memory": "4.0Gi"
@@ -42621,14 +42593,14 @@
               }
             ]
           },
-          "ingressTransport": {
-            "value": null
-          },
-          "disableIngress": {
-            "value": true
+          "ingressTargetPort": {
+            "value": 8080
           },
           "ingressExternal": {
             "value": false
+          },
+          "ingressAllowInsecure": {
+            "value": true
           },
           "scaleSettings": {
             "value": {
