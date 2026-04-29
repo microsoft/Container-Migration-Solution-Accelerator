@@ -348,7 +348,7 @@ class QueueMigrationService:
                         self._control_watcher_task, return_exceptions=True
                     )
                 except Exception:
-                    pass
+                    logger.debug("Best-effort cancel of control watcher failed", exc_info=True)
                 self._control_watcher_task = None
 
             self._worker_tasks.clear()
@@ -391,7 +391,7 @@ class QueueMigrationService:
             try:
                 await asyncio.gather(self._control_watcher_task, return_exceptions=True)
             except Exception:
-                pass
+                logger.debug("Best-effort cancel of control watcher failed", exc_info=True)
             self._control_watcher_task = None
 
         # Clear inflight tracking
@@ -405,12 +405,12 @@ class QueueMigrationService:
             if self.main_queue:
                 self.main_queue.close()
         except Exception:
-            pass
+            logger.debug("Best-effort close of main_queue failed", exc_info=True)
 
         try:
             self.queue_service.close()
         except Exception:
-            pass
+            logger.debug("Best-effort close of queue_service failed", exc_info=True)
 
     async def stop_process(
         self, process_id: str, timeout_seconds: float = 10.0
@@ -478,7 +478,11 @@ class QueueMigrationService:
                     target_worker_id,
                 )
             except Exception:
-                pass
+                logger.debug(
+                    "Unexpected error during job cancellation for process_id=%s",
+                    process_id,
+                    exc_info=True,
+                )
 
         return True
 
@@ -1116,7 +1120,7 @@ class QueueMigrationService:
                     task_param=task_param,
                 )
             finally:
-                migration_processor = None
+                migration_processor = None  # noqa: F841 — release reference for GC
 
         except asyncio.CancelledError:
             # When cancelled, we assume stop_process has already deleted the message
@@ -1146,7 +1150,7 @@ class QueueMigrationService:
                     task_param=None,
                 )
             except Exception:
-                pass
+                logger.debug("Failed to record failure for message_id=%s", getattr(queue_message, "id", "<unknown>"), exc_info=True)
         finally:
             self._worker_inflight.pop(worker_id, None)
             self._worker_inflight_message.pop(worker_id, None)

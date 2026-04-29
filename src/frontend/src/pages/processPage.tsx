@@ -14,10 +14,9 @@ import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import PanelRight from "../components/Panels/PanelRight";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
 import { HistoryRegular, HistoryFilled, bundleIcon } from "@fluentui/react-icons";
-import { CircleCheck, X } from "lucide-react";
+import { CircleCheck } from "lucide-react";
 import Lottie from 'lottie-react';
 import documentLoader from "../../public/images/loader.json";
-import { getApiUrl, headerBuilder } from '../api/config';
 import { apiService } from '../services/ApiService';
 import ProgressModal from "../commonComponents/ProgressModal/progressModal";
 
@@ -115,7 +114,6 @@ const ProcessPage: React.FC = () => {
   const [currentPhase, setCurrentPhase] = useState<string>("");
   const [phaseSteps, setPhaseSteps] = useState<string[]>([]);
   const [apiData, setApiData] = useState<any>(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
   const [processingCompleted, setProcessingCompleted] = useState(false);
   const stepsContainerRef = useRef<HTMLDivElement>(null);
   // Track the last seen phase to prevent duplicate phase messages
@@ -205,10 +203,6 @@ const ProcessPage: React.FC = () => {
         setShowProgressModal(true);
       }
 
-      // Update the stored last update time
-      if (response.last_update_time) {
-        setLastUpdateTime(response.last_update_time);
-      }
 
       // Update current phase - only add a new message when the phase actually changes
       // This prevents duplicate messages from agent activity changes within the same phase

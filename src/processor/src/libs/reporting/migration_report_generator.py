@@ -96,7 +96,7 @@ class MigrationReportCollector:
                 if os.path.exists(file_path):
                     file_size = os.path.getsize(file_path)
             except Exception:
-                pass
+                logger.debug("Failed to get file size for %s", file_path, exc_info=True)
 
             self._file_contexts[file_name] = FileContext(
                 file_name=file_name,
