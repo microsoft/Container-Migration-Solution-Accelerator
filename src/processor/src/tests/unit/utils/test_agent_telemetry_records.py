@@ -55,10 +55,10 @@ class TestRecordStepResult:
         # candidate < 0.5 and timestamps show >5s -> use ts_elapsed
         rec = ProcessStatus(id="p")
         rec.step_timings = {
-            "design": {"started_at": "2025-01-01T00:00:00Z"}
+            "design": {"started_at": "2025-01-01 00:00:00 UTC"}
         }
         tm = _tm_with_repo(rec)
-        with patch.object(at, "_get_utc_timestamp", return_value="2025-01-01T00:00:30Z"):
+        with patch.object(at, "_get_utc_timestamp", return_value="2025-01-01 00:00:30 UTC"):
             _run(
                 tm.record_step_result(
                     "p", "design", {"r": 1}, execution_time_seconds=0.001
@@ -69,10 +69,10 @@ class TestRecordStepResult:
     def test_only_timestamp_elapsed_when_no_perf(self):
         rec = ProcessStatus(id="p")
         rec.step_timings = {
-            "yaml": {"started_at": "2025-01-01T00:00:00Z"}
+            "yaml": {"started_at": "2025-01-01 00:00:00 UTC"}
         }
         tm = _tm_with_repo(rec)
-        with patch.object(at, "_get_utc_timestamp", return_value="2025-01-01T00:00:10Z"):
+        with patch.object(at, "_get_utc_timestamp", return_value="2025-01-01 00:00:10 UTC"):
             _run(tm.record_step_result("p", "yaml", {"r": 1}))
         assert rec.step_timings["yaml"]["elapsed_seconds"] == 10.0
 
