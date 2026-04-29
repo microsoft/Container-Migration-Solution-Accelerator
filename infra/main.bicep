@@ -11,9 +11,8 @@ param solutionUniqueText string = substring(uniqueString(subscription().id, reso
 
 @minLength(3)
 @metadata({ azd: { type: 'location' } })
-@description('Required. Azure region for container apps, storage, and other services. Choose a region close to your users.')
+@description('Required. Azure region for container apps, storage, Cosmos DB, and other services. Choose a region close to your users.')
 param location string
-var solutionLocation = empty(location) ? resourceGroup().location : location
 
 @allowed([
   'australiaeast'
@@ -38,23 +37,6 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
 })
 @description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment.')
 param azureAiServiceLocation string
-
-@allowed([
-  'australiaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'norwayeast'
-  'southindia'
-  'swedencentral'
-  'uksouth'
-  'westus'
-  'westus3'
-])
-@description('Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance.')
-#disable-next-line no-unused-params
-param aiDeploymentLocation string = azureAiServiceLocation
 
 @description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryHost string = 'containermigrationacr.azurecr.io'
@@ -110,9 +92,6 @@ param enableMonitoring bool = false
 
 @description('Optional. Enable scalability for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false.')
 param enableScalability bool = false
-
-@description('Optional. CosmosDB Location')
-param cosmosLocation string = 'eastus2'
 
 @description('Optional. Existing Log Analytics Workspace Resource ID')
 param existingLogAnalyticsWorkspaceId string = ''
@@ -229,7 +208,7 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
   name: take('avm.res.managed-identity.user-assigned-identity.${userAssignedIdentityResourceName}', 64)
   params: {
     name: userAssignedIdentityResourceName
-    location: solutionLocation
+    location: location
     tags: allTags
     enableTelemetry: enableTelemetry
   }
@@ -243,7 +222,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
     name: logAnalyticsWorkspaceResourceName
-    location: solutionLocation
+    location: location
     skuName: 'PerGB2018'
     dataRetention: 30
     diagnosticSettings: [{ useThisWorkspace: true }]
@@ -308,7 +287,7 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
   //dependsOn: [logAnalyticsWorkspace]
   params: {
     name: applicationInsightsResourceName
-    location: solutionLocation
+    location: location
     tags: allTags
     enableTelemetry: enableTelemetry
     retentionInDays: 365
@@ -492,7 +471,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
     name: storageAccountName
-    location: solutionLocation
+    location: location
     managedIdentities: { systemAssigned: true }
     minimumTlsVersion: 'TLS1_2'
     enableTelemetry: enableTelemetry
@@ -610,7 +589,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
     name: cosmosDbResourceName
-    location: cosmosLocation
+    location: location
     tags: allTags
     enableTelemetry: enableTelemetry
     sqlDatabases: [
@@ -692,7 +671,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
           {
             failoverPriority: 0
             isZoneRedundant: true
-            locationName: solutionLocation
+            locationName: location
           }
           {
             failoverPriority: 1
@@ -702,7 +681,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         ]
       : [
           {
-            locationName: solutionLocation
+            locationName: location
             failoverPriority: 0
             isZoneRedundant: enableRedundancy
           }
@@ -918,7 +897,7 @@ module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.
   params: {
     name: 'pep-${aiFoundryAiServicesResourceName}'
     customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-    location: solutionLocation
+    location: location
     tags: allTags
     enableTelemetry: enableTelemetry
     privateLinkServiceConnections: [
@@ -968,7 +947,7 @@ var aiServicesName = useExistingAiFoundryAiProject ? existingAiFoundryAiServices
 module appConfiguration 'br/public:avm/res/app-configuration/configuration-store:0.9.1' = {
   name: take('avm.res.app-config.store.${solutionSuffix}', 64)
   params: {
-    location: solutionLocation
+    location: location
     name: 'appcs-${solutionSuffix}'
     disableLocalAuth: false // needed to allow setting app config key values from this module
     tags: allTags
@@ -1096,7 +1075,7 @@ module avmAppConfigUpdated 'br/public:avm/res/app-configuration/configuration-st
   name: take('avm.res.app-configuration.configuration-store-update.${solutionSuffix}', 64)
   params: {
     name: 'appcs-${solutionSuffix}'
-    location: solutionLocation
+    location: location
     managedIdentities: { systemAssigned: true }
     sku: 'Standard'
     enableTelemetry: enableTelemetry
@@ -1177,7 +1156,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   dependsOn: [applicationInsights]
   params: {
     name: backendContainerAppName
-    location: solutionLocation
+    location: location
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
     managedIdentities: {
       userAssignedResourceIds: [
@@ -1264,7 +1243,7 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${frontEndContainerAppName}', 64)
   params: {
     name: frontEndContainerAppName
-    location: solutionLocation
+    location: location
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
     managedIdentities: {
       userAssignedResourceIds: [
@@ -1332,7 +1311,7 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   dependsOn: [applicationInsights]
   params: {
     name: processorContainerAppName
-    location: solutionLocation
+    location: location
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
     managedIdentities: {
       userAssignedResourceIds: [
