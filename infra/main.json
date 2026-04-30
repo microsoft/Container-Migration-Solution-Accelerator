@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "4935154224867976262"
+      "templateHash": "18053986120321996236"
     }
   },
   "parameters": {
@@ -55,10 +55,10 @@
         "azd": {
           "type": "location",
           "usageName": [
-            "OpenAI.GlobalStandard.o3, 500"
+            "OpenAI.GlobalStandard.gpt-5.1, 500"
           ]
         },
-        "description": "Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment."
+        "description": "Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment."
       }
     },
     "containerRegistryEndpoint": {
@@ -70,9 +70,9 @@
     },
     "imageTag": {
       "type": "string",
-      "defaultValue": "latest",
+      "defaultValue": "latest_v2",
       "metadata": {
-        "description": "Optional. The image tag to use for container images. Defaults to \"latest\"."
+        "description": "Optional. The image tag to use for container images. Defaults to \"latest_v2\"."
       }
     },
     "deploymentType": {
@@ -89,18 +89,18 @@
     },
     "gptModelName": {
       "type": "string",
-      "defaultValue": "o3",
+      "defaultValue": "gpt-5.1",
       "minLength": 1,
       "metadata": {
-        "description": "Optional. Name of the GPT model to deploy. Recommend using o3. Defaults to o3."
+        "description": "Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1."
       }
     },
     "gptModelVersion": {
       "type": "string",
-      "defaultValue": "2025-04-16",
+      "defaultValue": "2025-11-13",
       "minLength": 1,
       "metadata": {
-        "description": "Optional. Version of GPT model. Review available version numbers per model before setting. Defaults to 2025-04-16."
+        "description": "Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13."
       }
     },
     "gptDeploymentCapacity": {
@@ -108,6 +108,40 @@
       "defaultValue": 500,
       "metadata": {
         "description": "Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate."
+      }
+    },
+    "aiEmbeddingModelName": {
+      "type": "string",
+      "defaultValue": "text-embedding-3-large",
+      "minLength": 1,
+      "metadata": {
+        "description": "Optional. Name of the embedding model to deploy. Defaults to text-embedding-3-large."
+      }
+    },
+    "aiEmbeddingModelVersion": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+        "description": "Optional. Version of the embedding model. Defaults to 1."
+      }
+    },
+    "aiEmbeddingDeploymentType": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "allowedValues": [
+        "Standard",
+        "GlobalStandard"
+      ],
+      "minLength": 1,
+      "metadata": {
+        "description": "Optional. Embedding model deployment type. Defaults to GlobalStandard."
+      }
+    },
+    "aiEmbeddingModelCapacity": {
+      "type": "int",
+      "defaultValue": 500,
+      "metadata": {
+        "description": "Optional. Embedding model deployment token capacity. Defaults to 500."
       }
     },
     "tags": {
@@ -281,6 +315,7 @@
     "cosmosDatabaseName": "migration_db",
     "processCosmosContainerName": "processes",
     "agentTelemetryCosmosContainerName": "agent_telemetry",
+    "processControlCosmosContainerName": "processcontrol",
     "aiModelDeploymentName": "[parameters('gptModelName')]",
     "useExistingAiFoundryAiProject": "[not(empty(parameters('existingFoundryProjectResourceId')))]",
     "aiFoundryAiServicesResourceGroupName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[4], format('rg-{0}', variables('solutionSuffix')))]",
@@ -291,8 +326,8 @@
     "aiServicesName": "[if(variables('useExistingAiFoundryAiProject'), variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiServicesResourceName'))]",
     "backendContainerPort": 80,
     "backendContainerAppName": "[take(format('ca-backend-api-{0}', variables('solutionSuffix')), 32)]",
-    "frontEndContainerAppName": "[take(format('ca-frontend-{0}', variables('solutionSuffix')), 32)]",
-    "processorContainerAppName": "[take(format('ca-processor-{0}', variables('solutionSuffix')), 32)]"
+    "processorContainerAppName": "[take(format('ca-processor-{0}', variables('solutionSuffix')), 32)]",
+    "frontEndContainerAppName": "[take(format('ca-frontend-{0}', variables('solutionSuffix')), 32)]"
   },
   "resources": {
     "existingLogAnalyticsWorkspace": {
@@ -26100,8 +26135,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "virtualNetwork"
       ]
     },
@@ -26140,6 +26175,12 @@
                   },
                   {
                     "name": "[variables('agentTelemetryCosmosContainerName')]",
+                    "paths": [
+                      "/_partitionKey"
+                    ]
+                  },
+                  {
+                    "name": "[variables('processControlCosmosContainerName')]",
                     "paths": [
                       "/_partitionKey"
                     ]
@@ -30010,6 +30051,18 @@
                   "name": "[parameters('deploymentType')]",
                   "capacity": "[parameters('gptDeploymentCapacity')]"
                 }
+              },
+              {
+                "name": "[parameters('aiEmbeddingModelName')]",
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('aiEmbeddingModelName')]",
+                  "version": "[parameters('aiEmbeddingModelVersion')]"
+                },
+                "sku": {
+                  "name": "[parameters('aiEmbeddingDeploymentType')]",
+                  "capacity": "[parameters('aiEmbeddingModelCapacity')]"
+                }
               }
             ]
           },
@@ -30422,6 +30475,18 @@
                 "sku": {
                   "name": "[parameters('deploymentType')]",
                   "capacity": "[parameters('gptDeploymentCapacity')]"
+                }
+              },
+              {
+                "name": "[parameters('aiEmbeddingModelName')]",
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('aiEmbeddingModelName')]",
+                  "version": "[parameters('aiEmbeddingModelVersion')]"
+                },
+                "sku": {
+                  "name": "[parameters('aiEmbeddingDeploymentType')]",
+                  "capacity": "[parameters('aiEmbeddingModelCapacity')]"
                 }
               }
             ]
@@ -33788,9 +33853,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -33969,11 +34034,15 @@
               },
               {
                 "name": "AZURE_OPENAI_API_VERSION",
-                "value": "2025-01-01-preview"
+                "value": "2025-03-01-preview"
               },
               {
                 "name": "AZURE_OPENAI_CHAT_DEPLOYMENT_NAME",
                 "value": "[variables('aiModelDeploymentName')]"
+              },
+              {
+                "name": "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+                "value": "[parameters('aiEmbeddingModelName')]"
               },
               {
                 "name": "AZURE_OPENAI_ENDPOINT",
@@ -34010,6 +34079,10 @@
               {
                 "name": "COSMOS_DB_CONTAINER_NAME",
                 "value": "[variables('agentTelemetryCosmosContainerName')]"
+              },
+              {
+                "name": "COSMOS_DB_CONTROL_CONTAINER_NAME",
+                "value": "[variables('processControlCosmosContainerName')]"
               },
               {
                 "name": "COSMOS_DB_DATABASE_NAME",
@@ -39225,7 +39298,7 @@
               {
                 "name": "backend-api",
                 "image": "[format('{0}/backend-api:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
-                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value)), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
+                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'PROCESSOR_CONTROL_URL', 'value', format('https://{0}.internal.{1}', variables('processorContainerAppName'), reference('containerAppsEnvironment').outputs.defaultDomain.value))), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 1,
                   "memory": "2.0Gi"
@@ -42520,7 +42593,7 @@
               {
                 "name": "processor",
                 "image": "[format('{0}/processor:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
-                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value)), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
+                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'CONTROL_API_ENABLED', 'value', '1'), createObject('name', 'CONTROL_API_PORT', 'value', '8080')), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 2,
                   "memory": "4.0Gi"
@@ -42528,14 +42601,14 @@
               }
             ]
           },
-          "ingressTransport": {
-            "value": null
-          },
-          "disableIngress": {
-            "value": true
+          "ingressTargetPort": {
+            "value": 8080
           },
           "ingressExternal": {
             "value": false
+          },
+          "ingressAllowInsecure": {
+            "value": true
           },
           "scaleSettings": {
             "value": {

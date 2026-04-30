@@ -41,7 +41,7 @@ If you don’t want to delete the entire resource group, follow these steps:
 
 1. Open **Azure Portal** and go to the **Resource groups** section.
 2. Click on the specific **resource group**.
-3. Select the **resource** you want to delete (e.g., App Service, Storage Account).
+3. Select the **resource** you want to delete (e.g., Container App, Storage Account).
 4. Click **Delete** at the top.
 
 ![Delete Individual Resource](./images/portal_web_app_delete.png)

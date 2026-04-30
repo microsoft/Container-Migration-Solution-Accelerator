@@ -32,11 +32,11 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.o3, 500'
+      'OpenAI.GlobalStandard.gpt-5.1, 500'
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment.')
 param azureAiServiceLocation string
 
 
@@ -44,8 +44,8 @@ param azureAiServiceLocation string
 @description('Optional. The endpoint (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
 param containerRegistryEndpoint string = 'containermigrationacr.azurecr.io'
 
-@description('Optional. The image tag to use for container images. Defaults to "latest".')
-param imageTag string = 'latest'
+@description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
+param imageTag string = 'latest_v2'
 
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
@@ -53,15 +53,30 @@ param imageTag string = 'latest'
 param deploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the GPT model to deploy. Recommend using o3. Defaults to o3.')
-param gptModelName string = 'o3'
+@description('Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1.')
+param gptModelName string = 'gpt-5.1'
 
 @minLength(1)
-@description('Optional. Version of GPT model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
-param gptModelVersion string = '2025-04-16'
+@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
+param gptModelVersion string = '2025-11-13'
 
 @description('Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param gptDeploymentCapacity int = 500
+
+@minLength(1)
+@description('Optional. Name of the embedding model to deploy. Defaults to text-embedding-3-large.')
+param aiEmbeddingModelName string = 'text-embedding-3-large'
+
+@description('Optional. Version of the embedding model. Defaults to 1.')
+param aiEmbeddingModelVersion string = '1'
+
+@minLength(1)
+@allowed(['Standard', 'GlobalStandard'])
+@description('Optional. Embedding model deployment type. Defaults to GlobalStandard.')
+param aiEmbeddingDeploymentType string = 'GlobalStandard'
+
+@description('Optional. Embedding model deployment token capacity. Defaults to 500.')
+param aiEmbeddingModelCapacity int = 500
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -575,6 +590,7 @@ var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[resourceGroup().loca
 var cosmosDatabaseName = 'migration_db'
 var processCosmosContainerName = 'processes'
 var agentTelemetryCosmosContainerName = 'agent_telemetry'
+var processControlCosmosContainerName = 'processcontrol'
 module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
@@ -594,6 +610,12 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
           }
           {
             name: agentTelemetryCosmosContainerName
+            paths: [
+              '/_partitionKey'
+            ]
+          }
+          {
+            name: processControlCosmosContainerName
             paths: [
               '/_partitionKey'
             ]
@@ -745,6 +767,18 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
           capacity: gptDeploymentCapacity
         }
       }
+      {
+        name: aiEmbeddingModelName
+        model: {
+          format: 'OpenAI'
+          name: aiEmbeddingModelName
+          version: aiEmbeddingModelVersion
+        }
+        sku: {
+          name: aiEmbeddingDeploymentType
+          capacity: aiEmbeddingModelCapacity
+        }
+      }
     ]
     roleAssignments: [
       // Service Principal permissions
@@ -801,6 +835,18 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
         sku: {
           name: deploymentType
           capacity: gptDeploymentCapacity
+        }
+      }
+      {
+        name: aiEmbeddingModelName
+        model: {
+          format: 'OpenAI'
+          name: aiEmbeddingModelName
+          version: aiEmbeddingModelVersion
+        }
+        sku: {
+          name: aiEmbeddingDeploymentType
+          capacity: aiEmbeddingModelCapacity
         }
       }
     ]
@@ -939,11 +985,15 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_API_VERSION'
-        value: '2025-01-01-preview'
+        value: '2025-03-01-preview'
       }
       {
         name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME'
         value: aiModelDeploymentName
+      }
+      {
+        name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME'
+        value: aiEmbeddingModelName
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
@@ -981,6 +1031,11 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
         name: 'COSMOS_DB_CONTAINER_NAME'
         value: agentTelemetryCosmosContainerName
       }
+      {
+        name: 'COSMOS_DB_CONTROL_CONTAINER_NAME'
+        value: processControlCosmosContainerName
+      }
+
       {
         name: 'COSMOS_DB_DATABASE_NAME'
         value: cosmosDatabaseName
@@ -1100,6 +1155,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 
 var backendContainerPort = 80
 var backendContainerAppName = take('ca-backend-api-${solutionSuffix}', 32)
+var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1126,6 +1182,11 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
             {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.outputs.clientId
+            }
+            {
+              name: 'PROCESSOR_CONTROL_URL'
+              // Internal ingress FQDN format: https://<app-name>.internal.<environment-default-domain>
+              value: 'https://${processorContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
             }
           ],
           enableMonitoring
@@ -1250,7 +1311,6 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
   }
 }
 
-var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1286,6 +1346,14 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
               name: 'STORAGE_ACCOUNT_NAME' // TODO - verify name and if needed 
               value: storageAccount.outputs.name
             }
+            {
+              name: 'CONTROL_API_ENABLED'
+              value: '1'
+            }
+            {
+              name: 'CONTROL_API_PORT'
+              value: '8080'
+            }
           ],
           enableMonitoring
             ? [
@@ -1303,9 +1371,10 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
         }
       }
     ]
-    ingressTransport: null
-    disableIngress: true
+    // Internal ingress required for container-to-container communication
+    ingressTargetPort: 8080
     ingressExternal: false
+    ingressAllowInsecure: true  // Allow HTTP without SSL redirect for internal calls
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1

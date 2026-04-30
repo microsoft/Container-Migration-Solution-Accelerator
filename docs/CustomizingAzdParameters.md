@@ -10,19 +10,19 @@ By default this template will use the environment name as the prefix to prevent 
 | ------------------------------- | ------- | ----------------------- | ------------------------------------------------------------------------------------- |
 | `AZURE_ENV_NAME`                | string  | `conmig`                | Sets the environment name prefix for all Azure resources.                             |
 | `AZURE_LOCATION`                | string  | `westus`                | Sets the location/region for all Azure resources.                                     |
+| `AZURE_SECONDARY_LOCATION`      | string  | `eastus2`               | Specifies a secondary Azure region.                                                   |
 | `AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT` | string  | `myregistry.azurecr.io` | Specifies the container registry endpoint from which to pull app container images.             |
 | `AZURE_ENV_AI_SERVICE_LOCATION`     | string  | `eastus2`               | Specifies the Azure region for AI services (OpenAI/AI Foundry).                       |
 | `AZURE_ENV_MODEL_DEPLOYMENT_TYPE`      | string  | `GlobalStandard`        | Defines the model deployment type (allowed values: `Standard`, `GlobalStandard`).     |
-| `AZURE_ENV_GPT_MODEL_NAME`           | string  | `o3`                    | Specifies the AI model name.                                                         |
-| `AZURE_ENV_GPT_MODEL_VERSION`        | string  | `2025-04-16`            | Specifies the AI model version.                                                      |
-| `AZURE_ENV_GPT_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available capacity). |
+| `AZURE_ENV_GPT_MODEL_NAME`           | string  | `gpt-5.1`               | Specifies the Azure OpenAI model name to deploy.                                      |
+| `AZURE_ENV_GPT_MODEL_VERSION`        | string  | `2025-11-13`            | Specifies the model version (use a version available in your region/subscription).    |
+| `AZURE_ENV_GPT_MODEL_CAPACITY`       | integer | `200`                   | Sets the model capacity (choose based on your subscription's available quota).        |
 | `AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID` | string | ``             | Optional. Resource ID of an existing Log Analytics workspace to use.                  |
 | `AZURE_EXISTING_AIPROJECT_RESOURCE_ID` | string | ``            | Optional. Resource ID of an existing AI Foundry project to use.                       |
 | `AZURE_ENV_VM_ADMIN_USERNAME`   | string  | ``                      | The administrator username for the virtual machine.                                   |
 | `AZURE_ENV_VM_ADMIN_PASSWORD`   | string  | ``                      | The administrator password for the virtual machine.                                   |
 | `AZURE_ENV_IMAGE_TAG`            | string  | `latest`                | Specifies the container image tag to use for deployment.                              |
-| `AZURE_ENV_VM_SIZE`             | string  | `Standard_D2s_v5`      | Specifies the VM size for the jumpbox virtual machine (production deployment only).   |
-
+| `AZURE_ENV_VM_SIZE`             | string  | `Standard_D2s_v5`       | Specifies the VM size for the jumpbox virtual machine (production deployment only).   |
 ## How to Set a Parameter
 
 To customize any of the above values, run the following command **before** `azd up`:

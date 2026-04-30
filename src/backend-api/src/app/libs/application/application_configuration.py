@@ -34,8 +34,12 @@ class Configuration(_configuration_base, KernelBaseSettings):
     app_sample_variable: str = Field(default="Hello World!")
 
     # Azure logging configuration
-    azure_package_logging_level: str = Field(default="WARNING", alias="AZURE_PACKAGE_LOGGING_LEVEL")
-    azure_logging_packages: str | None = Field(default=None, alias="AZURE_LOGGING_PACKAGES")
+    azure_package_logging_level: str = Field(
+        default="WARNING", alias="AZURE_PACKAGE_LOGGING_LEVEL"
+    )
+    azure_logging_packages: str | None = Field(
+        default=None, alias="AZURE_LOGGING_PACKAGES"
+    )
 
     global_llm_service: str | None = "AzureOpenAI"
     cosmos_db_process_log_container: str | None = Field(
@@ -67,6 +71,16 @@ class Configuration(_configuration_base, KernelBaseSettings):
 
     app_insights_conn_string: str | None = Field(
         default=None, env="APPLICATIONINSIGHTS_CONNECTION_STRING"
+    )
+
+    # Processor Control API configuration
+    # In Azure Container Apps, apps call each other by name: http://<container-app-name>
+    # The actual URL is set via PROCESSOR_CONTROL_URL env var from Bicep
+    processor_control_url: str | None = Field(
+        default="http://localhost:8080", env="PROCESSOR_CONTROL_URL"
+    )
+    processor_control_token: str | None = Field(
+        default=None, env="PROCESSOR_CONTROL_TOKEN"
     )
 
 
