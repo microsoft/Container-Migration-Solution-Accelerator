@@ -116,7 +116,8 @@ class TestFluentSetters:
         assert b._store is True
 
     def test_with_message_store_factory(self):
-        f = lambda: MagicMock()
+        def f():
+            return MagicMock()
         b = _builder().with_message_store_factory(f)
         assert b._chat_message_store_factory is f
 

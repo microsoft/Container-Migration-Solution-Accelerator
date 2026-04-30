@@ -1,5 +1,4 @@
 import asyncio
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -166,7 +165,7 @@ class TestCreateInstance:
 
     def test_create_instance_supports_callable(self):
         ctx = AppContext()
-        ctx.add_transient(_DummyService, lambda: _DummyService())
+        ctx.add_transient(_DummyService, _DummyService)
         a = ctx.get_service(_DummyService)
         b = ctx.get_service(_DummyService)
         assert a is not b

@@ -1,6 +1,5 @@
 """Tests for main.get_app() factory."""
 
-import importlib
 from unittest.mock import MagicMock, patch
 
 

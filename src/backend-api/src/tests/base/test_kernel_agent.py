@@ -1,5 +1,6 @@
 """Tests for libs/base/kernel_agent.py."""
 
+import importlib
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -19,7 +20,7 @@ if not hasattr(_skbase_mod, "SKBaseModel"):
 
     _skbase_mod.SKBaseModel = _SKBaseModelStub  # type: ignore[attr-defined]
 
-import libs.base.kernel_agent  # noqa: E402, F401
+importlib.import_module("libs.base.kernel_agent")  # noqa: E402
 
 
 @pytest.fixture
