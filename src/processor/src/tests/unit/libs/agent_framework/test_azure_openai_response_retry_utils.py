@@ -20,8 +20,9 @@ def test_rate_limit_retry_config_from_env_clamps_invalid_values(monkeypatch) -> 
     cfg = RateLimitRetryConfig.from_env()
     assert cfg.max_retries == 0
     assert cfg.base_delay_seconds == 0.0
-    # Falls back to default (30.0) on parse failure, then clamped.
-    assert cfg.max_delay_seconds == 30.0
+    # Falls back to the dataclass default (120.0) on parse failure, then clamped
+    # via max(0.0, ...).
+    assert cfg.max_delay_seconds == 120.0
 
 
 def test_looks_like_rate_limit_detects_common_signals() -> None:
@@ -42,7 +43,7 @@ def test_looks_like_context_length_detects_common_signals() -> None:
     class E(Exception):
         pass
 
-    e = E("something")
+    e = E("token limit exceeded")
     e.status = 413
     assert _looks_like_context_length(e)
 
@@ -81,6 +82,9 @@ def test_trim_messages_keeps_system_and_tails_and_truncates_long_messages() -> N
     assert trimmed[0]["role"] == "system"
     assert len(trimmed) == 3
 
-    # Each long message should be truncated to <= max_message_chars.
+    # Non-last messages are truncated to <= max_message_chars.
     assert len(trimmed[1]["content"]) <= 50
-    assert len(trimmed[2]["content"]) <= 50
+
+    # The last message is intentionally never truncated — the agent needs
+    # the most recent tool result / instruction in full.
+    assert len(trimmed[2]["content"]) == 100
