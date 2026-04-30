@@ -327,9 +327,10 @@ class TestBlobDownloadOperations:
         
         assert result == b"test data"
 
+    @patch("os.makedirs")
     @patch("builtins.open", new_callable=mock_open)
     @patch("libs.sas.storage.blob.helper.BlobServiceClient")
-    def test_download_blob_to_file_success(self, mock_blob_client, mock_file):
+    def test_download_blob_to_file_success(self, mock_blob_client, mock_file, mock_makedirs):
         """Test downloading blob to file."""
         mock_blob = MagicMock()
         mock_blob.readall.return_value = b"test data"
@@ -337,10 +338,10 @@ class TestBlobDownloadOperations:
         mock_container.get_blob_client.return_value = mock_blob
         mock_blob_client.from_connection_string.return_value = MagicMock()
         mock_blob_client.from_connection_string.return_value.get_container_client.return_value = mock_container
-        
+
         helper = StorageBlobHelper(connection_string="DefaultEndpointsProtocol=https;...")
         result = helper.download_blob_to_file("container", "blob.txt", "/path/to/output.txt")
-        
+
         assert result is True
 
 

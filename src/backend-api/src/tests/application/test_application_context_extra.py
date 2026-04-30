@@ -130,17 +130,19 @@ def test_service_scope_restores_previous_scope():
     assert app_context._current_scope_id == original_scope
 
 
-@pytest.mark.asyncio
-async def test_service_scope_get_service_async():
+def test_service_scope_get_service_async():
     """Test ServiceScope get_service_async method."""
-    app_context = AppContext()
-    app_context.add_async_scoped(IAsyncService, SimpleAsyncServiceImpl)
+    async def run_test():
+        app_context = AppContext()
+        app_context.add_async_scoped(IAsyncService, SimpleAsyncServiceImpl)
 
-    scope = ServiceScope(app_context, "test-scope-id")
+        scope = ServiceScope(app_context, "test-scope-id")
 
-    service = await scope.get_service_async(IAsyncService)
+        service = await scope.get_service_async(IAsyncService)
 
-    assert isinstance(service, SimpleAsyncServiceImpl)
+        assert isinstance(service, SimpleAsyncServiceImpl)
+
+    asyncio.run(run_test())
 
 
 # AppContext tests
@@ -278,17 +280,19 @@ def test_app_context_get_service_transient():
     assert service1 is not service2
 
 
-@pytest.mark.asyncio
-async def test_app_context_get_service_scoped():
+def test_app_context_get_service_scoped():
     """Test getting scoped service within a scope."""
-    app_context = AppContext()
-    app_context.add_scoped(ITestService, SimpleTestServiceImpl)
+    async def run_test():
+        app_context = AppContext()
+        app_context.add_scoped(ITestService, SimpleTestServiceImpl)
 
-    async with app_context.create_scope() as scope:
-        service1 = scope.get_service(ITestService)
-        service2 = scope.get_service(ITestService)
+        async with app_context.create_scope() as scope:
+            service1 = scope.get_service(ITestService)
+            service2 = scope.get_service(ITestService)
 
-        assert service1 is service2
+            assert service1 is service2
+
+    asyncio.run(run_test())
 
 
 def test_app_context_get_service_not_registered():
@@ -308,52 +312,60 @@ def test_app_context_get_service_scoped_without_scope():
         app_context.get_service(ITestService)
 
 
-@pytest.mark.asyncio
-async def test_app_context_get_service_async_singleton():
+def test_app_context_get_service_async_singleton():
     """Test getting async singleton service."""
-    app_context = AppContext()
-    app_context.add_async_singleton(IAsyncService, SimpleAsyncServiceImpl)
+    async def run_test():
+        app_context = AppContext()
+        app_context.add_async_singleton(IAsyncService, SimpleAsyncServiceImpl)
 
-    service1 = await app_context.get_service_async(IAsyncService)
-    service2 = await app_context.get_service_async(IAsyncService)
+        service1 = await app_context.get_service_async(IAsyncService)
+        service2 = await app_context.get_service_async(IAsyncService)
 
-    assert service1 is service2
+        assert service1 is service2
+
+    asyncio.run(run_test())
 
 
-@pytest.mark.asyncio
-async def test_app_context_get_service_async_not_async_registered():
+def test_app_context_get_service_async_not_async_registered():
     """Test getting async service when registered as sync raises ValueError."""
-    app_context = AppContext()
-    app_context.add_singleton(ITestService, SimpleTestServiceImpl)
+    async def run_test():
+        app_context = AppContext()
+        app_context.add_singleton(ITestService, SimpleTestServiceImpl)
 
-    with pytest.raises(ValueError, match="not registered as an async service"):
-        await app_context.get_service_async(ITestService)
+        with pytest.raises(ValueError, match="not registered as an async service"):
+            await app_context.get_service_async(ITestService)
+
+    asyncio.run(run_test())
 
 
-@pytest.mark.asyncio
-async def test_app_context_create_scope():
+def test_app_context_create_scope():
     """Test creating a service scope."""
-    app_context = AppContext()
+    async def run_test():
+        app_context = AppContext()
 
-    async with app_context.create_scope() as scope:
-        assert isinstance(scope, ServiceScope)
-        assert scope._app_context is app_context
+        async with app_context.create_scope() as scope:
+            assert isinstance(scope, ServiceScope)
+            assert scope._app_context is app_context
+
+    asyncio.run(run_test())
 
 
-@pytest.mark.asyncio
-async def test_app_context_create_scope_cleanup():
+def test_app_context_create_scope_cleanup():
     """Test that scope cleanup is called."""
-    app_context = AppContext()
-    app_context.add_async_scoped(IAsyncService, SimpleAsyncServiceImpl)
+    async def run_test():
+        app_context = AppContext()
+        app_context.add_async_scoped(IAsyncService, SimpleAsyncServiceImpl)
 
-    scope_id = None
-    async with app_context.create_scope() as scope:
-        scope_id = scope._scope_id
-        service = await scope.get_service_async(IAsyncService)
-        assert service.initialized is True
+        scope_id = None
+        async with app_context.create_scope() as scope:
+            scope_id = scope._scope_id
+            service = await scope.get_service_async(IAsyncService)
+            assert service.initialized is True
 
-    # After scope exits, service should be cleaned up
-    assert scope_id not in app_context._scoped_instances
+        # After scope exits, service should be cleaned up
+        assert scope_id not in app_context._scoped_instances
+
+    asyncio.run(run_test())
 
 
 def test_app_context_is_registered():
@@ -476,52 +488,58 @@ def test_app_context_create_instance_invalid_type():
     assert instance == 123
 
 
-@pytest.mark.asyncio
-async def test_app_context_create_async_instance_with_class():
+def test_app_context_create_async_instance_with_class():
     """Test _create_async_instance with class type."""
-    app_context = AppContext()
-    descriptor = ServiceDescriptor(
-        service_type=IAsyncService,
-        implementation=SimpleAsyncServiceImpl,
-        lifetime=ServiceLifetime.ASYNC_SINGLETON,
-        is_async=True,
-    )
+    async def run_test():
+        app_context = AppContext()
+        descriptor = ServiceDescriptor(
+            service_type=IAsyncService,
+            implementation=SimpleAsyncServiceImpl,
+            lifetime=ServiceLifetime.ASYNC_SINGLETON,
+            is_async=True,
+        )
 
-    instance = await app_context._create_async_instance(descriptor)
+        instance = await app_context._create_async_instance(descriptor)
 
-    assert isinstance(instance, SimpleAsyncServiceImpl)
-    assert instance.initialized is True
+        assert isinstance(instance, SimpleAsyncServiceImpl)
+        assert instance.initialized is True
+
+    asyncio.run(run_test())
 
 
-@pytest.mark.asyncio
-async def test_app_context_create_async_instance_with_factory():
+def test_app_context_create_async_instance_with_factory():
     """Test _create_async_instance with factory function."""
-    app_context = AppContext()
-    factory = lambda: SimpleAsyncServiceImpl()
-    descriptor = ServiceDescriptor(
-        service_type=IAsyncService,
-        implementation=factory,
-        lifetime=ServiceLifetime.ASYNC_SINGLETON,
-        is_async=True,
-    )
+    async def run_test():
+        app_context = AppContext()
+        factory = lambda: SimpleAsyncServiceImpl()
+        descriptor = ServiceDescriptor(
+            service_type=IAsyncService,
+            implementation=factory,
+            lifetime=ServiceLifetime.ASYNC_SINGLETON,
+            is_async=True,
+        )
 
-    instance = await app_context._create_async_instance(descriptor)
+        instance = await app_context._create_async_instance(descriptor)
 
-    assert isinstance(instance, SimpleAsyncServiceImpl)
+        assert isinstance(instance, SimpleAsyncServiceImpl)
+
+    asyncio.run(run_test())
 
 
-@pytest.mark.asyncio
-async def test_app_context_shutdown_async():
+def test_app_context_shutdown_async():
     """Test shutdown_async method."""
-    app_context = AppContext()
-    app_context.add_async_singleton(IAsyncService, SimpleAsyncServiceImpl)
+    async def run_test():
+        app_context = AppContext()
+        app_context.add_async_singleton(IAsyncService, SimpleAsyncServiceImpl)
 
-    service = await app_context.get_service_async(IAsyncService)
+        service = await app_context.get_service_async(IAsyncService)
 
-    await app_context.shutdown_async()
+        await app_context.shutdown_async()
 
-    assert app_context._instances == {}
-    assert app_context._scoped_instances == {}
+        assert app_context._instances == {}
+        assert app_context._scoped_instances == {}
+
+    asyncio.run(run_test())
 
 
 def test_app_context_get_service_lifecycle_enum():
