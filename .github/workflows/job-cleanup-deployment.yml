@@ -218,7 +218,7 @@ jobs:
             azd env set AZURE_RESOURCE_GROUP "${RESOURCE_GROUP_NAME}"
             azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
             azd env set AZURE_LOCATION="${AZURE_LOCATION}"
-            azd env set AZURE_AI_DEPLOYMENT_TYPE="${AZURE_ENV_OPENAI_LOCATION}"
+            azd env set AZURE_ENV_MODEL_DEPLOYMENT_TYPE="${AZURE_ENV_OPENAI_LOCATION}"
           fi
 
       - name: Delete deployment using azd
