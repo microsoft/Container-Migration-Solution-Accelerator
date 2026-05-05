@@ -6,18 +6,18 @@
         "value": "${AZURE_ENV_NAME}"
       },
       "location": {
-        "value": "${AZURE_LOCATION23}"
+        "value": "${AZURE_LOCATION}"
       },
       "containerRegistryEndpoint": {
-        "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT231}"
+        "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
       },
-      "azureAiServiceLocation23": {
+      "azureAiServiceLocation2323": {
         "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
       },
-      "deploymentType": {
+      "deploymentTyp2323e": {
         "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
       },
-      "gptModelName23": {
+      "gptModelName": {
         "value": "${AZURE_ENV_GPT_MODEL_NAME}"
       },
       "gptModelVersion": {
