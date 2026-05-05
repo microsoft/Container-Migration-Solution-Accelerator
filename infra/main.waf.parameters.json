@@ -11,7 +11,7 @@
       "containerRegistryEndpoint": {
         "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
       },
-      "azureAiServiceLocation233": {
+      "azureAiServiceLocation": {
         "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
       },
       "deploymentType": {
@@ -20,7 +20,7 @@
       "gptModelName": {
         "value": "${AZURE_ENV_GPT_MODEL_NAME}"
       },
-      "gptModelVersion": {
+      "gptModelVersion2323": {
         "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
       },
       "gptDeploymentCapacity": {
