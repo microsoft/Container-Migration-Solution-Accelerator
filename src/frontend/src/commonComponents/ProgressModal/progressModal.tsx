@@ -41,8 +41,8 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
 }) => {
   // Calculate progress percentage based on step (stable step-level identifier)
   const getProgressPercentage = () => {
-    if (migrationError) return 0; // Show 0% progress for errors
     if (processingCompleted) return 100;
+    if (migrationError) return 0; // Show 0% progress for errors
     if (!apiData) return 0;
 
     // Use apiData.step (stable: "analysis", "design", "yaml_conversion", "documentation")

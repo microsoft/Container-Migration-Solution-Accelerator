@@ -462,6 +462,7 @@ const ModernizationPage = () => {
   const [showLoading, setShowLoading] = useState(true);
   const [selectedFilebg, setSelectedFile] = useState<string | null>(null);
   const [selectedFileId, setSelectedFileId] = React.useState<string>("");
+  const fileId = selectedFileId;
   const [expandedSections, setExpandedSections] = React.useState<string[]>([]);
   const [progressPercentage] = useState(0);
   const [allFilesCompleted, setAllFilesCompleted] = useState(false);
@@ -482,9 +483,6 @@ const ModernizationPage = () => {
           setFileLoading(true);
           const newFileUpdate = await fetchFileFromAPI(selectedFile?.fileId || "");
           setFileLoading(false);
-        } else {
-
-          console.log(selectedFile.translatedCode);
         }
 
       } catch (err) {
