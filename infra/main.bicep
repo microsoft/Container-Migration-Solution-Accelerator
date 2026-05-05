@@ -39,25 +39,10 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
 @description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment.')
 param azureAiServiceLocation string
 
-@allowed([
-  'australiaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'norwayeast'
-  'southindia'
-  'swedencentral'
-  'uksouth'
-  'westus'
-  'westus3'
-])
-@description('Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance.')
-#disable-next-line no-unused-params
-param aiDeploymentLocation string = azureAiServiceLocation
 
-@description('Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
-param containerRegistryHost string = 'containermigrationacr.azurecr.io'
+
+@description('Optional. The endpoint (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
+param containerRegistryEndpoint string = 'containermigrationacr.azurecr.io'
 
 @description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
 param imageTag string = 'latest_v2'
@@ -65,18 +50,18 @@ param imageTag string = 'latest_v2'
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
 @description('Optional. Model deployment type. Defaults to GlobalStandard.')
-param aiDeploymentType string = 'GlobalStandard'
+param deploymentType string = 'GlobalStandard'
 
 @minLength(1)
 @description('Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1.')
-param aiModelName string = 'gpt-5.1'
+param gptModelName string = 'gpt-5.1'
 
 @minLength(1)
 @description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
-param aiModelVersion string = '2025-11-13'
+param gptModelVersion string = '2025-11-13'
 
-@description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
-param aiModelCapacity int = 500
+@description('Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
+param gptDeploymentCapacity int = 500
 
 @minLength(1)
 @description('Optional. Name of the embedding model to deploy. Defaults to text-embedding-3-large.')
@@ -743,7 +728,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   dependsOn: [storageAccount]
 }
 
-var aiModelDeploymentName = aiModelName
+var aiModelDeploymentName = gptModelName
 
 var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
@@ -774,12 +759,12 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         name: aiModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
+          name: gptModelName
+          version: gptModelVersion
         }
         sku: {
-          name: aiDeploymentType
-          capacity: aiModelCapacity
+          name: deploymentType
+          capacity: gptDeploymentCapacity
         }
       }
       {
@@ -844,12 +829,12 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
         name: aiModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
+          name: gptModelName
+          version: gptModelVersion
         }
         sku: {
-          name: aiDeploymentType
-          capacity: aiModelCapacity
+          name: deploymentType
+          capacity: gptDeploymentCapacity
         }
       }
       {
@@ -1187,7 +1172,7 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
     containers: [
       {
         name: 'backend-api'
-        image: '${containerRegistryHost}/backend-api:${imageTag}'
+        image: '${containerRegistryEndpoint}/backend-api:${imageTag}'
         env: concat(
           [
             {
@@ -1274,7 +1259,7 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
     containers: [
       {
         name: 'frontend'
-        image: '${containerRegistryHost}/frontend:${imageTag}'
+        image: '${containerRegistryEndpoint}/frontend:${imageTag}'
         env: [
           {
             name: 'API_URL'
@@ -1342,7 +1327,7 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
     containers: [
       {
         name: 'processor'
-        image: '${containerRegistryHost}/processor:${imageTag}'
+        image: '${containerRegistryEndpoint}/processor:${imageTag}'
         env: concat(
           [
             {
