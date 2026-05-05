@@ -1,5 +1,9 @@
 name: PyLint
 
+permissions:
+  contents: read
+  actions: read
+
 on:
   push:
     paths:

@@ -32,11 +32,11 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.o3, 500'
+      'OpenAI.GlobalStandard.gpt-5.1, 500'
     ]
   }
 })
-@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports o3 model deployment.')
+@description('Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports GPT5.1 model deployment.')
 param azureAiServiceLocation string
 
 
@@ -61,12 +61,12 @@ param frontendImageName string = ''
 param aiDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
-@description('Optional. Name of the AI model to deploy. Recommend using o3. Defaults to o3.')
-param aiModelName string = 'o3'
+@description('Optional. Name of the AI model to deploy. Recommend using GPT5.1. Defaults to GPT5.1.')
+param aiModelName string = 'gpt-5.1'
 
 @minLength(1)
-@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-04-16.')
-param aiModelVersion string = '2025-04-16'
+@description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
+param aiModelVersion string = '2025-11-13'
 
 @description('Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
 param aiModelCapacity int = 1
@@ -153,16 +153,20 @@ var allTags = union(
   tags
 )
 
+var existingTags = resourceGroup().tags ?? {}
+
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
-    tags: {
-      ...resourceGroup().tags
-      ...tags
-      TemplateName: 'Container Migration'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
-    }
+    tags: union(
+      existingTags,
+      tags,
+      {
+        TemplateName: 'Container Migration'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+        CreatedBy: createdBy
+      }
+    )
   }
 }
 
@@ -331,7 +335,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
     name: take(jumpboxVmName, 15) // Shorten VM name to 15 characters to avoid Azure limits
-    vmSize: vmSize ?? 'Standard_DS2_v2'
+    vmSize: vmSize ?? 'Standard_D2s_v5'
     location: location
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
@@ -715,7 +719,8 @@ var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(existingFoundryProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
-
+var aiFoundryAiProjectResourceName = 'aifp-${solutionSuffix}'
+var aiFoundryAiProjectDescription = 'AI Foundry project for ${solutionName}'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
@@ -761,45 +766,19 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   }
 }
 
-// Temporarily disabled AI Foundry due to AML workspace creation issues
-module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiFoundryAiProject) {
-  name: take('avm.ptn.ai-ml.ai-foundry.${solutionSuffix}', 64)
+// ========== AI Foundry AI Services ========== //
+module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
+  name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
-    #disable-next-line BCP334
-    baseName: take(aiFoundryAiServicesResourceName, 12)
-    baseUniqueName: null
+    name: aiFoundryAiServicesResourceName
     location: empty(azureAiServiceLocation) ? location : azureAiServiceLocation
-    aiFoundryConfiguration: {
-      accountName:aiFoundryAiServicesResourceName
-      allowProjectManagement: true
-      roleAssignments: [
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        }
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        }
-      ]
-      // Remove networking configuration to avoid AML workspace creation issues
-      networking: enablePrivateNetworking? {
-        aiServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-        openAiPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-        cognitiveServicesPrivateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-      } : null
-    }
-    // Disable private endpoints temporarily to fix AML workspace issue
-    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : null
-    // Only attempt model deployment when explicitly enabled to avoid AccountIsNotSucceeded failures due to quota or model availability.
-    aiModelDeployments: [
+    tags: allTags
+    sku: 'S0'
+    kind: 'AIServices'
+    disableLocalAuth: true
+    allowProjectManagement: true
+    customSubDomainName: aiFoundryAiServicesResourceName
+    deployments: [
       {
         name: aiModelDeploymentName
         model: {
@@ -813,8 +792,101 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.4.0' = if(!useExistingAiF
         }
       }
     ]
+    networkAcls: {
+      defaultAction: 'Allow'
+      virtualNetworkRules: []
+      ipRules: []
+    }
+    managedIdentities: {
+      systemAssigned: true
+      userAssignedResourceIds: [appIdentity.outputs.resourceId]
+    }
+    roleAssignments: [
+      // Service Principal permissions
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        principalId: appIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      // Deployer permissions for local debugging
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: deployingUserPrincipalId
+        principalType: 'User'
+      }
+      {
+        roleDefinitionIdOrName: 'Cognitive Services User'
+        principalId: deployingUserPrincipalId
+        principalType: 'User'
+      }
+    ]
+    // WAF aligned configuration for Monitoring
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    // Private endpoints are deployed separately via the aiFoundryPrivateEndpoint module below
+    privateEndpoints: []
+    enableTelemetry: enableTelemetry
+  }
+}
+
+// ========== AI Foundry Private Endpoint ========== //
+module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
+  name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
+  params: {
+    name: 'pep-${aiFoundryAiServicesResourceName}'
+    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+    location: solutionLocation
     tags: allTags
     enableTelemetry: enableTelemetry
+    privateLinkServiceConnections: [
+      {
+        name: 'pep-${aiFoundryAiServicesResourceName}-connection'
+        properties: {
+          privateLinkServiceId: aiFoundryAiServices!.outputs.resourceId
+          groupIds: ['account']
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      privateDnsZoneGroupConfigs: [
+        {
+          name: 'ai-services-dns-zone-cognitiveservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-openai'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-aiservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        }
+      ]
+    }
+    subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
+  }
+}
+
+module aiFoundryProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
+  dependsOn: enablePrivateNetworking ? [aiFoundryPrivateEndpoint] : []
+  params: {
+    name: aiFoundryAiProjectResourceName
+    location: azureAiServiceLocation
+    tags: tags
+    desc: aiFoundryAiProjectDescription
+    //Implicit dependencies below
+    aiServicesName: aiFoundryAiServices!.outputs.name
   }
 }
 
@@ -877,7 +949,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       }
       {
         name: 'AZURE_OPENAI_API_VERSION'
-        value: '2025-01-01-preview'
+        value: '2025-03-01-preview'
       }
       {
         name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME'
@@ -1036,6 +1108,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 
 var backendContainerPort = 80
 var backendContainerAppName = take('ca-backend-api-${solutionSuffix}', 32)
+var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${backendContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1069,6 +1142,11 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
             {
               name: 'AZURE_CLIENT_ID'
               value: appIdentity.outputs.clientId
+            }
+            {
+              name: 'PROCESSOR_CONTROL_URL'
+              // Internal ingress FQDN format: https://<app-name>.internal.<environment-default-domain>
+              value: 'https://${processorContainerAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
             }
           ],
           enableMonitoring
@@ -1157,6 +1235,10 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'APP_ENV'
             value: 'prod'
           }
+          {
+            name: 'ALLOWED_ORIGINS'
+            value: 'https://${frontEndContainerAppName}.${containerAppsEnvironment.outputs.defaultDomain}'
+          }
         ]
         resources: {
           cpu: '1'
@@ -1186,7 +1268,6 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
   }
 }
 
-var processorContainerAppName = take('ca-processor-${solutionSuffix}', 32)
 module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${processorContainerAppName}', 64)
   #disable-next-line no-unnecessary-dependson
@@ -1229,6 +1310,14 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
               name: 'STORAGE_ACCOUNT_NAME' // TODO - verify name and if needed 
               value: storageAccount.outputs.name
             }
+            {
+              name: 'CONTROL_API_ENABLED'
+              value: '1'
+            }
+            {
+              name: 'CONTROL_API_PORT'
+              value: '8080'
+            }
           ],
           enableMonitoring
             ? [
@@ -1246,9 +1335,10 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
         }
       }
     ]
-    ingressTransport: null
-    disableIngress: true
+    // Internal ingress required for container-to-container communication
+    ingressTargetPort: 8080
     ingressExternal: false
+    ingressAllowInsecure: true  // Allow HTTP without SSL redirect for internal calls
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1

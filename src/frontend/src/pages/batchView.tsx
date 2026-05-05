@@ -29,8 +29,12 @@ import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
 import yaml from "react-syntax-highlighter/dist/esm/languages/hljs/yaml"
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown"
+import json from "react-syntax-highlighter/dist/esm/languages/hljs/json"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeRaw from "rehype-raw"
+import mermaid from "mermaid"
 import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
@@ -43,6 +47,7 @@ import { format } from "sql-formatter";
 SyntaxHighlighter.registerLanguage("sql", sql)
 SyntaxHighlighter.registerLanguage("yaml", yaml)
 SyntaxHighlighter.registerLanguage("markdown", markdown)
+SyntaxHighlighter.registerLanguage("json", json)
 
 
 
@@ -57,6 +62,107 @@ interface FileItem {
   errorCount?: number;
   warningCount?: number;
 }
+
+// Initialize mermaid for diagram rendering
+mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+// Mermaid code block renderer
+const MermaidBlock: React.FC<{ chart: string }> = ({ chart }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = React.useState<string>('');
+
+  React.useEffect(() => {
+    const renderChart = async () => {
+      try {
+        const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
+        const { svg: renderedSvg } = await mermaid.render(id, chart);
+        setSvg(renderedSvg);
+      } catch (err) {
+        console.warn('Mermaid render failed:', err);
+        setSvg(`<div style="border:1px solid #e0e0e0; padding:12px; border-radius:6px; background:#f8f9fa"><div style="color:#d32f2f; font-size:12px; margin-bottom:8px">⚠ Mermaid diagram could not be rendered</div><pre style="color:#555; white-space:pre-wrap; font-size:12px">${chart.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div>`);
+      }
+    };
+    renderChart();
+  }, [chart]);
+
+  return (
+    <div
+      ref={containerRef}
+      dangerouslySetInnerHTML={{ __html: svg }}
+      style={{ textAlign: 'center', margin: '16px 0', overflow: 'auto' }}
+    />
+  );
+};
+
+// GitHub-style markdown table and content styles
+const markdownStyles = `
+  .gh-markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .gh-markdown th, .gh-markdown td {
+    border: 1px solid #d0d7de;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .gh-markdown th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+  }
+  .gh-markdown tr:nth-child(even) {
+    background-color: #f6f8fa;
+  }
+  .gh-markdown h1, .gh-markdown h2 {
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 8px;
+    margin-top: 24px;
+  }
+  .gh-markdown h3, .gh-markdown h4 {
+    margin-top: 20px;
+  }
+  .gh-markdown code {
+    background-color: #eff1f3;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .gh-markdown pre {
+    background-color: #f6f8fa;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  .gh-markdown pre code {
+    background-color: transparent;
+    padding: 0;
+  }
+  .gh-markdown blockquote {
+    border-left: 4px solid #d0d7de;
+    padding: 0 16px;
+    color: #656d76;
+    margin: 16px 0;
+  }
+  .gh-markdown ul, .gh-markdown ol {
+    padding-left: 24px;
+  }
+  .gh-markdown li {
+    margin: 4px 0;
+  }
+  .gh-markdown a {
+    color: #0969da;
+    text-decoration: none;
+  }
+  .gh-markdown a:hover {
+    text-decoration: underline;
+  }
+  .gh-markdown hr {
+    border: none;
+    border-top: 1px solid #d0d7de;
+    margin: 24px 0;
+  }
+`;
 
 const BatchStoryPage = () => {
   const { batchId } = useParams<{ batchId: string }>();
@@ -79,6 +185,7 @@ const BatchStoryPage = () => {
   const [batchSummary, setBatchSummary] = useState<BatchSummary | null>(null);
   const [selectedFileContent, setSelectedFileContent] = useState<string>("");
   const [selectedFileTranslatedContent, setSelectedFileTranslatedContent] = useState<string>("");
+  const [telemetryData, setTelemetryData] = useState<any>(null);
 
   // Helper function to determine file type and language for syntax highlighting
   const getFileLanguageAndType = (fileName: string) => {
@@ -92,6 +199,8 @@ const BatchStoryPage = () => {
       case 'md':
       case 'markdown':
         return { language: 'markdown', type: 'Markdown' };
+      case 'json':
+        return { language: 'json', type: 'JSON' };
       default:
         return { language: 'sql', type: 'T-SQL' }; // Default to SQL for backwards compatibility
     }
@@ -100,7 +209,7 @@ const BatchStoryPage = () => {
   // Helper function to format content based on file type
   const formatContent = (content: string, fileName: string) => {
     const { language } = getFileLanguageAndType(fileName);
-    
+
     // Only apply SQL formatting for SQL files
     if (language === 'sql') {
       try {
@@ -110,7 +219,7 @@ const BatchStoryPage = () => {
         return content;
       }
     }
-    
+
     // Return content as-is for YAML and Markdown files
     return content;
   };
@@ -198,6 +307,16 @@ const BatchStoryPage = () => {
         setSelectedFileId("summary"); // Default to summary view
         setDataLoaded(true);
         setLoading(false);
+
+        // Fetch telemetry data for the summary page
+        try {
+          const telemetry = await apiService.get(`/process/status/${batchId}/render/`);
+          if (telemetry) {
+            setTelemetryData(telemetry);
+          }
+        } catch (telErr) {
+          console.warn("Could not load telemetry data:", telErr);
+        }
       } catch (err) {
         console.error("Error fetching batch data:", err);
         setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -375,11 +494,13 @@ const BatchStoryPage = () => {
               width: isPanelOpen ? "calc(100% - 320px)" : "98%",
               transition: "width 0.3s ease-in-out",
             }}>
+            {getFileLanguageAndType(selectedFile.name).language !== 'markdown' && (
             <div className={styles.codeHeader}>
               <Text weight="semibold">
-                {selectedFile.name} {selectedFileTranslatedContent && getFileLanguageAndType(selectedFile.name).language !== 'markdown' ? "(Migrated)" : ""}
+                {selectedFile.name} {selectedFileTranslatedContent ? "(Migrated)" : ""}
               </Text>
             </div>
+            )}
             {fileLoading ? (
               <div style={{ padding: "20px", textAlign: "center" }}>
                 <Spinner />
@@ -399,15 +520,54 @@ const BatchStoryPage = () => {
                 ) : null}
                 {selectedFileTranslatedContent ? (
                   getFileLanguageAndType(selectedFile.name).language === 'markdown' ? (
-                    <div style={{
+                    <div className="gh-markdown" style={{
                       margin: 0,
-                      padding: "16px",
+                      padding: "16px 24px",
                       backgroundColor: tokens.colorNeutralBackground1,
                       borderRadius: "4px",
                       overflow: "auto",
-                      maxHeight: "70vh"
+                      maxHeight: "70vh",
+                      lineHeight: "1.6",
+                      fontSize: "14px",
                     }}>
-                      <ReactMarkdown>{selectedFileTranslatedContent}</ReactMarkdown>
+                      <style>{markdownStyles}</style>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          pre({ children, ...props }) {
+                            // Check if the child is a code element with mermaid language
+                            const child = children as any;
+                            if (child?.props?.className === 'language-mermaid') {
+                              const codeText = String(child.props.children).replace(/\n$/, '');
+                              return <MermaidBlock chart={codeText} />;
+                            }
+                            return <pre {...props}>{children}</pre>;
+                          },
+                          code({ className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            const codeText = String(children).replace(/\n$/, '');
+                            if (match && match[1] === 'mermaid') {
+                              return <MermaidBlock chart={codeText} />;
+                            }
+                            // Inline code vs block code
+                            if (!className) {
+                              return <code {...props}>{children}</code>;
+                            }
+                            return (
+                              <SyntaxHighlighter
+                                language={match ? match[1] : 'text'}
+                                style={vs}
+                                customStyle={{ margin: 0, borderRadius: '6px' }}
+                              >
+                                {codeText}
+                              </SyntaxHighlighter>
+                            );
+                          }
+                        }}
+                      >
+                        {selectedFileTranslatedContent}
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <SyntaxHighlighter
@@ -457,15 +617,6 @@ const BatchStoryPage = () => {
                 transition: "width 0.3s ease-in-out",
                 overflowX: "hidden",
               }}>
-              {/* Green success banner */}
-              <Card className={styles.summaryCard}>
-                <div style={{ padding: "8px" }}>
-                  <Text weight="semibold">
-                    {getJsonYamlFileCount()} {getJsonYamlFileCount() === 1 ? 'file' : 'files'} processed successfully and {getMdFileCount()} {getMdFileCount() === 1 ? 'report' : 'reports'} generated successfully.
-                  </Text>
-                </div>
-              </Card>
-
               {/* Success checkmark and message */}
               <div className="file-content"
                 style={{
@@ -474,28 +625,224 @@ const BatchStoryPage = () => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: '60px',
-                  height: '70vh',
-                  width: "100%", // Ensures full visibility
-                  maxWidth: "800px", // Prevents content from stretching
-                  margin: "auto", // Keeps it centered
+                  marginTop: '24px',
+                  width: "100%",
+                  maxWidth: "800px",
+                  margin: "auto",
                   transition: "width 0.3s ease-in-out",
                 }}>
                 <img
                   src={getJsonYamlFileCount() === 0 ? "/images/Crossmark.png" : "/images/Checkmark.png"}
                   alt={getJsonYamlFileCount() === 0 ? "No files" : "Success checkmark"}
-                  style={{ width: '150px', height: '150px', marginBottom: '24px' }}
+                  style={{ width: '80px', height: '80px', marginBottom: '12px', marginTop: '24px' }}
                 />
-                <Text size={600} weight="semibold" style={{ marginBottom: '16px' }}>
+                <Text size={600} weight="semibold" style={{ marginBottom: '8px' }}>
                   {getJsonYamlFileCount() === 0 ? "No files to process!" : "No errors! Your files are ready to download."}
                 </Text>
-                <Text style={{ marginBottom: '24px' }}>
-                  {getJsonYamlFileCount() === 0 
+                <Text style={{ marginBottom: '16px', color: '#666' }}>
+                  {getJsonYamlFileCount() === 0
                     ? "No files were found in this migration batch. Please upload files to proceed with the migration process."
                     : "Your files have been successfully migrated with no errors. All files are now ready for download. Click 'Download' to save them to your local drive."
                   }
                 </Text>
               </div>
+
+              {/* Migration Telemetry Dashboard */}
+              {telemetryData && (
+                <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 16px 96px 16px' }}>
+
+                  {/* Migration Overview Card */}
+                  <Card style={{ marginBottom: '16px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <Text size={500} weight="semibold">Migration Overview</Text>
+                      <span style={{ fontSize: '12px', color: '#888' }}>
+                        {telemetryData.conversion_metrics?.platform_detected || 'Unknown'} → Azure Kubernetes Service
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#107c10', marginBottom: '12px' }}>
+                      ✓ {getJsonYamlFileCount()} {getJsonYamlFileCount() === 1 ? 'file' : 'files'} converted and {getMdFileCount()} {getMdFileCount() === 1 ? 'report' : 'reports'} generated
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+                      {/* Total Time */}
+                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Total Time</div>
+                        <div style={{ fontSize: '20px', fontWeight: '600', color: '#333' }}>
+                          {(() => {
+                            const timings = telemetryData.step_timings || {};
+                            const total = Object.values(timings).reduce((sum: number, t: any) => sum + (t?.elapsed_seconds || 0), 0);
+                            const mins = Math.floor(total / 60);
+                            const secs = Math.floor(total % 60);
+                            return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                          })()}
+                        </div>
+                      </div>
+                      {/* Platform */}
+                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Source Platform</div>
+                        <div style={{ fontSize: '20px', fontWeight: '600', color: '#0078d4' }}>
+                          {telemetryData.conversion_metrics?.platform_detected || 'N/A'}
+                        </div>
+                      </div>
+                      {/* Accuracy */}
+                      {telemetryData.step_results?.yaml?.result && (
+                        <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Conversion Accuracy</div>
+                          <div style={{ fontSize: '20px', fontWeight: '600', color: '#107c10' }}>
+                            {(() => {
+                              const yamlResult = Array.isArray(telemetryData.step_results.yaml.result)
+                                ? telemetryData.step_results.yaml.result[0]
+                                : telemetryData.step_results.yaml.result;
+                              return yamlResult?.termination_output?.overall_conversion_metrics?.overall_accuracy || 'N/A';
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                      {/* Enterprise Readiness */}
+                      <div style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Readiness</div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#107c10' }}>
+                          {telemetryData.conversion_metrics?.enterprise_readiness?.split('–')[0]?.trim() || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Step Timeline */}
+                  {telemetryData.step_timings && Object.keys(telemetryData.step_timings).length > 0 && (
+                    <Card style={{ marginBottom: '16px', padding: '16px' }}>
+                      <Text size={500} weight="semibold" style={{ marginBottom: '12px', display: 'block' }}>Step Timeline</Text>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(() => {
+                          const stepOrder = ['analysis', 'design', 'yaml', 'documentation'];
+                          const stepLabels: Record<string, string> = {
+                            'analysis': 'Analysis', 'design': 'Design', 'yaml': 'YAML Conversion',
+                            'documentation': 'Documentation'
+                          };
+                          const stepIcons: Record<string, string> = {
+                            'analysis': '🔍', 'design': '📐', 'yaml': '📄',
+                            'documentation': '📝'
+                          };
+                          const timings = telemetryData.step_timings;
+                          const totalElapsed = Object.values(timings).reduce((sum: number, t: any) => sum + (t?.elapsed_seconds || 0), 0);
+                          const seen = new Set<string>();
+
+                          return stepOrder
+                            .filter(key => {
+                              if (!timings[key] || seen.has(stepLabels[key])) return false;
+                              seen.add(stepLabels[key]);
+                              return true;
+                            })
+                            .map(key => {
+                              const t = timings[key];
+                              const elapsed = t?.elapsed_seconds || 0;
+                              const pct = totalElapsed > 0 ? (elapsed / totalElapsed) * 100 : 0;
+                              const mins = Math.floor(elapsed / 60);
+                              const secs = Math.floor(elapsed % 60);
+                              const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+                              // Get step summary from step_results
+                              const stepResult = telemetryData.step_results?.[key];
+                              let summary = '';
+                              if (stepResult?.result) {
+                                const r = Array.isArray(stepResult.result) ? stepResult.result[0] : stepResult.result;
+                                if (key === 'analysis') {
+                                  summary = `${r?.output?.platform_detected || ''} detected (${r?.output?.confidence_score || ''})`;
+                                } else if (key === 'yaml') {
+                                  const metrics = r?.termination_output?.overall_conversion_metrics;
+                                  if (metrics) summary = `${metrics.successful_conversions}/${metrics.total_files} files converted (${metrics.overall_accuracy})`;
+                                } else if (key === 'design') {
+                                  const services = r?.termination_output?.azure_services?.length || 0;
+                                  const decisions = r?.termination_output?.architecture_decisions?.length || 0;
+                                  if (services) summary = `${services} Azure services, ${decisions} architecture decisions`;
+                                } else if (key === 'documentation') {
+                                  summary = 'Migration report finalized, all sign-offs PASS';
+                                }
+                              }
+
+                              return (
+                                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <span style={{ fontSize: '16px', width: '24px', textAlign: 'center' }}>{stepIcons[key] || '✅'}</span>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                      <Text weight="semibold" size={300}>{stepLabels[key]}</Text>
+                                      <Text size={200} style={{ color: '#666' }}>{timeStr}</Text>
+                                    </div>
+                                    <div style={{ height: '6px', backgroundColor: '#f0f0f0', borderRadius: '3px', overflow: 'hidden' }}>
+                                      <div style={{
+                                        width: `${pct}%`, height: '100%',
+                                        backgroundColor: t?.ended_at ? '#107c10' : '#0078d4',
+                                        borderRadius: '3px', transition: 'width 0.5s'
+                                      }} />
+                                    </div>
+                                    {summary && (
+                                      <Text size={200} style={{ color: '#888', marginTop: '2px', display: 'block' }}>{summary}</Text>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            });
+                        })()}
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Agent Participation */}
+                  {telemetryData.agent_activities && Object.keys(telemetryData.agent_activities).length > 0 && (
+                    <Card style={{ marginBottom: '16px', padding: '16px' }}>
+                      <Text size={500} weight="semibold" style={{ marginBottom: '12px', display: 'block' }}>Agent Participation</Text>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {(() => {
+                          const agents = telemetryData.agent_activities;
+                          const agentIcons: Record<string, string> = {
+                            'Coordinator': '⚡', 'Chief Architect': '👷', 'AKS Expert': '☁️',
+                            'EKS Expert': '🔍', 'GKE Expert': '🔍', 'YAML Expert': '🔧',
+                            'Technical Writer': '📝', 'QA Engineer': '✅', 'Azure Architect': '🏗️'
+                          };
+                          const stepLabels: Record<string, string> = {
+                            'analysis': 'Analysis', 'design': 'Design', 'yaml': 'YAML',
+                            'documentation': 'Docs'
+                          };
+
+                          return Object.entries(agents)
+                            .filter(([name]) => name !== 'Coordinator')
+                            .map(([name, agent]: [string, any]) => {
+                              const history = agent.activity_history || [];
+                              const actionCount = history.length;
+                              const steps = [...new Set(history.map((h: any) => stepLabels[h.step] || h.step).filter(Boolean))];
+                              const toolCount = history.filter((h: any) => h.tool_used).length;
+                              return { name, actionCount, steps, toolCount };
+                            })
+                            .sort((a, b) => b.actionCount - a.actionCount)
+                            .map(({ name, actionCount, steps, toolCount }) => (
+                              <div key={name} style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '6px 8px', backgroundColor: '#f8f9fa', borderRadius: '6px'
+                              }}>
+                                <span style={{ fontSize: '14px', width: '20px', textAlign: 'center' }}>
+                                  {agentIcons[name] || '🤖'}
+                                </span>
+                                <Text weight="semibold" size={300} style={{ minWidth: '120px' }}>{name}</Text>
+                                <span style={{
+                                  fontSize: '11px', color: '#0078d4', backgroundColor: '#e8f4fd',
+                                  padding: '1px 8px', borderRadius: '10px'
+                                }}>
+                                  {actionCount} actions
+                                </span>
+                                {toolCount > 0 && (
+                                  <span style={{ fontSize: '11px', color: '#666' }}>🔧 {toolCount} tool calls</span>
+                                )}
+                                <span style={{ fontSize: '11px', color: '#888', marginLeft: 'auto' }}>
+                                  {steps.join(', ')}
+                                </span>
+                              </div>
+                            ));
+                        })()}
+                      </div>
+                    </Card>
+                  )}
+
+                </div>
+              )}
             </div>
           </>
         );
@@ -595,9 +942,9 @@ const BatchStoryPage = () => {
 
       <div className={styles.content}>
         <PanelLeft panelWidth={400} panelResize={true}>
-          <div className={styles.panelHeader} style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
+          <div className={styles.panelHeader} style={{
+            display: "flex",
+            justifyContent: "space-between",
             alignItems: "center",
             padding: "8px 16px 8px 16px",
             marginTop: "15px",

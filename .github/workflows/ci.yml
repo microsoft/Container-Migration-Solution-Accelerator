@@ -1,4 +1,10 @@
 name: Validate Deployment
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
 on:
   push:
     branches:
@@ -29,27 +35,27 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       RESOURCE_GROUP_NAME: ${{ steps.check_create_rg.outputs.RESOURCE_GROUP_NAME }}
       DEPLOYMENT_SUCCESS: ${{ steps.deployment_status.outputs.SUCCESS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Setup Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version
+
       - name: Login to Azure
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Run Quota Check
         id: quota-check
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
+          GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
         run: |
-          export AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
-          export AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
-          export AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
-          export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          export AZURE_REGIONS="${{ vars.AZURE_REGIONS }}"
           chmod +x scripts/checkquota.sh
           if ! scripts/checkquota.sh; then
             # If quota check fails due to insufficient quota, set the flag
@@ -165,17 +171,16 @@ jobs:
     if: always() && needs.deploy.outputs.RESOURCE_GROUP_NAME != ''
     needs: [deploy]
     runs-on: ubuntu-latest
+    environment: production
     env:
       RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
     steps:
-      - name: Setup Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version
       - name: Login to Azure
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Extract AI Services and Key Vault Names
         if: always()
         run: |

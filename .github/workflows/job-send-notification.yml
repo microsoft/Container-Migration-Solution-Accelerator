@@ -41,6 +41,11 @@ on:
         required: false
         default: 'false'
         type: string
+      cleanup_result:
+        description: 'Cleanup job result (success, failure, skipped)'
+        required: false
+        default: 'skipped'
+        type: string
 
 env:
   GPT_MIN_CAPACITY: 100
@@ -55,77 +60,104 @@ jobs:
     env:
       accelerator_name: "Container Migration"
     steps:
+      - name: Determine Cleanup Status
+        id: cleanup
+        shell: bash
+        env:
+          CLEANUP_RESULT: ${{ inputs.cleanup_result }}
+        run: |
+          case "$CLEANUP_RESULT" in
+            success) echo "CLEANUP_STATUS=✅ SUCCESS" >> $GITHUB_OUTPUT ;;
+            failure) echo "CLEANUP_STATUS=❌ FAILED (Needs Manual Cleanup)" >> $GITHUB_OUTPUT ;;
+            *) echo "CLEANUP_STATUS=⏭️ SKIPPED (Needs Manual Cleanup)" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Determine Configuration Label
+        id: config
+        shell: bash
+        env:
+          WAF_ENABLED: ${{ env.WAF_ENABLED }}
+          EXP: ${{ env.EXP }}
+        run: |
+          WAF_LABEL=$( [ "$WAF_ENABLED" = "true" ] && echo "WAF" || echo "Non-WAF" )
+          EXP_LABEL=$( [ "$EXP" = "true" ] && echo "EXP" || echo "Non-EXP" )
+          echo "CONFIG_LABEL=${WAF_LABEL} + ${EXP_LABEL}" >> $GITHUB_OUTPUT
+
       - name: Send Quota Failure Notification
         if: inputs.deploy_result == 'failure' && inputs.QUOTA_FAILED == 'true'
         shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          ACCELERATOR_NAME: ${{ env.accelerator_name }}
+          LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
+          CLEANUP_STATUS: ${{ steps.cleanup.outputs.CLEANUP_STATUS }}
+          CONFIG_LABEL: ${{ steps.config.outputs.CONFIG_LABEL }}
         run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           EMAIL_BODY=$(cat <<EOF
           {
-            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment has failed due to insufficient quota in the requested regions.</p><p><strong>Issue Details:</strong><br>• Quota check failed for GPT model<br>• Required GPT Capacity: ${{ env.GPT_MIN_CAPACITY }}<br>• Checked Regions: ${{ vars.AZURE_REGIONS }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please resolve the quota issue and retry the deployment.</p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "${{ env.accelerator_name }} Pipeline - Failed (Insufficient Quota)"
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${ACCELERATOR_NAME} deployment has failed due to insufficient quota.</p><p><strong>Status Summary:</strong><br><table border='1' cellpadding='5' cellspacing='0'><tr><th>Stage</th><th>Status</th></tr><tr><td>Deployment</td><td>❌ FAILED (Insufficient Quota)</td></tr><tr><td>Cleanup</td><td>${CLEANUP_STATUS}</td></tr></table></p><p><strong>Configuration:</strong> ${CONFIG_LABEL}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please resolve the quota issue and retry the deployment.</p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "❌[CI/CD-Automation] [${ACCELERATOR_NAME}] Insufficient Quota"
           }
           EOF
           )
 
-          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+          curl -X POST "${LOGICAPP_URL}" \
             -H "Content-Type: application/json" \
             -d "$EMAIL_BODY" || echo "Failed to send quota failure notification"
 
       - name: Send Deployment Failure Notification
         if: inputs.deploy_result == 'failure' && inputs.QUOTA_FAILED != 'true'
         shell: bash
+        env:
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          ACCELERATOR_NAME: ${{ env.accelerator_name }}
+          LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
+          CONFIG_LABEL: ${{ steps.config.outputs.CONFIG_LABEL }}
+          CLEANUP_STATUS: ${{ steps.cleanup.outputs.CLEANUP_STATUS }}
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
           
           EMAIL_BODY=$(cat <<EOF
           {
-            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment process has encountered an issue and has failed to complete successfully.</p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• WAF Enabled: ${{ env.WAF_ENABLED }}<br>• EXP Enabled: ${{ env.EXP }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please investigate the deployment failure at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "${{ env.accelerator_name }} Pipeline - Failed"
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${ACCELERATOR_NAME} deployment has failed.</p><p><strong>Status Summary:</strong><br><table border='1' cellpadding='5' cellspacing='0'><tr><th>Stage</th><th>Status</th></tr><tr><td>Deployment</td><td>❌ FAILED (Deployment Issue)</td></tr><tr><td>Cleanup</td><td>${CLEANUP_STATUS}</td></tr></table></p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}</p><p><strong>Configuration:</strong> ${CONFIG_LABEL}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Please investigate the deployment failure at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "❌[CI/CD-Automation] [${ACCELERATOR_NAME}] Deployment-Failed"
           }
           EOF
           )
           
-          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+          curl -X POST "${LOGICAPP_URL}" \
             -H "Content-Type: application/json" \
             -d "$EMAIL_BODY" || echo "Failed to send deployment failure notification"
 
       - name: Send Success Notification
         if: inputs.deploy_result == 'success'
         shell: bash
+        env:
+          INPUT_WEB_APPURL: ${{ inputs.WEB_APPURL }}
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          ACCELERATOR_NAME: ${{ env.accelerator_name }}
+          LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          CONFIG_LABEL: ${{ steps.config.outputs.CONFIG_LABEL }}
+          CLEANUP_STATUS: ${{ steps.cleanup.outputs.CLEANUP_STATUS }}
         run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          WEBAPP_URL="${{ inputs.WEB_APPURL || inputs.existing_webapp_url }}"
-          RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          WEBAPP_URL="${INPUT_WEB_APPURL:-$INPUT_EXISTING_WEBAPP_URL}"
+          RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
           
           EMAIL_BODY=$(cat <<EOF
           {
-            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment has completed successfully.</p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• Web App URL: <a href='${WEBAPP_URL}'>${WEBAPP_URL}</a></p><p><strong>Configuration:</strong><br>• WAF Enabled: ${{ env.WAF_ENABLED }}<br>• EXP Enabled: ${{ env.EXP }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "${{ env.accelerator_name }} Pipeline - Deployment Success"
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the ${ACCELERATOR_NAME} deployment has completed successfully.</p><p><strong>Status Summary:</strong><br><table border='1' cellpadding='5' cellspacing='0'><tr><th>Stage</th><th>Status</th></tr><tr><td>Deployment</td><td>✅ SUCCESS</td></tr><tr><td>Cleanup</td><td>${CLEANUP_STATUS}</td></tr></table></p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• Web App URL: <a href='${WEBAPP_URL}'>${WEBAPP_URL}</a></p><p><strong>Configuration:</strong> ${CONFIG_LABEL}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "✅[CI/CD-Automation] [${ACCELERATOR_NAME}] Success"
           }
           EOF
           )
           
-          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+          curl -X POST "${LOGICAPP_URL}" \
             -H "Content-Type: application/json" \
             -d "$EMAIL_BODY" || echo "Failed to send success notification"
-
-      - name: Send Existing URL Test Failure Notification
-        if: inputs.deploy_result == 'skipped' && inputs.existing_webapp_url != ''
-        shell: bash
-        run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          EXISTING_URL="${{ inputs.existing_webapp_url }}"
-          
-          EMAIL_BODY=$(cat <<EOF
-          {
-            "body": "<p>Dear Team,</p><p>The ${{ env.accelerator_name }} pipeline executed against the <strong>existing WebApp URL</strong>.</p><p><strong>Details:</strong><br>• Target URL: <a href='${EXISTING_URL}'>${EXISTING_URL}</a><br>• Deployment: Skipped</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "${{ env.accelerator_name }} Pipeline - Existing URL Notification"
-          }
-          EOF
-          )
-
-          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
-            -H "Content-Type: application/json" \
-            -d "$EMAIL_BODY" || echo "Failed to send existing URL test failure notification"
