@@ -47,12 +47,12 @@ on:
         default: ''
         type: string
       AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
-        description: 'Log Analytics Workspace ID (Optional)'
+        description: 'Log Analytics Workspace Resource ID (Optional)'
         required: false
         default: ''
         type: string
       AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
-        description: 'AI Project Resource ID (Optional)'
+        description: 'Existing AI Project Resource ID in full Azure Resource ID format (Optional, for example: /subscriptions/...)'
         required: false
         default: ''
         type: string
@@ -388,7 +388,11 @@ jobs:
           rg_exists=$(az group exists --name $RESOURCE_GROUP_NAME)
           if [ "$rg_exists" = "false" ]; then
             echo "📦 Resource group does not exist. Creating new resource group '$RESOURCE_GROUP_NAME' in location '$AZURE_LOCATION'..."
-            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION --tags ${{ env.RG_TAGS }} || { echo "❌ Error creating resource group"; exit 1; }
+            TAG_ARGS=""
+            if [ -n "${{ env.RG_TAGS }}" ]; then
+              TAG_ARGS="--tags ${{ env.RG_TAGS }}"
+            fi
+            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION $TAG_ARGS || { echo "❌ Error creating resource group"; exit 1; }
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' created successfully."
           else
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' already exists. Deploying to existing resource group."

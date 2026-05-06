@@ -68,8 +68,8 @@ param gptModelName string = 'gpt-5.1'
 @description('Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13.')
 param gptModelVersion string = '2025-11-13'
 
-@description('Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate.')
-param gptDeploymentCapacity int = 1
+@description('Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 500K tokens per minute to improve regional success rate.')
+param gptDeploymentCapacity int = 500
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -1338,7 +1338,7 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
     // Internal ingress required for container-to-container communication
     ingressTargetPort: 8080
     ingressExternal: false
-    ingressAllowInsecure: true  // Allow HTTP without SSL redirect for internal calls
+    ingressAllowInsecure: false
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
       minReplicas: 1
