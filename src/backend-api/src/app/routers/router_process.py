@@ -8,11 +8,14 @@ import httpx
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from libs.base.typed_fastapi import TypedFastAPI
+from libs.logging.event_utils import track_event_if_configured
 from libs.models.entities import Process
 from libs.repositories.process_repository import ProcessRepository
 from libs.services.auth import get_authenticated_user
 from libs.services.interfaces import ILoggerService
 from libs.services.process_services import ProcessService
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 from routers.models.files import FileInfo
 from routers.models.processes import (
     FileContentResponse,
@@ -25,6 +28,37 @@ from routers.models.processes import (
 from routers.models.processes import (
     FileInfo as ResponseFileInfo,
 )
+
+
+def _annotate_span(attributes: dict[str, object]) -> None:
+    """Stamp domain attributes onto the active span, if any.
+
+    No-op when no span is active (e.g. called from a unit test that did
+    not stand up the OpenTelemetry SDK).
+    """
+    span = trace.get_current_span()
+    if span is None or not span.is_recording():
+        return
+    for key, value in attributes.items():
+        if value is None:
+            continue
+        try:
+            span.set_attribute(key, value)
+        except Exception:  # noqa: BLE001 — telemetry must never break a request
+            pass
+
+
+def _record_exception_on_span(exc: Exception) -> None:
+    """Record an exception + ERROR status on the active span, if any."""
+    span = trace.get_current_span()
+    if span is None or not span.is_recording():
+        return
+    try:
+        span.record_exception(exc)
+        span.set_status(Status(StatusCode.ERROR, description=type(exc).__name__))
+    except Exception:  # noqa: BLE001
+        pass
+
 
 router = APIRouter(
     prefix="/api/process",
@@ -64,12 +98,30 @@ async def create(request: Request):
             processRepository = scope.get_service(ProcessRepository)
             await processRepository.add_async(process)
 
+        _annotate_span({"process_id": process.id})
+        track_event_if_configured(
+            "CreateProcessSuccess", {"process_id": process.id}
+        )
         return ProcessCreateResponse(process_id=process.id)
     except HTTPException as e:
         logger.log_error(f"HTTPException: {e.detail}", e)
+        track_event_if_configured(
+            "CreateProcessError",
+            {
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise e
     except Exception as e:
         logger.log_error(f"Exception: {str(e)}", e)
+        track_event_if_configured(
+            "CreateProcessError",
+            {"error": str(e), "error_type": type(e).__name__},
+        )
+        _record_exception_on_span(e)
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
@@ -82,11 +134,28 @@ async def status(process_id: str, request: Request):
     logger_service.log_info(
         f"Process router status endpoint called for process_id: {process_id}"
     )
+    _annotate_span({"process_id": process_id})
 
     # loading business component for process
     processService = app.app_context.get_service(ProcessService)
 
-    return await processService.get_current_process(process_id)
+    try:
+        result = await processService.get_current_process(process_id)
+        track_event_if_configured(
+            "GetProcessStatusSuccess", {"process_id": process_id}
+        )
+        return result
+    except Exception as e:
+        track_event_if_configured(
+            "GetProcessStatusError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
+        raise
 
 
 @router.get("/status/{process_id}/render/", response_class=JSONResponse)
@@ -98,11 +167,28 @@ async def render_status(process_id: str, request: Request):
     logger_service.log_info(
         f"Process router render status endpoint called for process_id: {process_id}"
     )
+    _annotate_span({"process_id": process_id})
 
     # loading business component for process
     processService = app.app_context.get_service(ProcessService)
 
-    return await processService.render_current_process(process_id)
+    try:
+        result = await processService.render_current_process(process_id)
+        track_event_if_configured(
+            "RenderProcessStatusSuccess", {"process_id": process_id}
+        )
+        return result
+    except Exception as e:
+        track_event_if_configured(
+            "RenderProcessStatusError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
+        raise
 
 
 @router.post(process_router_paths.UPLOAD_FILES, status_code=200)
@@ -194,9 +280,33 @@ async def upload_files(
         if response:
             response.headers["Location"] = f"/process/{process_id}/"
 
+        _annotate_span(
+            {
+                "process_id": process_id,
+                "uploaded_count": len(uploaded_files),
+                "total_count": len(all_process_files),
+            }
+        )
+        track_event_if_configured(
+            "UploadFilesSuccess",
+            {
+                "process_id": process_id,
+                "uploaded_count": len(uploaded_files),
+                "total_count": len(all_process_files),
+            },
+        )
         return result_response
     except Exception as e:
         logger_service.log_error(f"Error in upload_files: {str(e)}")
+        track_event_if_configured(
+            "UploadFilesError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(status_code=500, detail=f"Error uploading files: {str(e)}")
 
 
@@ -267,15 +377,49 @@ async def delete_file(
         if response:
             response.headers["Location"] = f"/process/{process_id}/"
 
+        _annotate_span(
+            {
+                "process_id": process_id,
+                "deleted_file": file_name,
+                "remaining_count": len(all_process_files),
+            }
+        )
+        track_event_if_configured(
+            "DeleteFileSuccess",
+            {
+                "process_id": process_id,
+                "deleted_file": file_name,
+                "remaining_count": len(all_process_files),
+            },
+        )
         return result_response
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
+        track_event_if_configured(
+            "DeleteFileError",
+            {
+                "process_id": process_id,
+                "deleted_file": file_name,
+                "error_type": "FileNotFoundError",
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=404,
             detail=f"File '{file_name}' not found for process '{process_id}'",
         )
     except Exception as e:
         logger_service.log_error(f"Error in delete_file: {str(e)}")
+        track_event_if_configured(
+            "DeleteFileError",
+            {
+                "process_id": process_id,
+                "deleted_file": file_name,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
 
 
@@ -331,10 +475,26 @@ async def delete_process(
         if response:
             response.headers["Location"] = f"/process/{process_id}/"
 
+        _annotate_span(
+            {"process_id": process_id, "deleted_count": deleted_count}
+        )
+        track_event_if_configured(
+            "DeleteProcessSuccess",
+            {"process_id": process_id, "deleted_count": deleted_count},
+        )
         return result_response
 
     except Exception as e:
         logger_service.log_error(f"Error in delete_process: {str(e)}")
+        track_event_if_configured(
+            "DeleteProcessError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(status_code=500, detail=f"Error deleting process: {str(e)}")
 
 
@@ -388,6 +548,10 @@ async def start_processing(
         if response:
             response.headers["Location"] = f"/process/{process_id}/"
 
+        _annotate_span({"process_id": process_id})
+        track_event_if_configured(
+            "StartProcessingSuccess", {"process_id": process_id}
+        )
         return {
             "message": "Processing started successfully",
             "process_id": process_id,
@@ -396,6 +560,15 @@ async def start_processing(
         }
     except Exception as e:
         logger_service.log_error(f"Error in start_processing: {str(e)}")
+        track_event_if_configured(
+            "StartProcessingError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=500, detail=f"Error starting processing: {str(e)}"
         )
@@ -449,6 +622,17 @@ async def download_process_files(
             f"Created ZIP file with {len(converted_files)} files for process {process_id}"
         )
 
+        _annotate_span(
+            {
+                "process_id": process_id,
+                "file_count": len(converted_files),
+            }
+        )
+        track_event_if_configured(
+            "DownloadProcessFilesSuccess",
+            {"process_id": process_id, "file_count": len(converted_files)},
+        )
+
         # Return ZIP file as streaming response
         return StreamingResponse(
             io.BytesIO(zip_buffer.read()),
@@ -460,9 +644,28 @@ async def download_process_files(
 
     except HTTPException as e:
         logger_service.log_error(f"HTTPException in download: {e.detail}")
+        track_event_if_configured(
+            "DownloadProcessFilesError",
+            {
+                "process_id": process_id,
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise e
     except Exception as e:
         logger_service.log_error(f"Error in download_process_files: {str(e)}")
+        track_event_if_configured(
+            "DownloadProcessFilesError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=500, detail=f"Error downloading files: {str(e)}"
         )
@@ -512,13 +715,40 @@ async def get_process_summary(
             f"Process summary retrieved for {process_id}: {len(filenames)} files"
         )
 
+        _annotate_span(
+            {"process_id": process_id, "file_count": len(filenames)}
+        )
+        track_event_if_configured(
+            "GetProcessSummarySuccess",
+            {"process_id": process_id, "file_count": len(filenames)},
+        )
+
         return response
 
     except HTTPException as e:
         logger_service.log_error(f"HTTPException in process summary: {e.detail}")
+        track_event_if_configured(
+            "GetProcessSummaryError",
+            {
+                "process_id": process_id,
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise e
     except Exception as e:
         logger_service.log_error(f"Error in get_process_summary: {str(e)}")
+        track_event_if_configured(
+            "GetProcessSummaryError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=500, detail=f"Error retrieving process summary: {str(e)}"
         )
@@ -561,23 +791,68 @@ async def get_file_content(
             f"File content retrieved for {filename} in process {process_id}"
         )
 
+        _annotate_span({"process_id": process_id, "filename": filename})
+        track_event_if_configured(
+            "GetFileContentSuccess",
+            {"process_id": process_id, "filename": filename},
+        )
+
         return FileContentResponse(content=file_content)
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
+        track_event_if_configured(
+            "GetFileContentError",
+            {
+                "process_id": process_id,
+                "filename": filename,
+                "error_type": "FileNotFoundError",
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=404,
             detail=f"File '{filename}' not found for process '{process_id}'",
         )
-    except UnicodeDecodeError:
+    except UnicodeDecodeError as e:
+        track_event_if_configured(
+            "GetFileContentError",
+            {
+                "process_id": process_id,
+                "filename": filename,
+                "error_type": "UnicodeDecodeError",
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=400,
             detail=f"File '{filename}' is not a text file and cannot be displayed",
         )
     except HTTPException as e:
         logger_service.log_error(f"HTTPException in file content: {e.detail}")
+        track_event_if_configured(
+            "GetFileContentError",
+            {
+                "process_id": process_id,
+                "filename": filename,
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise e
     except Exception as e:
         logger_service.log_error(f"Error in get_file_content: {str(e)}")
+        track_event_if_configured(
+            "GetFileContentError",
+            {
+                "process_id": process_id,
+                "filename": filename,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=500, detail=f"Error retrieving file content: {str(e)}"
         )
@@ -599,6 +874,7 @@ async def cancel_process(
 
     try:
         logger_service.log_info(f"Cancel process request for process_id: {process_id}")
+        _annotate_span({"process_id": process_id})
 
         # Get authenticated user
         authenticated_user = get_authenticated_user(request)
@@ -653,6 +929,14 @@ async def cancel_process(
             f"Cancel request sent for process {process_id}, state: {result.get('kill_state', 'unknown')}"
         )
 
+        track_event_if_configured(
+            "CancelProcessSuccess",
+            {
+                "process_id": process_id,
+                "kill_state": result.get("kill_state", "pending"),
+            },
+        )
+
         return {
             "message": "Cancellation request submitted",
             "process_id": process_id,
@@ -661,22 +945,57 @@ async def cancel_process(
             "kill_requested_at": result.get("kill_requested_at", ""),
         }
 
-    except httpx.TimeoutException:
+    except httpx.TimeoutException as e:
         logger_service.log_error(f"Timeout connecting to processor control API")
+        track_event_if_configured(
+            "CancelProcessError",
+            {
+                "process_id": process_id,
+                "error_type": "TimeoutException",
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=504,
             detail="Timeout connecting to processor control API",
         )
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
         logger_service.log_error(f"Failed to connect to processor control API")
+        track_event_if_configured(
+            "CancelProcessError",
+            {
+                "process_id": process_id,
+                "error_type": "ConnectError",
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=503,
             detail="Processor control API is unavailable",
         )
-    except HTTPException:
+    except HTTPException as e:
+        track_event_if_configured(
+            "CancelProcessError",
+            {
+                "process_id": process_id,
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise
     except Exception as e:
         logger_service.log_error(f"Error in cancel_process: {str(e)}")
+        track_event_if_configured(
+            "CancelProcessError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=500, detail=f"Error cancelling process: {str(e)}"
         )
@@ -696,6 +1015,7 @@ async def get_cancel_status(
 
     try:
         logger_service.log_info(f"Get cancel status for process_id: {process_id}")
+        _annotate_span({"process_id": process_id})
 
         # Get authenticated user
         authenticated_user = get_authenticated_user(request)
@@ -745,24 +1065,56 @@ async def get_cancel_status(
 
             result = response.json()
 
+        track_event_if_configured(
+            "GetCancelStatusSuccess", {"process_id": process_id}
+        )
         return result
 
-    except httpx.TimeoutException:
+    except httpx.TimeoutException as e:
         logger_service.log_error(f"Timeout connecting to processor control API")
+        track_event_if_configured(
+            "GetCancelStatusError",
+            {"process_id": process_id, "error_type": "TimeoutException"},
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=504,
             detail="Timeout connecting to processor control API",
         )
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
         logger_service.log_error(f"Failed to connect to processor control API")
+        track_event_if_configured(
+            "GetCancelStatusError",
+            {"process_id": process_id, "error_type": "ConnectError"},
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=503,
             detail="Processor control API is unavailable",
         )
-    except HTTPException:
+    except HTTPException as e:
+        track_event_if_configured(
+            "GetCancelStatusError",
+            {
+                "process_id": process_id,
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise
     except Exception as e:
         logger_service.log_error(f"Error in get_cancel_status: {str(e)}")
+        track_event_if_configured(
+            "GetCancelStatusError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(
             status_code=500, detail=f"Error getting cancel status: {str(e)}"
         )

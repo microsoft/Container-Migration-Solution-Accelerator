@@ -13,14 +13,44 @@ from fastapi import (
 )
 from fastapi.responses import Response
 from libs.base.typed_fastapi import TypedFastAPI
+from libs.logging.event_utils import track_event_if_configured
 from libs.models.entities import File
+from libs.repositories.file_repository import FileRepository
+from libs.repositories.process_repository import ProcessRepository
 from libs.sas.storage import AsyncStorageBlobHelper
 from libs.services.auth import get_authenticated_user
 from libs.services.input_validation import is_valid_uuid
 from libs.services.interfaces import ILoggerService
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 from routers.models.files import FileUploadResult
-from libs.repositories.process_repository import ProcessRepository
-from libs.repositories.file_repository import FileRepository
+
+
+def _annotate_span(attributes: dict[str, object]) -> None:
+    """Stamp domain attributes onto the active span, if any."""
+    span = trace.get_current_span()
+    if span is None or not span.is_recording():
+        return
+    for key, value in attributes.items():
+        if value is None:
+            continue
+        try:
+            span.set_attribute(key, value)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _record_exception_on_span(exc: Exception) -> None:
+    """Record an exception + ERROR status on the active span, if any."""
+    span = trace.get_current_span()
+    if span is None or not span.is_recording():
+        return
+    try:
+        span.record_exception(exc)
+        span.set_status(Status(StatusCode.ERROR, description=type(exc).__name__))
+    except Exception:  # noqa: BLE001
+        pass
+
 
 router = APIRouter(
     prefix="/api/file",
@@ -110,6 +140,23 @@ async def upload_file(
                 f"Process {process_id} source count updated to {process_record.source_file_count}."
             )
 
+            _annotate_span(
+                {
+                    "process_id": process_id,
+                    "file_id": file_id,
+                    "filename": file_name,
+                }
+            )
+            track_event_if_configured(
+                "UploadFileSuccess",
+                {
+                    "process_id": process_id,
+                    "file_id": file_id,
+                    "filename": file_name,
+                    "source_file_count": process_record.source_file_count,
+                },
+            )
+
             return FileUploadResult(
                 batch_id=process_record.id,
                 file_id=file_record.id,
@@ -118,7 +165,26 @@ async def upload_file(
 
     except HTTPException as e:
         logger.log_error(f"HTTPException: {e.detail}", e)
+        track_event_if_configured(
+            "UploadFileError",
+            {
+                "process_id": process_id,
+                "error": str(e.detail),
+                "error_type": type(e).__name__,
+                "status_code": e.status_code,
+            },
+        )
+        _record_exception_on_span(e)
         raise e
     except Exception as e:
         logger.log_error(f"Exception: {str(e)}", e)
+        track_event_if_configured(
+            "UploadFileError",
+            {
+                "process_id": process_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        _record_exception_on_span(e)
         raise HTTPException(status_code=500, detail="Internal server error") from e
