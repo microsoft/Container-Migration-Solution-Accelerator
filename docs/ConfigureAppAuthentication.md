@@ -43,7 +43,7 @@ We will add Microsoft Entra ID as an authentication provider to API and Web Appl
    - Go to deployed Container App `ca-frontend-<randomname>` and select **Authentication** menu, then select created Application Registration.
      ![configure_app_registration_web_1](./images/configure_app_registration_web_1.png)
 
-   - Select **Authentication**, then select **+ Add a platform** menu.
+   - Select **Authentication (Preview)**, then select **+ Add Redirect URI**.
      ![configure_app_registration_web_2](./images/configure_app_registration_web_2.png)
 
    - Select **Single-page application**.
