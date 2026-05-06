@@ -125,6 +125,11 @@ const ProcessPage: React.FC = () => {
 
   // Error state management
   const [migrationError, setMigrationError] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{ reason: string; step: string; details: string }>({
+    reason: '',
+    step: '',
+    details: '',
+  });
 
   // Helper function to clean phase name - removes "PHASE X - " prefix
   const cleanPhaseName = (phase: string): string => {
