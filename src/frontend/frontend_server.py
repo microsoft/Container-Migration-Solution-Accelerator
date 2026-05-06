@@ -90,26 +90,43 @@ async def proxy_api(full_path: str, request: Request):
 
     body = await request.body()
 
-    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-        proxied = await client.request(
-            method=request.method,
-            url=target_url,
-            headers=headers,
-            content=body,
+    try:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            proxied = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=headers,
+                content=body,
+            )
+    except httpx.TimeoutException:
+        return JSONResponse(
+            status_code=504,
+            content={"detail": "Upstream backend request timed out"},
+        )
+    except httpx.RequestError:
+        return JSONResponse(
+            status_code=502,
+            content={"detail": "Failed to reach upstream backend"},
         )
 
-    passthrough_headers = {
-        key: value
-        for key, value in proxied.headers.items()
-        if key.lower() not in {"content-encoding", "transfer-encoding", "connection"}
+    excluded_headers = {
+        "content-encoding",
+        "transfer-encoding",
+        "connection",
+        "content-length",
+        "content-type",
     }
 
-    return Response(
+    response = Response(
         content=proxied.content,
         status_code=proxied.status_code,
-        headers=passthrough_headers,
         media_type=proxied.headers.get("content-type"),
     )
+    for key, value in proxied.headers.multi_items():
+        if key.lower() not in excluded_headers:
+            response.raw_headers.append((key.encode("latin-1"), value.encode("latin-1")))
+
+    return response
 
 
 @app.get("/{full_path:path}")
