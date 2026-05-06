@@ -85,12 +85,12 @@ on:
         type: boolean
       
       AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
-        description: 'Log Analytics Workspace ID (Optional)'
+        description: 'Log Analytics Workspace Resource ID (Optional)'
         required: false
         default: ''
         type: string
       AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
-        description: 'AI Project Resource ID (Optional)'
+        description: 'Full Azure AI Project Resource ID (Optional, format: /subscriptions/.../resourceGroups/.../providers/...)'
         required: false
         default: ''
         type: string
