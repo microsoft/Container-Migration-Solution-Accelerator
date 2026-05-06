@@ -548,14 +548,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     blobServices: {
       corsRules: []
       deleteRetentionPolicyEnabled: false
-      containers: [
-        {
-          name: 'data'
-          publicAccess: 'None'
-          denyEncryptionScopeOverride: false
-          defaultEncryptionScope: '$account-encryption-key'
-        }
-      ]
+      containers: []
     }
     queueServices: {
       deleteRetentionPolicyEnabled: true
@@ -622,12 +615,6 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
           }
           {
             name: 'files'
-            paths: [
-              '/_partitionKey'
-            ]
-          }
-          {
-            name: 'process_statuses'
             paths: [
               '/_partitionKey'
             ]

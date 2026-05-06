@@ -10,7 +10,6 @@ dependencies = [
     "azure-appconfiguration==1.7.1",
     "azure-identity==1.25.0",
     "azure-monitor-opentelemetry==1.7.0",
-    "azure-search-documents==11.6.0b12",
     "azure-storage-blob==12.26.0",
     "azure-storage-queue==12.13.0",
     "fastapi[standard]==0.116.1",
