@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "18053986120321996236"
+      "version": "0.43.1.21952",
+      "templateHash": "1278209883407272359"
     }
   },
   "parameters": {
@@ -107,7 +107,7 @@
       "type": "int",
       "defaultValue": 500,
       "metadata": {
-        "description": "Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate."
+        "description": "Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 500K tokens per minute to improve regional success rate."
       }
     },
     "aiEmbeddingModelName": {
@@ -4715,8 +4715,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "2245351167779444314"
+              "version": "0.43.1.21952",
+              "templateHash": "4488065934246762087"
             }
           },
           "definitions": {
@@ -26135,8 +26135,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
@@ -30103,8 +30103,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16866311185741009453"
+              "version": "0.43.1.21952",
+              "templateHash": "17526785557845507677"
             }
           },
           "definitions": {
@@ -33854,8 +33854,8 @@
       "dependsOn": [
         "aiFoundryAiServices",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "virtualNetwork"
       ]
     },
@@ -33892,8 +33892,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16351752584270870112"
+              "version": "0.43.1.21952",
+              "templateHash": "8251376928798842081"
             }
           },
           "parameters": {
