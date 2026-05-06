@@ -22,8 +22,8 @@ parameters:
   displayName: Resource Group Name
   type: string
   default: 'rg-conmig-dev'
-- name: containerRegistryHost
-  displayName: Container Registry Host (exclude https://)
+- name: containerRegistryEndpoint
+  displayName: Container Registry Endpoint (exclude https://)
   type: string
   default: 'acrcontainermigrationdev.azurecr.io'
 - name: tags
@@ -40,7 +40,7 @@ variables:
   vmImageName: 'ubuntu-latest'
   envName: ${{ parameters.environmentName }}
   resourceGroupName: ${{ parameters.resourceGroupName }}
-  containerRegistryHost: ${{ parameters.containerRegistryHost }}
+  containerRegistryEndpoint: ${{ parameters.containerRegistryEndpoint }}
   tags: ${{ convertToJson(parameters.tags) }}
   enableMonitoring: ${{ parameters.enableMonitoring }}
 
@@ -76,14 +76,14 @@ stages:
             --name "deploy.$(envName).$(Build.BuildId)" \
             --resource-group $(resourceGroupName) \
             --template-file $(Build.SourcesDirectory)/infra/main.bicep \
-            --parameters solutionName=$(envName) containerRegistryHost='$(containerRegistryHost)' tags='$(tags)' enableMonitoring=$(enableMonitoring) \
+            --parameters solutionName=$(envName) containerRegistryEndpoint='$(containerRegistryEndpoint)' tags='$(tags)' enableMonitoring=$(enableMonitoring) \
             --query "properties.outputs" \
             --output json) || {
             echo "❌ ERROR: Bicep deployment failed!"
             echo "Deployment name: deploy.$(envName).$(Build.BuildId)"
             echo "Resource group: $(resourceGroupName)"
             echo "Template file: $(Build.SourcesDirectory)/infra/main.bicep"
-            echo "Parameters: solutionName=$(envName) containerRegistryHost='$(containerRegistryHost)'"
+            echo "Parameters: solutionName=$(envName) containerRegistryEndpoint='$(containerRegistryEndpoint)'"
             
             # Try to get deployment error details
             echo "Attempting to retrieve deployment error details..."

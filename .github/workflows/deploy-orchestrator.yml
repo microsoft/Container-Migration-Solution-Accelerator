@@ -37,13 +37,13 @@ on:
         required: false
         default: false
         type: boolean
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
-        description: 'Log Analytics Workspace ID (Optional)'
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
+        description: 'Log Analytics Workspace Resource ID (Optional)'
         required: false
         default: ''
         type: string
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
-        description: 'AI Project Resource ID (Optional)'
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
+        description: 'Existing AI Project full Azure Resource ID (Optional; must be a full Azure Resource ID, not just the project name or a GUID)'
         required: false
         default: ''
         type: string
@@ -81,8 +81,8 @@ jobs:
       EXP: ${{ inputs.EXP }}
       build_docker_image: ${{ inputs.build_docker_image }}
       existing_webapp_url: ${{ inputs.existing_webapp_url }}
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
       docker_image_tag: ${{ needs.docker-build.outputs.IMAGE_TAG }}
       cleanup_resources: ${{ inputs.cleanup_resources }}
     secrets: inherit
