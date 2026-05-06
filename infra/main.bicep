@@ -301,8 +301,12 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
     disableIpMasking: false
     flowType: 'Bluefield'
     // WAF aligned configuration for Monitoring
+    // The AVM `insights/component` module wires Application Insights to
+    // the Log Analytics workspace via `workspaceResourceId` (workspace-
+    // based App Insights). A separate `diagnosticSettings` entry on the
+    // SAME workspace causes duplicate ingestion of platform logs.
+    // Source: AB#37816 — see CKM #811 reference implementation.
     workspaceResourceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
   }
 }
 
