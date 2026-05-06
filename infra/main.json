@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "8711849552667845282"
+      "templateHash": "2628360443413130454"
     }
   },
   "parameters": {
@@ -107,7 +107,7 @@
       "type": "int",
       "defaultValue": 500,
       "metadata": {
-        "description": "Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate."
+        "description": "Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 500K tokens per minute to improve regional success rate."
       }
     },
     "aiEmbeddingModelName": {
@@ -42608,7 +42608,7 @@
             "value": false
           },
           "ingressAllowInsecure": {
-            "value": false
+            "value": true
           },
           "scaleSettings": {
             "value": {
