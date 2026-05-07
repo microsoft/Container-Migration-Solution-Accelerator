@@ -8,23 +8,29 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
-      "containerRegistryEndpoint": {
-        "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+      "containerRegistryHost": {
+        "value": "${AZURE_CONTAINER_REGISTRY_HOST}"
       },
       "azureAiServiceLocation": {
-        "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
+        "value": "${AZURE_AI_SERVICE_LOCATION}"
       },
-      "deploymentType": {
-        "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
+      "aiDeploymentLocation": {
+        "value": "${AZURE_AI_DEPLOYMENT_LOCATION}"
       },
-      "gptModelName": {
-        "value": "${AZURE_ENV_GPT_MODEL_NAME}"
+      "azureAiServiceLocation": {
+        "value": "${AZURE_AI_SERVICE_LOCATION}"
       },
-      "gptModelVersion2323": {
-        "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
+      "aiDeploymentType": {
+        "value": "${AZURE_AI_DEPLOYMENT_TYPE}"
       },
-      "gptDeploymentCapacity": {
-        "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
+      "aiModelName": {
+        "value": "${AZURE_AI_MODEL_NAME}"
+      },
+      "aiModelVersion": {
+        "value": "${AZURE_AI_MODEL_VERSION}"
+      },
+      "aiModelCapacity": {
+        "value": "${AZURE_AI_MODEL_CAPACITY}"
       },
       "enableTelemetry": {
         "value": true
@@ -45,13 +51,13 @@
         "value": "${AZURE_ENV_VM_ADMIN_PASSWORD}"
       },
       "existingLogAnalyticsWorkspaceId": {
-        "value": "${AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID}"
+        "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
       },
-      "existingFoundryProjectResourceId": {
-        "value": "${AZURE_EXISTING_AIPROJECT_RESOURCE_ID}"
+      "existingFoundryProjectResourceId":{
+        "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
       },
       "imageTag": {
-        "value": "${AZURE_ENV_IMAGE_TAG}"
+        "value": "${AZURE_ENV_IMAGETAG}"
       },
       "vmSize": {
         "value": "${AZURE_ENV_VM_SIZE}"
