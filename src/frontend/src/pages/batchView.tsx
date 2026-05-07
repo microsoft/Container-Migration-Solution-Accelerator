@@ -26,10 +26,9 @@ import {
   Warning24Regular
 } from "@fluentui/react-icons"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
-import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
-import yaml from "react-syntax-highlighter/dist/esm/languages/hljs/yaml"
-import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown"
-import json from "react-syntax-highlighter/dist/esm/languages/hljs/json"
+import yamlLang from "highlight.js/lib/languages/yaml"
+import markdownLang from "highlight.js/lib/languages/markdown"
+import jsonLang from "highlight.js/lib/languages/json"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -41,13 +40,12 @@ import BatchHistoryPanel from "../components/batchHistoryPanel";
 import ConfirmationDialog from "../commonComponents/ConfirmationDialog/confirmationDialogue";
 import { determineFileStatus, filesLogsBuilder, renderErrorSection, useStyles, renderFileError, filesErrorCounter, completedFiles, hasFiles, fileErrorCounter, BatchSummary, fileWarningCounter } from "../api/utils";
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
-import { format } from "sql-formatter";
 
 
-SyntaxHighlighter.registerLanguage("sql", sql)
-SyntaxHighlighter.registerLanguage("yaml", yaml)
-SyntaxHighlighter.registerLanguage("markdown", markdown)
-SyntaxHighlighter.registerLanguage("json", json)
+const unwrap = (mod: any) => (typeof mod === "function" ? mod : mod.default);
+SyntaxHighlighter.registerLanguage("yaml", unwrap(yamlLang))
+SyntaxHighlighter.registerLanguage("markdown", unwrap(markdownLang))
+SyntaxHighlighter.registerLanguage("json", unwrap(jsonLang))
 
 
 
@@ -207,20 +205,7 @@ const BatchStoryPage = () => {
   };
 
   // Helper function to format content based on file type
-  const formatContent = (content: string, fileName: string) => {
-    const { language } = getFileLanguageAndType(fileName);
-
-    // Only apply SQL formatting for SQL files
-    if (language === 'sql') {
-      try {
-        return format(content, { language: "tsql" });
-      } catch (error) {
-        console.warn("SQL formatting failed, returning original content:", error);
-        return content;
-      }
-    }
-
-    // Return content as-is for YAML and Markdown files
+  const formatContent = (content: string, _fileName: string) => {
     return content;
   };
 

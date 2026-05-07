@@ -27,7 +27,6 @@ import {
 } from "@fluentui/react-icons"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
-import sql from "react-syntax-highlighter/dist/cjs/languages/hljs/sql"
 import { useNavigate, useParams } from "react-router-dom"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { getApiUrl, headerBuilder } from '../api/config';
@@ -36,11 +35,8 @@ import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import PanelRightToggles from "../components/Header/PanelRightToggles";
 import { filesLogsBuilder, BatchSummary, completedFiles, filesErrorCounter, hasFiles, renderFileError, fileErrorCounter, renderErrorContent, filesFinalErrorCounter, formatAgent, formatDescription, fileWarningCounter } from "../api/utils";
-import { format } from "sql-formatter";
 
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
-
-SyntaxHighlighter.registerLanguage("sql", sql)
 
 const useStyles = makeStyles({
   root: {
@@ -1014,7 +1010,7 @@ useEffect(() => {
                     backgroundColor: tokens.colorNeutralBackground1,
                   }}
                 >
-                  {format(selectedFile.translatedCode, { language: "tsql" })}
+                  {selectedFile.translatedCode}
                 </SyntaxHighlighter>
               ) : selectedFile.status === "completed" && !selectedFile.translatedCode && !selectedFile.errorCount ? (
                 <div style={{ padding: "20px", textAlign: "center" }}>

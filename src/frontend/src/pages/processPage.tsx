@@ -15,7 +15,8 @@ import PanelRight from "../components/Panels/PanelRight";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
 import { HistoryRegular, HistoryFilled, bundleIcon } from "@fluentui/react-icons";
 import { CircleCheck, X } from "lucide-react";
-import Lottie from 'lottie-react';
+import LottieImport from 'lottie-react';
+const Lottie = ('default' in LottieImport ? (LottieImport as any).default : LottieImport) as typeof LottieImport;
 import documentLoader from "../../public/images/loader.json";
 import { getApiUrl, headerBuilder } from '../api/config';
 import { apiService } from '../services/ApiService';
@@ -127,7 +128,11 @@ const ProcessPage: React.FC = () => {
 
   // Error state management
   const [migrationError, setMigrationError] = useState(false);
-
+  const [errorDetails, setErrorDetails] = useState<{ reason: string; step: string; details: string }>({
+    reason: '',
+    step: '',
+    details: '',
+  });
   // Helper function to clean phase name - removes "PHASE X - " prefix
   const cleanPhaseName = (phase: string): string => {
     if (!phase) return "";
