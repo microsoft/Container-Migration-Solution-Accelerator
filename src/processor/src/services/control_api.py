@@ -159,12 +159,12 @@ class ControlApiServer:
             try:
                 await self._site.stop()
             except Exception:
-                pass
+                logger.debug("Best-effort stop of control API site failed", exc_info=True)
             self._site = None
 
         if self._runner:
             try:
                 await self._runner.cleanup()
             except Exception:
-                pass
+                logger.debug("Best-effort cleanup of control API runner failed", exc_info=True)
             self._runner = None

@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import { MessageBar, MessageBarType } from "@fluentui/react";
-import { deleteBatch, deleteFileFromBatch, createProcess, uploadFiles, startProcessing, deleteFile } from '../slices/batchSlice';
+import { deleteBatch, createProcess, uploadFiles, startProcessing, deleteFile } from '../slices/batchSlice';
 import { useDispatch } from 'react-redux';
 import ConfirmationDialog from '../commonComponents/ConfirmationDialog/confirmationDialogue';
 import { AppDispatch } from '../store/store'
@@ -53,7 +53,6 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const [allUploadsComplete, setAllUploadsComplete] = useState(false);
   const [fileLimitExceeded, setFileLimitExceeded] = useState(false);
   const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
-  const [isCreatingProcess, setIsCreatingProcess] = useState(false);
   const [rejectedFiles, setRejectedFiles] = useState<FileRejection[]>([]);
   const [showFileRejectionError, setShowFileRejectionError] = useState(false);
   const [showNetworkError, setShowNetworkError] = useState(false);
@@ -822,12 +821,6 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     }
   }, [showFileRejectionError]);
 
-
-  const handleStartProcessing = () => {
-    if (uploadState === 'COMPLETED' && onStartTranslating) {
-      onStartTranslating();
-    }
-  };
 
   return (
     <div 

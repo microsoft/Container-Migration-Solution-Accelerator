@@ -34,7 +34,7 @@ import BatchHistoryPanel from "../components/batchHistoryPanel"
 import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import PanelRightToggles from "../components/Header/PanelRightToggles";
-import { filesLogsBuilder, BatchSummary, completedFiles, filesErrorCounter, hasFiles, renderFileError, fileErrorCounter, renderErrorContent, filesFinalErrorCounter, formatAgent, formatDescription, fileWarningCounter } from "../api/utils";
+import { filesLogsBuilder, BatchSummary, completedFiles, filesErrorCounter, hasFiles, renderFileError, fileErrorCounter, renderErrorContent, filesFinalErrorCounter, fileWarningCounter } from "../api/utils";
 
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
 
@@ -427,33 +427,6 @@ enum Agents {
   Agents = "Agent"
 }
 
-
-
-const getTrackPercentage = (status: string, fileTrackLog: TrackLogMessage[]): number => {
-  switch (status?.toLowerCase()) {
-    case "completed":
-      return ProcessingStage.Completed;
-    case "in_process":
-      if (fileTrackLog && fileTrackLog.length > 0) {
-        if (fileTrackLog.some(entry => entry.agent_type === Agents.Checker)) {
-          return ProcessingStage.FinalChecks;
-        } else if (fileTrackLog.some(entry => entry.agent_type === Agents.Picker)) {
-          return ProcessingStage.Processing;
-        } else if (fileTrackLog.some(entry => entry.agent_type === Agents.Migrator)) {
-          return ProcessingStage.Parsing;
-        }
-        return ProcessingStage.Starting;
-      }
-      return ProcessingStage.Queued;
-    case "ready_to_process":
-      return ProcessingStage.Queued;
-    default:
-      return ProcessingStage.NotStarted;
-  }
-};
-
-
-
 const getPrintFileStatus = (status: string): string => {
   switch (status) {
     case "completed":
@@ -471,10 +444,10 @@ const getPrintFileStatus = (status: string): string => {
 
 const ModernizationPage = () => {
   const { batchId } = useParams<{ batchId: string }>();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const [batchSummary, setBatchSummary] = useState<BatchSummary | null>(null);
-  const styles = useStyles()
+  const styles = useStyles();
   const [text, setText] = useState("");
   const [isPanelOpen, setIsPanelOpen] = React.useState(false); // Add state management
 
@@ -483,16 +456,14 @@ const ModernizationPage = () => {
 
   // State for the loading component
   const [showLoading, setShowLoading] = useState(true);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [selectedFilebg, setSelectedFile] = useState<string | null>(null);
-  const [selectedFileId, setSelectedFileId] = React.useState<string>("")
-  const [fileId, setFileId] = React.useState<string>("");
-  const [expandedSections, setExpandedSections] = React.useState<string[]>([])
-  const [progressPercentage, setProgressPercentage] = useState(0);
+  const [selectedFileId, setSelectedFileId] = React.useState<string>("");
+  const fileId = selectedFileId;
+  const [expandedSections, setExpandedSections] = React.useState<string[]>([]);
+  const [progressPercentage] = useState(0);
   const [allFilesCompleted, setAllFilesCompleted] = useState(false);
   const [isZipButtonDisabled, setIsZipButtonDisabled] = useState(true);
   const [fileLoading, setFileLoading] = useState(false);
-  const [selectedFileTranslatedContent, setSelectedFileTranslatedContent] = useState<string>("");
   const [processingStarted, setProcessingStarted] = useState(false);
 
   // Fetch file content when a file is selected
@@ -507,11 +478,7 @@ const ModernizationPage = () => {
         if (!selectedFile || !selectedFile.translatedCode) {
           setFileLoading(true);
           const newFileUpdate = await fetchFileFromAPI(selectedFile?.fileId || "");
-          setSelectedFileTranslatedContent(newFileUpdate.translatedContent);
           setFileLoading(false);
-        } else {
-
-          setSelectedFileTranslatedContent(selectedFile.translatedCode);
         }
 
       } catch (err) {
@@ -571,14 +538,13 @@ const ModernizationPage = () => {
         setReduxFileList(updatedFiles);
 
       } else {
-        setLoadingError("No data received from server");
+        console.log("No data received from server");
       }
       if (isInitialLoad) {
         setShowLoading(false);
       }
     } catch (err) {
       console.error("Error fetching batch data:", err);
-      setLoadingError(err instanceof Error ? err.message : "An unknown error occurred");
       if (isInitialLoad) {
         setShowLoading(false);
       }
@@ -587,7 +553,7 @@ const ModernizationPage = () => {
 
   useEffect(() => {
     if (!batchId || batchId.length !== 36) {
-      setLoadingError("No valid batch ID provided");
+      console.log("No valid batch ID provided");
       setShowLoading(false);
       return;
     }
@@ -797,9 +763,6 @@ const ModernizationPage = () => {
     }
   }, [batchId]);
 
-  const highestProgressRef = useRef(0);
-  const currentProcessingFileRef = useRef<string | null>(null);
-
 
   //new PT FR ends
   const updateSummaryStatus = async () => {
@@ -871,7 +834,7 @@ useEffect(() => {
   useEffect(() => {
     const loadingTimeout = setTimeout(() => {
       if (progressPercentage < 5 && showLoading) {
-        setLoadingError('Processing is taking longer than expected. You can continue waiting or try again later.');
+        console.log('Processing is taking longer than expected. You can continue waiting or try again later.');
       }
     }, 30000);
 
@@ -1079,7 +1042,7 @@ useEffect(() => {
     }
 
     // Show the full summary page only when all files are completed and summary is selected
-    if (allFilesCompleted && selectedFile?.id === "summary") {
+    if (selectedFile?.id === "summary") {
       const completedCount = files.filter(file => file.status === "completed" && file.file_result !== "error" && file.id !== "summary").length;
       const totalCount = files.filter(file => file.id !== "summary").length;
       const errorCount = selectedFile.errorCount || 0;
