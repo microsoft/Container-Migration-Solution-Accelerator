@@ -13,7 +13,6 @@ import {
   Card,
   tokens,
   Spinner,
-  Tooltip,
 } from "@fluentui/react-components"
 import {
   DismissCircle24Regular,
@@ -183,7 +182,6 @@ const BatchStoryPage = () => {
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState(["errors"]);
   const [batchSummary, setBatchSummary] = useState<BatchSummary | null>(null);
-  const [selectedFileContent, setSelectedFileContent] = useState<string>("");
   const [selectedFileTranslatedContent, setSelectedFileTranslatedContent] = useState<string>("");
   const [telemetryData, setTelemetryData] = useState<any>(null);
 
@@ -339,7 +337,6 @@ const BatchStoryPage = () => {
         const data = await apiService.get(`/process/${batchId}/file/${encodeURIComponent(selectedFileId)}`);
 
         if (data) {
-          setSelectedFileContent(data.content || "");
           setSelectedFileTranslatedContent(data.content || ""); // Use content for both since we only have one version
         }
 
@@ -354,38 +351,6 @@ const BatchStoryPage = () => {
   }, [selectedFileId]);
 
 
-  const renderWarningContent = () => {
-    if (!expandedSections.includes("warnings")) return null;
-
-    if (!batchSummary) return null;
-
-    // Group warnings by file
-    const warningFiles = files.filter(file => file.warningCount && file.warningCount > 0 && file.id !== "summary");
-
-    if (warningFiles.length === 0) {
-      return (
-        <div className={styles.errorItem}>
-          <Text>No warnings found.</Text>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        {warningFiles.map((file, fileIndex) => (
-          <div key={fileIndex} className={styles.errorItem}>
-            <div className={styles.errorTitle}>
-              <Text weight="semibold">{file.name} ({file.warningCount})</Text>
-              <Text className={styles.errorSource}>source</Text>
-            </div>
-            <div className={styles.errorDetails}>
-              <Text>Warning in file processing. See file for details.</Text>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   // Helper function to count JSON/YAML files
   const getJsonYamlFileCount = () => {
@@ -601,7 +566,7 @@ const BatchStoryPage = () => {
     }
 
     // Show the summary page when summary is selected
-    if (selectedFile.id === "summary" && batchSummary) {
+    if (selectedFile.id === "summary") {
       // Check if there are no errors and all JSON/YAML files are processed successfully
       const noErrors = (batchSummary.error_count === 0);
       const jsonYamlFileCount = getJsonYamlFileCount();

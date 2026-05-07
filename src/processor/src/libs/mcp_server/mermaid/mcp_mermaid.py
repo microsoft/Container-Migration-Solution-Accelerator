@@ -388,7 +388,7 @@ try {
                         :200
                     ]
             except json.JSONDecodeError:
-                pass
+                pass  # Non-JSON output from mermaid CLI; fall through to accept
 
         return True, ""
     except (subprocess.TimeoutExpired, OSError):
