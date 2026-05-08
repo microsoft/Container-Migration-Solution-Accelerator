@@ -78,6 +78,18 @@ jobs:
             --junitxml=pytest.xml \
             -v
 
+      - name: Strip file details from coverage XML
+        if: env.skip_backend_tests == 'false'
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('src/backend-api/reports/coverage.xml')
+          root = tree.getroot()
+          for packages in root.findall('packages'):
+              root.remove(packages)
+          tree.write('src/backend-api/reports/coverage.xml', xml_declaration=True)
+          "
+
       - name: Pytest Coverage Comment
         if: |
           always() &&
@@ -135,6 +147,18 @@ jobs:
             --cov-report=xml:reports/coverage.xml \
             --junitxml=pytest.xml \
             -v
+
+      - name: Strip file details from coverage XML
+        if: env.skip_processor_tests == 'false'
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('src/processor/reports/coverage.xml')
+          root = tree.getroot()
+          for packages in root.findall('packages'):
+              root.remove(packages)
+          tree.write('src/processor/reports/coverage.xml', xml_declaration=True)
+          "
 
       - name: Pytest Coverage Comment (Processor)
         if: |
