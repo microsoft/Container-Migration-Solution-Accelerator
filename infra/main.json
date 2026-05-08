@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.1.21952",
-      "templateHash": "1278209883407272359"
+      "version": "0.39.26.7824",
+      "templateHash": "10416093194621236912"
     }
   },
   "parameters": {
@@ -4715,8 +4715,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.1.21952",
-              "templateHash": "4488065934246762087"
+              "version": "0.39.26.7824",
+              "templateHash": "9098270296053650342"
             }
           },
           "definitions": {
@@ -26135,8 +26135,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "virtualNetwork"
       ]
     },
@@ -30103,8 +30103,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.1.21952",
-              "templateHash": "17526785557845507677"
+              "version": "0.39.26.7824",
+              "templateHash": "7473169155225322335"
             }
           },
           "definitions": {
@@ -30411,7 +30411,7 @@
               },
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'name'), guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].principalId, coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId))]",
               "properties": {
                 "roleDefinitionId": "[coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId]",
@@ -33853,9 +33853,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
@@ -33892,8 +33892,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.1.21952",
-              "templateHash": "8251376928798842081"
+              "version": "0.39.26.7824",
+              "templateHash": "13634050148372048883"
             }
           },
           "parameters": {
@@ -38361,6 +38361,9 @@
           },
           "location": {
             "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[shallowMerge(createArray(resourceGroup().tags, parameters('tags')))]"
           },
           "managedIdentities": {
             "value": {
