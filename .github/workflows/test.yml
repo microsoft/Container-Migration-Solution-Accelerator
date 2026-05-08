@@ -89,7 +89,6 @@ jobs:
           pytest-xml-coverage-path: src/backend-api/reports/coverage.xml
           junitxml-path: src/backend-api/pytest.xml
           report-only-changed-files: true
-          hide-report: true
 
       - name: Skip Backend Tests
         if: env.skip_backend_tests == 'true'
@@ -150,7 +149,6 @@ jobs:
           title: Processor Coverage Report
           unique-id-for-comment: processor
           report-only-changed-files: true
-          hide-report: true
 
       - name: Skip Processor Tests
         if: env.skip_processor_tests == 'true'
