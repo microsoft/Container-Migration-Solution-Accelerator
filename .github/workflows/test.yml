@@ -78,16 +78,19 @@ jobs:
             --junitxml=pytest.xml \
             -v
 
-      - name: Strip file details from coverage XML
+      - name: Generate coverage summary
         if: env.skip_backend_tests == 'false'
         run: |
           python -c "
           import xml.etree.ElementTree as ET
           tree = ET.parse('src/backend-api/reports/coverage.xml')
           root = tree.getroot()
-          for packages in root.findall('packages'):
-              root.remove(packages)
-          tree.write('src/backend-api/reports/coverage.xml', xml_declaration=True)
+          stmts = int(root.attrib.get('lines-valid', 0))
+          miss = stmts - int(root.attrib.get('lines-covered', 0))
+          cover = int(float(root.attrib.get('line-rate', 0)) * 100)
+          with open('src/backend-api/reports/coverage-summary.txt', 'w') as f:
+              f.write('Name     Stmts   Miss  Cover\n')
+              f.write(f'TOTAL    {stmts}    {miss}    {cover}%\n')
           "
 
       - name: Pytest Coverage Comment
@@ -98,9 +101,8 @@ jobs:
           env.skip_backend_tests == 'false'
         uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4  # v1.6.0
         with:
-          pytest-xml-coverage-path: src/backend-api/reports/coverage.xml
+          pytest-coverage-path: src/backend-api/reports/coverage-summary.txt
           junitxml-path: src/backend-api/pytest.xml
-          report-only-changed-files: true
 
       - name: Skip Backend Tests
         if: env.skip_backend_tests == 'true'
@@ -148,16 +150,19 @@ jobs:
             --junitxml=pytest.xml \
             -v
 
-      - name: Strip file details from coverage XML
+      - name: Generate coverage summary
         if: env.skip_processor_tests == 'false'
         run: |
           python -c "
           import xml.etree.ElementTree as ET
           tree = ET.parse('src/processor/reports/coverage.xml')
           root = tree.getroot()
-          for packages in root.findall('packages'):
-              root.remove(packages)
-          tree.write('src/processor/reports/coverage.xml', xml_declaration=True)
+          stmts = int(root.attrib.get('lines-valid', 0))
+          miss = stmts - int(root.attrib.get('lines-covered', 0))
+          cover = int(float(root.attrib.get('line-rate', 0)) * 100)
+          with open('src/processor/reports/coverage-summary.txt', 'w') as f:
+              f.write('Name     Stmts   Miss  Cover\n')
+              f.write(f'TOTAL    {stmts}    {miss}    {cover}%\n')
           "
 
       - name: Pytest Coverage Comment (Processor)
@@ -168,11 +173,10 @@ jobs:
           env.skip_processor_tests == 'false'
         uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4  # v1.6.0
         with:
-          pytest-xml-coverage-path: src/processor/reports/coverage.xml
+          pytest-coverage-path: src/processor/reports/coverage-summary.txt
           junitxml-path: src/processor/pytest.xml
           title: Processor Coverage Report
           unique-id-for-comment: processor
-          report-only-changed-files: true
 
       - name: Skip Processor Tests
         if: env.skip_processor_tests == 'true'
