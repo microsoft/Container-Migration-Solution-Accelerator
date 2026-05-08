@@ -9,10 +9,6 @@ declare global {
     startTranslating?: () => Promise<string | null>;
   }
 }
-import {
-  Button,
-  Tooltip,
-} from "@fluentui/react-components";
 import Content from "../components/Content/Content";
 import Header from "../components/Header/Header";
 import HeaderTools from "../components/Header/HeaderTools";
@@ -29,7 +25,6 @@ export const History = bundleIcon(HistoryFilled, HistoryRegular);
 
 export const LandingPage = (): JSX.Element => {
   const dispatch = useDispatch(); // Add dispatch hook
-  const batchHistoryRef = useRef<{ triggerDeleteAll: () => void } | null>(null);
   const isPanelOpen = useSelector((state: RootState) => state.historyPanel.isOpen);
   const navigate = useNavigate();
 
@@ -43,21 +38,13 @@ export const LandingPage = (): JSX.Element => {
     setUploadState(state);
   };
 
-  const handleCancelUploads = () => {
-    // This function will be called from BottomBar
-    if (window.cancelUploads) {
-      window.cancelUploads();
-    }
-    setUploadState('IDLE');
-  };
-
   const handleStartTranslating = async () => {
     console.log('Starting translation...');
 
     try {
       if (window.startTranslating) {
         // Get the batchId from startTranslating first
-        const resultBatchId = await window.startTranslating();
+        await window.startTranslating();
         navigate('/start');
       //   if (resultBatchId) {
       //     // Once processing is complete, navigate to the modern page

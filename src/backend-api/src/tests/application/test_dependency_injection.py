@@ -126,7 +126,7 @@ def test_factory_registration():
     app_context = AppContext()
 
     # Register with factory function
-    app_context.add_singleton(IDataService, lambda: InMemoryDataService())
+    app_context.add_singleton(IDataService, InMemoryDataService)
 
     data_service = app_context.get_service(IDataService)
     assert isinstance(data_service, InMemoryDataService)
