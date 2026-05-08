@@ -1126,6 +1126,10 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     tags: {
       ...resourceGroup().tags
       ...tags
+      TemplateName: 'Content Processing'
+      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+      CreatedBy: createdBy
+      DeploymentName: deployment().name
     }
     managedIdentities: { systemAssigned: true }
     appLogsConfiguration: enableMonitoring
