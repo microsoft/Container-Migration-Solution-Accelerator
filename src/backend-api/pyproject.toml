@@ -19,7 +19,7 @@ dependencies = [
     "python-multipart==0.0.26",
     "protobuf==7.34.0",
     "sas-cosmosdb==0.1.4",
-    "semantic-kernel[azure]==1.40.0",
+    "semantic-kernel==1.40.0",
     "uvicorn==0.35.0",
 ]
 

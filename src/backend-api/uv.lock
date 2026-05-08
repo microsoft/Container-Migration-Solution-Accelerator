@@ -189,7 +189,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "sas-cosmosdb" },
-    { name = "semantic-kernel", extra = ["azure"] },
+    { name = "semantic-kernel" },
     { name = "uvicorn" },
 ]
 
@@ -215,7 +215,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-multipart", specifier = "==0.0.26" },
     { name = "sas-cosmosdb", specifier = "==0.1.4" },
-    { name = "semantic-kernel", extras = ["azure"], specifier = "==1.40.0" },
+    { name = "semantic-kernel", specifier = "==1.40.0" },
     { name = "uvicorn", specifier = "==0.35.0" },
 ]
 
@@ -329,20 +329,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/72/52/3c1af9ed86582f09343f135d527ca26f0bf9659c01ccbddb650bbb952963/azure_ai_agents-1.2.0b3.tar.gz", hash = "sha256:440d7fca98c0b13654a57dcd159cdf64d1024f9baacd1a4354ce91a290d3741e", size = 362563, upload-time = "2025-08-22T22:41:58.609Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/a4/c916745e150b5e157688da9a7965d62efb82ad940f2991260d1d2b79fcf1/azure_ai_agents-1.2.0b3-py3-none-any.whl", hash = "sha256:fec3e92fac5de2c18dee2d4def734825c2a4880bee39b3c237a7ad8079bfa8a7", size = 208129, upload-time = "2025-08-22T22:42:00.249Z" },
-]
-
-[[package]]
-name = "azure-ai-inference"
-version = "1.0.0b9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "azure-core" },
-    { name = "isodate" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/6a/ed85592e5c64e08c291992f58b1a94dab6869f28fb0f40fd753dced73ba6/azure_ai_inference-1.0.0b9.tar.gz", hash = "sha256:1feb496bd84b01ee2691befc04358fa25d7c344d8288e99364438859ad7cd5a4", size = 182408, upload-time = "2025-02-15T00:37:28.464Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/0f/27520da74769db6e58327d96c98e7b9a07ce686dff582c9a5ec60b03f9dd/azure_ai_inference-1.0.0b9-py3-none-any.whl", hash = "sha256:49823732e674092dad83bb8b0d1b65aa73111fab924d61349eb2a8cdc0493990", size = 124885, upload-time = "2025-02-15T00:37:29.964Z" },
 ]
 
 [[package]]
@@ -467,20 +453,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0f/02/a4f6d50ee43a25680b46f82d985c0920c5f8422b0fb9b408efc484b498f8/azure_monitor_opentelemetry_exporter-1.0.0b45.tar.gz", hash = "sha256:b2d495b318710c521d6611cfb9cb4b36d990e3d613cf10ebdaa957099ddbe351", size = 277588, upload-time = "2025-11-13T23:12:01.461Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3a/05/4007d55d7fa88992bf70cdfdf9e7c4ec0734fd853c4c548da9fd36623892/azure_monitor_opentelemetry_exporter-1.0.0b45-py2.py3-none-any.whl", hash = "sha256:10d6363ac971fb4530511df464898fe69c0499e85841febad800572d1e8e8ec6", size = 200419, upload-time = "2025-11-13T23:12:02.7Z" },
-]
-
-[[package]]
-name = "azure-search-documents"
-version = "12.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "azure-core" },
-    { name = "isodate" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/59/dc/bb4db263381aa5b29414e280a8535a343d877a3831a501ef39332174c85c/azure_search_documents-12.0.0.tar.gz", hash = "sha256:8e6d73ec0ed1623083435b757e34324db65d72d4e09cca061a59fc7e90c8ddbc", size = 386222, upload-time = "2026-05-01T20:28:22.269Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/b1/4869a064dbb79fb4ecac684de51a8f8f7a93a315f3f9cc4bf8a65cc413cd/azure_search_documents-12.0.0-py3-none-any.whl", hash = "sha256:d88114e4179cd753845711042380a4571e7faa8619addf5e017928ebe37fc0d1", size = 352117, upload-time = "2026-05-01T20:28:23.989Z" },
 ]
 
 [[package]]
@@ -2842,7 +2814,7 @@ wheels = [
 
 [[package]]
 name = "requests"
-version = "2.33.1"
+version = "2.33.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -2850,9 +2822,9 @@ dependencies = [
     { name = "idna" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5f/a4/98b9c7c6428a668bf7e42ebb7c79d576a1c3c1e3ae2d47e674b468388871/requests-2.33.1.tar.gz", hash = "sha256:18817f8c57c6263968bc123d237e3b8b08ac046f5456bd1e307ee8f4250d3517", size = 134120, upload-time = "2026-03-30T16:09:15.531Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/64/8860370b167a9721e8956ae116825caff829224fbca0ca6e7bf8ddef8430/requests-2.33.0.tar.gz", hash = "sha256:c7ebc5e8b0f21837386ad0e1c8fe8b829fa5f544d8df3b2253bff14ef29d7652", size = 134232, upload-time = "2026-03-25T15:10:41.586Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/8e/7540e8a2036f79a125c1d2ebadf69ed7901608859186c856fa0388ef4197/requests-2.33.1-py3-none-any.whl", hash = "sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a", size = 64947, upload-time = "2026-03-30T16:09:13.83Z" },
+    { url = "https://files.pythonhosted.org/packages/56/5d/c814546c2333ceea4ba42262d8c4d55763003e767fa169adc693bd524478/requests-2.33.0-py3-none-any.whl", hash = "sha256:3324635456fa185245e24865e810cecec7b4caf933d7eb133dcde67d48cee69b", size = 65017, upload-time = "2026-03-25T15:10:40.382Z" },
 ]
 
 [[package]]
@@ -3211,14 +3183,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a4/c9/913f256a9dda89424b38f873b68dbdba4b0b1a8aeb8a36c8e276f1d0039a/semantic_kernel-1.40.0.tar.gz", hash = "sha256:4d514caaae4a9e3fe5a576bed78580d6411590fb8a4dadc7328318df4d4b7c61", size = 604683, upload-time = "2026-03-02T23:55:24.641Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/38/9847ea4dfe9abbd895d5ccd9dfc1b563abda8df12ce6240006e37bb82c12/semantic_kernel-1.40.0-py3-none-any.whl", hash = "sha256:cb2f366884efe59a80e5c5c3ae719cf13955d98f6ed24ca54913015b8a7ec24b", size = 916755, upload-time = "2026-03-02T23:55:21.166Z" },
-]
-
-[package.optional-dependencies]
-azure = [
-    { name = "azure-ai-inference" },
-    { name = "azure-core-tracing-opentelemetry" },
-    { name = "azure-cosmos" },
-    { name = "azure-search-documents" },
 ]
 
 [[package]]
