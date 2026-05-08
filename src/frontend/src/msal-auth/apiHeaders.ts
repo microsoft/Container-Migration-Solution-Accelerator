@@ -1,5 +1,4 @@
 // apiHeaders.ts - Utility for creating API headers with user info
-import { getMsalInstance } from './msalInstance';
 
 export interface ApiHeaders {
   'Authorization': string;

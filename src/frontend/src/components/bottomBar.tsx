@@ -1,5 +1,5 @@
 import { Button, Card, Dropdown, DropdownProps, Option } from "@fluentui/react-components"
-import React, { useState } from "react"
+import React from "react"
 import { useNavigate } from "react-router-dom"
 
 // Define possible upload states

@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "11219559543155133570"
+      "version": "0.43.1.21952",
+      "templateHash": "1278209883407272359"
     }
   },
   "parameters": {
@@ -61,31 +61,11 @@
         "description": "Required. Azure region for AI services (OpenAI/AI Foundry). Must be a region that supports gpt-5.1 model deployment."
       }
     },
-    "aiDeploymentLocation": {
-      "type": "string",
-      "defaultValue": "[parameters('azureAiServiceLocation')]",
-      "allowedValues": [
-        "australiaeast",
-        "eastus",
-        "eastus2",
-        "francecentral",
-        "japaneast",
-        "norwayeast",
-        "southindia",
-        "swedencentral",
-        "uksouth",
-        "westus",
-        "westus3"
-      ],
-      "metadata": {
-        "description": "Required. Azure region for AI model deployment. Should match azureAiServiceLocation for optimal performance."
-      }
-    },
-    "containerRegistryHost": {
+    "containerRegistryEndpoint": {
       "type": "string",
       "defaultValue": "containermigrationacr.azurecr.io",
       "metadata": {
-        "description": "Optional. The host (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry."
+        "description": "Optional. The endpoint (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry."
       }
     },
     "imageTag": {
@@ -95,7 +75,7 @@
         "description": "Optional. The image tag to use for container images. Defaults to \"latest_v2\"."
       }
     },
-    "aiDeploymentType": {
+    "deploymentType": {
       "type": "string",
       "defaultValue": "GlobalStandard",
       "allowedValues": [
@@ -107,7 +87,7 @@
         "description": "Optional. Model deployment type. Defaults to GlobalStandard."
       }
     },
-    "aiModelName": {
+    "gptModelName": {
       "type": "string",
       "defaultValue": "gpt-5.1",
       "minLength": 1,
@@ -115,7 +95,7 @@
         "description": "Optional. Name of the AI model to deploy. Recommend using gpt-5.1. Defaults to gpt-5.1."
       }
     },
-    "aiModelVersion": {
+    "gptModelVersion": {
       "type": "string",
       "defaultValue": "2025-11-13",
       "minLength": 1,
@@ -123,11 +103,11 @@
         "description": "Optional. Version of AI model. Review available version numbers per model before setting. Defaults to 2025-11-13."
       }
     },
-    "aiModelCapacity": {
+    "gptDeploymentCapacity": {
       "type": "int",
       "defaultValue": 500,
       "metadata": {
-        "description": "Optional. AI model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 50K tokens per minute to improve regional success rate."
+        "description": "Optional. GPT model deployment token capacity. Lower this if initial provisioning fails due to capacity. Defaults to 500K tokens per minute to improve regional success rate."
       }
     },
     "aiEmbeddingModelName": {
@@ -336,7 +316,7 @@
     "processCosmosContainerName": "processes",
     "agentTelemetryCosmosContainerName": "agent_telemetry",
     "processControlCosmosContainerName": "processcontrol",
-    "aiModelDeploymentName": "[parameters('aiModelName')]",
+    "aiModelDeploymentName": "[parameters('gptModelName')]",
     "useExistingAiFoundryAiProject": "[not(empty(parameters('existingFoundryProjectResourceId')))]",
     "aiFoundryAiServicesResourceGroupName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[4], format('rg-{0}', variables('solutionSuffix')))]",
     "aiFoundryAiServicesSubscriptionId": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[2], subscription().id)]",
@@ -346,8 +326,8 @@
     "aiServicesName": "[if(variables('useExistingAiFoundryAiProject'), variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiServicesResourceName'))]",
     "backendContainerPort": 80,
     "backendContainerAppName": "[take(format('ca-backend-api-{0}', variables('solutionSuffix')), 32)]",
-    "frontEndContainerAppName": "[take(format('ca-frontend-{0}', variables('solutionSuffix')), 32)]",
-    "processorContainerAppName": "[take(format('ca-processor-{0}', variables('solutionSuffix')), 32)]"
+    "processorContainerAppName": "[take(format('ca-processor-{0}', variables('solutionSuffix')), 32)]",
+    "frontEndContainerAppName": "[take(format('ca-frontend-{0}', variables('solutionSuffix')), 32)]"
   },
   "resources": {
     "existingLogAnalyticsWorkspace": {
@@ -4735,8 +4715,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "2245351167779444314"
+              "version": "0.43.1.21952",
+              "templateHash": "4488065934246762087"
             }
           },
           "definitions": {
@@ -30064,12 +30044,12 @@
                 "name": "[variables('aiModelDeploymentName')]",
                 "model": {
                   "format": "OpenAI",
-                  "name": "[parameters('aiModelName')]",
-                  "version": "[parameters('aiModelVersion')]"
+                  "name": "[parameters('gptModelName')]",
+                  "version": "[parameters('gptModelVersion')]"
                 },
                 "sku": {
-                  "name": "[parameters('aiDeploymentType')]",
-                  "capacity": "[parameters('aiModelCapacity')]"
+                  "name": "[parameters('deploymentType')]",
+                  "capacity": "[parameters('gptDeploymentCapacity')]"
                 }
               },
               {
@@ -30123,8 +30103,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16866311185741009453"
+              "version": "0.43.1.21952",
+              "templateHash": "17526785557845507677"
             }
           },
           "definitions": {
@@ -30489,12 +30469,12 @@
                 "name": "[variables('aiModelDeploymentName')]",
                 "model": {
                   "format": "OpenAI",
-                  "name": "[parameters('aiModelName')]",
-                  "version": "[parameters('aiModelVersion')]"
+                  "name": "[parameters('gptModelName')]",
+                  "version": "[parameters('gptModelVersion')]"
                 },
                 "sku": {
-                  "name": "[parameters('aiDeploymentType')]",
-                  "capacity": "[parameters('aiModelCapacity')]"
+                  "name": "[parameters('deploymentType')]",
+                  "capacity": "[parameters('gptDeploymentCapacity')]"
                 }
               },
               {
@@ -33873,9 +33853,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
@@ -33912,8 +33892,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16351752584270870112"
+              "version": "0.43.1.21952",
+              "templateHash": "8251376928798842081"
             }
           },
           "parameters": {
@@ -39317,8 +39297,8 @@
             "value": [
               {
                 "name": "backend-api",
-                "image": "[format('{0}/backend-api:{1}', parameters('containerRegistryHost'), parameters('imageTag'))]",
-                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value)), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
+                "image": "[format('{0}/backend-api:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
+                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'PROCESSOR_CONTROL_URL', 'value', format('https://{0}.internal.{1}', variables('processorContainerAppName'), reference('containerAppsEnvironment').outputs.defaultDomain.value))), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 1,
                   "memory": "2.0Gi"
@@ -40964,7 +40944,7 @@
             "value": [
               {
                 "name": "frontend",
-                "image": "[format('{0}/frontend:{1}', parameters('containerRegistryHost'), parameters('imageTag'))]",
+                "image": "[format('{0}/frontend:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
                 "env": [
                   {
                     "name": "API_URL",
@@ -42612,8 +42592,8 @@
             "value": [
               {
                 "name": "processor",
-                "image": "[format('{0}/processor:{1}', parameters('containerRegistryHost'), parameters('imageTag'))]",
-                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value)), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
+                "image": "[format('{0}/processor:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
+                "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'CONTROL_API_ENABLED', 'value', '1'), createObject('name', 'CONTROL_API_PORT', 'value', '8080')), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 2,
                   "memory": "4.0Gi"
@@ -42621,14 +42601,14 @@
               }
             ]
           },
-          "ingressTransport": {
-            "value": null
-          },
-          "disableIngress": {
-            "value": true
+          "ingressTargetPort": {
+            "value": 8080
           },
           "ingressExternal": {
             "value": false
+          },
+          "ingressAllowInsecure": {
+            "value": true
           },
           "scaleSettings": {
             "value": {
