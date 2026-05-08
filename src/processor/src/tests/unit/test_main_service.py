@@ -38,14 +38,13 @@ class TestServiceStatus:
         app = _make_app(queue_service=q)
         assert app.is_service_running() is True
 
-    def test_get_service_status_not_initialized(self):
+    @patch("main_service.asyncio")
+    def test_get_service_status_not_initialized(self, mock_asyncio):
+        mock_loop = MagicMock()
+        mock_loop.time.return_value = 1000.0
+        mock_asyncio.get_event_loop.return_value = mock_loop
         app = _make_app(queue_service=None)
-        # asyncio.get_event_loop() may not be available in all run contexts;
-        # ensure status is at least the not_initialized shape regardless.
-        try:
-            status = app.get_service_status()
-        except RuntimeError:
-            return
+        status = app.get_service_status()
         assert status["status"] == "not_initialized"
         assert status["running"] is False
         assert status["docker_health"] == "unhealthy"

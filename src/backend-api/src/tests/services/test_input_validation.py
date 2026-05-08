@@ -28,9 +28,6 @@ class TestIsValidUuid:
         assert is_valid_uuid(value) is False
 
     def test_returns_false_for_none(self):
-        # Passing a non-string raises inside UUID and is caught
+        # is_valid_uuid only catches ValueError; non-string input raises TypeError
         with pytest.raises(TypeError):
-            # Sanity check on the underlying behaviour
-            from uuid import UUID
-
-            UUID(None, version=4)
+            is_valid_uuid(None)

@@ -79,7 +79,7 @@ def test_load_env_file_loads_values(tmp_path, monkeypatch, clear_azure_env):
 
 
 def test_load_env_file_missing_path_is_ignored(clear_azure_env):
-    # Non-existent file path passes the os.path.exists check and is silently ignored
+    # Non-existent file path fails the os.path.exists check and is silently ignored
     s = AgentFrameworkSettings(env_file_path="/nope/does/not/exist.env")
     assert s.use_entra_id is True
 

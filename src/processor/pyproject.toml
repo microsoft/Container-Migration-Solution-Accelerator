@@ -54,5 +54,8 @@ indent-style = "space"
 testpaths = ["src/tests"]
 pythonpath = ["src"]
 
+[tool.coverage.run]
+omit = ["src/tests/*"]
+
 [tool.uv]
 prerelease = "allow"
