@@ -75,6 +75,7 @@ jobs:
             --cov=src/app \
             --cov-report=term-missing \
             --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=82 \
             --junitxml=pytest.xml \
             -v
 
@@ -149,6 +150,7 @@ jobs:
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=82 \
             --junitxml=pytest.xml \
             -v
 
