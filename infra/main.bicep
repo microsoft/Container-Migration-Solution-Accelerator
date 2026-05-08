@@ -1123,6 +1123,12 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
   params: {
     name: 'cae-${solutionSuffix}'
     location: location
+    tags: {
+      ...resourceGroup().tags
+      ...existingTags
+      ...allTags
+      ...tags
+    }
     managedIdentities: { systemAssigned: true }
     appLogsConfiguration: enableMonitoring
       ? {

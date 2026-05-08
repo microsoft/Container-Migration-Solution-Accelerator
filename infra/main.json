@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.1.21952",
-      "templateHash": "1278209883407272359"
+      "version": "0.43.8.12551",
+      "templateHash": "7630070384569998511"
     }
   },
   "parameters": {
@@ -4715,8 +4715,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.1.21952",
-              "templateHash": "4488065934246762087"
+              "version": "0.43.8.12551",
+              "templateHash": "4604761290796021104"
             }
           },
           "definitions": {
@@ -26135,8 +26135,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
         "virtualNetwork"
       ]
     },
@@ -30103,8 +30103,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.1.21952",
-              "templateHash": "17526785557845507677"
+              "version": "0.43.8.12551",
+              "templateHash": "13516349791985095953"
             }
           },
           "definitions": {
@@ -33853,9 +33853,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "virtualNetwork"
       ]
     },
@@ -33892,8 +33892,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.1.21952",
-              "templateHash": "8251376928798842081"
+              "version": "0.43.8.12551",
+              "templateHash": "17583277036649944863"
             }
           },
           "parameters": {
@@ -38361,6 +38361,9 @@
           },
           "location": {
             "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[shallowMerge(createArray(resourceGroup().tags, variables('existingTags'), variables('allTags'), parameters('tags')))]"
           },
           "managedIdentities": {
             "value": {
