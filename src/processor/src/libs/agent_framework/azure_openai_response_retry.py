@@ -654,7 +654,7 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
                     try:
                         await close()
                     except Exception:
-                        pass
+                        logger.debug("Best-effort close of response stream failed", exc_info=True)
 
                 # Progressive retry for context-length failures.
                 if (

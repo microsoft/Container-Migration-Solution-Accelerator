@@ -263,7 +263,11 @@ class QdrantMemoryStore:
             try:
                 await self._client.delete_collection(self.collection_name)
             except Exception:
-                pass
+                logger.debug(
+                    "Best-effort delete of collection %s failed",
+                    self.collection_name,
+                    exc_info=True,
+                )
             await self._client.close()
             self._client = None
         self._initialized = False

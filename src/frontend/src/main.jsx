@@ -25,7 +25,7 @@ const Main = () => {
     const initMsal = async () => {
       try {
         const response = await fetch('/config');
-        let config = defaultConfig;
+        let config;
         
         if (response.ok) {
           config = await response.json();

@@ -4,7 +4,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # Load environment variables from .env file
@@ -42,7 +42,6 @@ async def serve_index():
 async def get_config(request: Request):
     # Only serve config to same-origin requests by checking the Referer/Origin
     origin = request.headers.get("origin") or ""
-    referer = request.headers.get("referer") or ""
     host = request.headers.get("host") or ""
     if origin and not origin.endswith(host):
         return JSONResponse(status_code=403, content={"detail": "Forbidden"})
