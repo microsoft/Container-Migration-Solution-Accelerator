@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Type, TypeVar, overload
+from typing import Any, Type, TypeVar, overload
 
 from pydantic import BaseModel, Field
 from semantic_kernel.agents import (
@@ -81,7 +81,7 @@ class SKLogicBase(ABC, SKBaseModel):
         """
         raise NotImplementedError("This method should be overridden in subclasses")
 
-    async def execute(self, func_params: dict[str, any]):
+    async def execute(self, func_params: dict[str, Any]):
         raise NotImplementedError("Execute method not implemented")
 
     @overload
