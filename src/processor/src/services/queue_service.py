@@ -1119,8 +1119,6 @@ class QueueMigrationService:
                     execution_time,
                     task_param=task_param,
                 )
-            finally:
-                migration_processor = None  # noqa: F841 — release reference for GC
 
         except asyncio.CancelledError:
             # When cancelled, we assume stop_process has already deleted the message
