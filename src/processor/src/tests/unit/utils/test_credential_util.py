@@ -134,8 +134,12 @@ class TestBearerTokenProviders:
 
 class TestValidateAzureAuthentication:
     def test_local_environment_recommendations(self):
-        cred = MagicMock()
-        cred.__class__.__name__ = "AzureCliCredential"
+        # Use a real dummy class so __class__.__name__ is set naturally,
+        # without mutating MagicMock's class name globally (which leaks across tests).
+        class AzureCliCredential:
+            pass
+
+        cred = AzureCliCredential()
         with patch.object(credential_util, "get_azure_credential", return_value=cred):
             info = credential_util.validate_azure_authentication()
             assert info["environment"] == "local_development"

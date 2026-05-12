@@ -1,6 +1,7 @@
 """Tests for libs/base/kernel_agent.py."""
 
 import importlib
+import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -8,9 +9,14 @@ import pytest
 from pydantic import BaseModel, ValidationError
 from semantic_kernel.exceptions.service_exceptions import ServiceInitializationError
 
-# The source module imports SKBaseModel from libs.base.SKBase, but that module
-# is empty in the repository. Inject a minimal stand-in before importing
-# kernel_agent so tests can exercise the file without touching source.
+# `libs/base/SKBase.py` is currently empty in the repository, but
+# `libs/base/kernel_agent.py` (and the orphaned `SKLogicBase.py`) import
+# `SKBaseModel` from it. Neither file is imported by production code, so the
+# missing symbol does not surface at runtime today. To exercise `kernel_agent`
+# in isolation we inject a minimal stand-in into the namespace before the
+# module is imported. This intentionally does NOT modify any production source
+# file (out of scope for this PR); it is a test-only shim with idempotent
+# `hasattr` guard, so it is a no-op once `SKBase` defines `SKBaseModel` for real.
 import libs.base.SKBase as _skbase_mod  # noqa: E402
 
 if not hasattr(_skbase_mod, "SKBaseModel"):
@@ -19,6 +25,10 @@ if not hasattr(_skbase_mod, "SKBaseModel"):
         model_config = {"arbitrary_types_allowed": True}
 
     _skbase_mod.SKBaseModel = _SKBaseModelStub  # type: ignore[attr-defined]
+    # Drop any previously-cached import of kernel_agent so its `from
+    # libs.base.SKBase import SKBaseModel` line picks up the stub on first
+    # import below.
+    sys.modules.pop("libs.base.kernel_agent", None)
 
 importlib.import_module("libs.base.kernel_agent")  # noqa: E402
 
