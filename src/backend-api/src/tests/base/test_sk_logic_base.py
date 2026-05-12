@@ -60,6 +60,7 @@ def teardown_module(module):  # noqa: D401 - pytest hook
     else:
         _skbase_mod.SKBaseModel = _ORIGINAL_SKBASEMODEL  # type: ignore[attr-defined]
 
+
 # Ensure libs.base.kernel_agent has been imported (creates real
 # semantic_kernel_agent symbol used by the stub below).
 import libs.base.kernel_agent as _kernel_agent_mod  # noqa: E402
