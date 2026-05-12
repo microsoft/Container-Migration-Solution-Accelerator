@@ -204,9 +204,7 @@ const BatchStoryPage = () => {
   };
 
   // Helper function to format content based on file type
-  const formatContent = (content: string, fileName: string) => {
-    const { language } = getFileLanguageAndType(fileName);
-
+  const formatContent = (content: string, _fileName: string) => {
     // Return content as-is for all file types.
     return content;
   };
