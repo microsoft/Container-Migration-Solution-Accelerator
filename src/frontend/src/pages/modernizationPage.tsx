@@ -36,7 +36,6 @@ import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import PanelRightToggles from "../components/Header/PanelRightToggles";
 import { filesLogsBuilder, BatchSummary, completedFiles, filesErrorCounter, hasFiles, renderFileError, fileErrorCounter, renderErrorContent, filesFinalErrorCounter, fileWarningCounter } from "../api/utils";
-import { format } from "sql-formatter";
 
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
 
@@ -977,7 +976,7 @@ useEffect(() => {
                     backgroundColor: tokens.colorNeutralBackground1,
                   }}
                 >
-                  {format(selectedFile.translatedCode, { language: "tsql" })}
+                  {selectedFile.translatedCode}
                 </SyntaxHighlighter>
               ) : selectedFile.status === "completed" && !selectedFile.translatedCode && !selectedFile.errorCount ? (
                 <div style={{ padding: "20px", textAlign: "center" }}>

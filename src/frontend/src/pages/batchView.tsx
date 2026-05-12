@@ -40,7 +40,6 @@ import BatchHistoryPanel from "../components/batchHistoryPanel";
 import ConfirmationDialog from "../commonComponents/ConfirmationDialog/confirmationDialogue";
 import { determineFileStatus, filesLogsBuilder, renderErrorSection, useStyles, renderFileError, filesErrorCounter, completedFiles, hasFiles, fileErrorCounter, BatchSummary, fileWarningCounter } from "../api/utils";
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
-import { format } from "sql-formatter";
 
 
 SyntaxHighlighter.registerLanguage("sql", sql)
@@ -208,17 +207,7 @@ const BatchStoryPage = () => {
   const formatContent = (content: string, fileName: string) => {
     const { language } = getFileLanguageAndType(fileName);
 
-    // Only apply SQL formatting for SQL files
-    if (language === 'sql') {
-      try {
-        return format(content, { language: "tsql" });
-      } catch (error) {
-        console.warn("SQL formatting failed, returning original content:", error);
-        return content;
-      }
-    }
-
-    // Return content as-is for YAML and Markdown files
+    // Return content as-is for all file types.
     return content;
   };
 
