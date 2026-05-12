@@ -33,10 +33,32 @@ class _SKBaseModelStub(BaseModel):
     }
 
 
+# Save whatever was on ``SKBase.SKBaseModel`` before this module ran so we can
+# restore it in ``teardown_module`` and avoid leaking our extra-allow stub
+# into subsequent test modules. A sentinel distinguishes "attribute was
+# missing" from "attribute was None".
+_MISSING = object()
+_ORIGINAL_SKBASEMODEL = getattr(_skbase_mod, "SKBaseModel", _MISSING)
+
 # Always force-set our stub so it overrides whatever a previously-loaded
 # test module installed (e.g. test_kernel_agent.py uses a stricter stub
 # without ``extra="allow"`` which prevents SKLogicBase from being constructed).
 _skbase_mod.SKBaseModel = _SKBaseModelStub  # type: ignore[attr-defined]
+
+
+def teardown_module(module):  # noqa: D401 - pytest hook
+    """Restore the original ``SKBaseModel`` attribute on ``libs.base.SKBase``.
+
+    This keeps test ordering deterministic: any test module that imports
+    ``SKBaseModel`` after us sees the original value (or absence) rather than
+    our extra-allow stub. The SUT (``libs.base.SKLogicBase``) is unaffected
+    because it captured the stub at its own import time.
+    """
+    if _ORIGINAL_SKBASEMODEL is _MISSING:
+        if hasattr(_skbase_mod, "SKBaseModel"):
+            delattr(_skbase_mod, "SKBaseModel")
+    else:
+        _skbase_mod.SKBaseModel = _ORIGINAL_SKBASEMODEL  # type: ignore[attr-defined]
 
 # Ensure libs.base.kernel_agent has been imported (creates real
 # semantic_kernel_agent symbol used by the stub below).

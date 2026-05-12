@@ -39,10 +39,11 @@ class TestWorkflowExecutorFailedException:
         assert WorkflowExecutorFailedException._details_to_dict(d) == d
 
     def test_details_to_dict_with_pydantic_v2_object(self):
-        obj = MagicMock()
-        obj.model_dump = MagicMock(return_value={"executor_id": "v2"})
-        del obj.dict  # ensure we don't fall through to vars()
-        result = WorkflowExecutorFailedException._details_to_dict(obj)
+        class V2Like:
+            def model_dump(self):
+                return {"executor_id": "v2"}
+
+        result = WorkflowExecutorFailedException._details_to_dict(V2Like())
         assert result == {"executor_id": "v2"}
 
     def test_details_to_dict_with_pydantic_v1_object(self):
