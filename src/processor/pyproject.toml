@@ -56,3 +56,7 @@ pythonpath = ["src"]
 
 [tool.uv]
 prerelease = "allow"
+override-dependencies = [
+    "urllib3>=2.7.0",
+    "authlib>=1.7.1",
+]
