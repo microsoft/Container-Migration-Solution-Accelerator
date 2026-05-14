@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "13964591020760549631"
+      "version": "0.43.8.12551",
+      "templateHash": "13087590133917597872"
     }
   },
   "parameters": {
@@ -4715,8 +4715,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "2245351167779444314"
+              "version": "0.43.8.12551",
+              "templateHash": "4604761290796021104"
             }
           },
           "definitions": {
@@ -30103,8 +30103,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16866311185741009453"
+              "version": "0.43.8.12551",
+              "templateHash": "13516349791985095953"
             }
           },
           "definitions": {
@@ -33853,9 +33853,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "virtualNetwork"
       ]
     },
@@ -33892,8 +33892,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16351752584270870112"
+              "version": "0.43.8.12551",
+              "templateHash": "17583277036649944863"
             }
           },
           "parameters": {
