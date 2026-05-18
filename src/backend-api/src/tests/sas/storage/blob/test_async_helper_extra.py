@@ -81,13 +81,16 @@ def _wire_credential(svc_cls, *, account_key=None, account_name="myacct",
                      credential_cls_name="DefaultAzureCredential"):
     svc = _wire(svc_cls)
     svc.account_name = account_name
+    # Use a dedicated stub class per credential type so that ``type(cred).__name__``
+    # reflects the desired credential class without mutating the shared ``MagicMock``
+    # class metadata (which would leak across tests and make order-dependent failures).
     if credential_cls_name == "AccountKey":
-        cred = MagicMock()
+        cred_cls = type("StorageSharedKeyCredential", (), {})
+        cred = cred_cls()
         cred.account_key = account_key
-        type(cred).__name__ = "StorageSharedKeyCredential"
     else:
-        cred = MagicMock(spec=[])
-        type(cred).__name__ = credential_cls_name
+        cred_cls = type(credential_cls_name, (), {})
+        cred = cred_cls()
     svc.credential = cred
     return svc
 

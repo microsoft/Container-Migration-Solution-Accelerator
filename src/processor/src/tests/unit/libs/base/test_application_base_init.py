@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -71,7 +70,7 @@ class TestApplicationBaseInit:
         env_file = tmp_path / ".env"
         env_file.write_text("X=1")
         _App = _build_concrete()
-        app = _App(env_file_path=str(env_file))
+        _App(env_file_path=str(env_file))
         patches_chain["ac_helper"].assert_called_once()
         # The helper instance had its method invoked
         helper_instance = patches_chain["ac_helper"].return_value

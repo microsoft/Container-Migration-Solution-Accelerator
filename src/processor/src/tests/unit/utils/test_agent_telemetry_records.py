@@ -8,8 +8,6 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 import utils.agent_telemetry as at
 from utils.agent_telemetry import ProcessStatus, TelemetryManager
 
