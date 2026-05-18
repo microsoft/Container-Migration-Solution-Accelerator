@@ -363,6 +363,10 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     tags: allTags
     zone: 0
+    // SFI: enable system-assigned managed identity on the jumpbox VM. Required so
+    // the Azure Monitor Agent can authenticate to the Log Analytics workspace and
+    // honor the SecurityAuditEvents data collection rule association. (ADO #43311)
+    managedIdentities: { systemAssigned: true }
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
@@ -600,6 +604,8 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
     location: cosmosLocation
     tags: allTags
     enableTelemetry: enableTelemetry
+    // SFI: enable system-assigned managed identity for Cosmos DB account (ADO #43311)
+    managedIdentities: { systemAssigned: true }
     sqlDatabases: [
       {
         name: cosmosDatabaseName
