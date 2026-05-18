@@ -480,6 +480,8 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     location: solutionLocation
     managedIdentities: { systemAssigned: true }
     minimumTlsVersion: 'TLS1_2'
+    // SFI: enable infrastructure (double) encryption at rest (ADO #43311)
+    requireInfrastructureEncryption: true
     enableTelemetry: enableTelemetry
     tags: allTags
     accessTier: 'Hot'
