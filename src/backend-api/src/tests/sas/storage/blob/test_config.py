@@ -1,12 +1,9 @@
 """Tests for libs/sas/storage/blob/config.py."""
 
-import pytest
-
 from libs.sas.storage.blob import config as blob_config_module
 from libs.sas.storage.blob.config import (
     BlobHelperConfig,
     create_config,
-    default_config,
     get_config,
     set_config,
 )

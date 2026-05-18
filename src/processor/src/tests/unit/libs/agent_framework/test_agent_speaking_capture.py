@@ -2,9 +2,8 @@
 # Licensed under the MIT License.
 
 import asyncio
-from datetime import datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from libs.agent_framework.agent_speaking_capture import AgentSpeakingCaptureMiddleware
 

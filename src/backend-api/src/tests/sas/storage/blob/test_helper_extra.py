@@ -66,16 +66,21 @@ class TestDeleteContainerForceErrorBranches:
 
 def _wire_credential(blob_service_mock, *, account_key=None, account_name="myacct",
                      credential_cls_name="DefaultAzureCredential"):
-    """Make the helper's blob_service_client respond like an Azure SDK client."""
+    """Make the helper's blob_service_client respond like an Azure SDK client.
+
+    Uses a dedicated stub class per credential type so that ``type(cred).__name__``
+    reflects the desired credential class without mutating the shared ``MagicMock``
+    class metadata (which would leak across tests).
+    """
     h = _make_helper(blob_service_mock)
     h.blob_service_client.account_name = account_name
     if credential_cls_name == "AccountKey":
-        cred = MagicMock()
+        cred_cls = type("StorageSharedKeyCredential", (), {})
+        cred = cred_cls()
         cred.account_key = account_key
-        type(cred).__name__ = "StorageSharedKeyCredential"
     else:
-        cred = MagicMock(spec=[])
-        type(cred).__name__ = credential_cls_name
+        cred_cls = type(credential_cls_name, (), {})
+        cred = cred_cls()
     h.blob_service_client.credential = cred
     return h
 
