@@ -1102,6 +1102,11 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     ]
     enableTelemetry: enableTelemetry
     publicNetworkAccess: 'Enabled' // Always enabled for Container Apps Environment
+    // SFI: enable mTLS / end-to-end encryption between revisions within the
+    // Container Apps environment (Container Apps equivalent of App Service's
+    // endToEndEncryptionEnabled). Applies to Microsoft.App/managedEnvironments
+    // peerTrafficConfiguration.encryption.enabled. (ADO #43311)
+    peerTrafficEncryption: true
 
     // <========== WAF related parameters
 
