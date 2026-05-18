@@ -391,6 +391,94 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
       }
     ]
     enableTelemetry: enableTelemetry
+    // SFI: associate the SecurityAuditEvents data collection rule with the
+    // jumpbox VM via the Azure Monitor Agent extension. Routes Windows audit
+    // success (4624) / audit failure (4625) events to Log Analytics. Disabled
+    // when monitoring is off because the DCR is also gated on enableMonitoring.
+    // (ADO #43311)
+    extensionMonitoringAgentConfig: enableMonitoring
+      ? {
+          enabled: true
+          tags: allTags
+          dataCollectionRuleAssociations: [
+            {
+              name: 'send-${logAnalyticsWorkspaceResourceName}'
+              dataCollectionRuleResourceId: windowsVmDataCollectionRules!.outputs.resourceId
+            }
+          ]
+        }
+      : null
+  }
+}
+
+// SFI: install the Azure Monitor "Security" solution on the Log Analytics
+// workspace so that the Microsoft-SecurityEvent stream produced by the data
+// collection rule below populates the SecurityEvent table. Same gate as the
+// DCR. (ADO #43311)
+resource securitySolution 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = if (enablePrivateNetworking && enableMonitoring) {
+  name: 'Security(${logAnalyticsWorkspaceResourceName})'
+  location: solutionLocation
+  plan: {
+    name: 'Security(${logAnalyticsWorkspaceResourceName})'
+    publisher: 'Microsoft'
+    product: 'OMSGallery/Security'
+    promotionCode: ''
+  }
+  properties: {
+    workspaceResourceId: logAnalyticsWorkspaceResourceId
+  }
+}
+
+// SFI: data collection rule that captures Windows Security audit success
+// (EventID 4624) and audit failure (EventID 4625) events from the jumpbox VM
+// and routes them to Log Analytics via the Microsoft-SecurityEvent stream.
+// (ADO #43311)
+var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
+var dataCollectionRulesLocation = useExistingLogAnalytics
+  ? existingLogAnalyticsWorkspace!.location
+  : logAnalyticsWorkspace!.outputs.location
+module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (enablePrivateNetworking && enableMonitoring) {
+  name: take('avm.res.insights.data-collection-rule.${dataCollectionRulesResourceName}', 64)
+  dependsOn: [securitySolution]
+  params: {
+    name: dataCollectionRulesResourceName
+    tags: allTags
+    enableTelemetry: enableTelemetry
+    location: dataCollectionRulesLocation
+    dataCollectionRuleProperties: {
+      kind: 'Windows'
+      dataSources: {
+        windowsEventLogs: [
+          {
+            name: 'SecurityAuditEvents'
+            streams: [
+              'Microsoft-SecurityEvent'
+            ]
+            xPathQueries: [
+              'Security!*[System[(EventID=4624 or EventID=4625)]]'
+            ]
+          }
+        ]
+      }
+      destinations: {
+        logAnalytics: [
+          {
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+            name: 'la-${dataCollectionRulesResourceName}'
+          }
+        ]
+      }
+      dataFlows: [
+        {
+          streams: [
+            'Microsoft-SecurityEvent'
+          ]
+          destinations: [
+            'la-${dataCollectionRulesResourceName}'
+          ]
+        }
+      ]
+    }
   }
 }
 
