@@ -996,7 +996,9 @@ useEffect(() => {
         );
       }
       // Otherwise, show the progress view with summary information
-      const fileIndex = files.findIndex(file => file.fileId === fileId);
+      // selectedFileId/fileId is the internal UI id (e.g. "summary"/"file0"),
+      // so match against file.id rather than the server-side file.fileId.
+      const fileIndex = files.findIndex(file => file.id === fileId);
       const currentFile = files[fileIndex];
       return (
         <>

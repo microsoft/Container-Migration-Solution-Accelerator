@@ -9,6 +9,8 @@ on:
       - 'src/backend-api/**/*.py'
       - 'src/backend-api/pyproject.toml'
       - 'src/backend-api/pytest.ini'
+      - 'src/processor/**/*.py'
+      - 'src/processor/pyproject.toml'
       - '.github/workflows/test.yml'
   pull_request:
     types:
@@ -23,6 +25,8 @@ on:
       - 'src/backend-api/**/*.py'
       - 'src/backend-api/pyproject.toml'
       - 'src/backend-api/pytest.ini'
+      - 'src/processor/**/*.py'
+      - 'src/processor/pyproject.toml'
       - '.github/workflows/test.yml'
 
 permissions:
@@ -48,7 +52,7 @@ jobs:
           python -m pip install --upgrade pip
           cd src/backend-api
           pip install -e .
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov pytest-asyncio
 
       - name: Check if Backend Test Files Exist
         id: check_backend_tests
@@ -71,8 +75,25 @@ jobs:
             --cov=src/app \
             --cov-report=term-missing \
             --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=82 \
             --junitxml=pytest.xml \
             -v
+
+      - name: Prefix coverage XML filenames with repo-root path
+        if: env.skip_backend_tests == 'false'
+        run: |
+          python <<'PY'
+          import xml.etree.ElementTree as ET
+          path = "src/backend-api/reports/coverage.xml"
+          prefix = "src/backend-api/src/app/"
+          tree = ET.parse(path)
+          root = tree.getroot()
+          for cls in root.iter("class"):
+              fname = cls.attrib.get("filename", "")
+              if fname and not fname.startswith(prefix):
+                  cls.attrib["filename"] = prefix + fname
+          tree.write(path, xml_declaration=True, encoding="utf-8")
+          PY
 
       - name: Pytest Coverage Comment
         if: |
@@ -90,3 +111,80 @@ jobs:
         if: env.skip_backend_tests == 'true'
         run: |
           echo "Skipping backend tests because no test files were found."
+
+  processor_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Processor Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd src/processor
+          pip install -e .
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Check if Processor Test Files Exist
+        id: check_processor_tests
+        run: |
+          if [ -z "$(find src/processor/src/tests -type f -name 'test_*.py' 2>/dev/null)" ]; then
+            echo "No processor test files found, skipping processor tests."
+            echo "skip_processor_tests=true" >> $GITHUB_ENV
+          else
+            echo "Processor test files found, running tests."
+            echo "skip_processor_tests=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run Processor Tests with Coverage
+        if: env.skip_processor_tests == 'false'
+        run: |
+          cd src/processor
+          pytest src/tests \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=82 \
+            --junitxml=pytest.xml \
+            -v
+
+      - name: Prefix coverage XML filenames with repo-root path
+        if: env.skip_processor_tests == 'false'
+        run: |
+          python <<'PY'
+          import xml.etree.ElementTree as ET
+          path = "src/processor/reports/coverage.xml"
+          prefix = "src/processor/src/"
+          tree = ET.parse(path)
+          root = tree.getroot()
+          for cls in root.iter("class"):
+              fname = cls.attrib.get("filename", "")
+              if fname and not fname.startswith(prefix):
+                  cls.attrib["filename"] = prefix + fname
+          tree.write(path, xml_declaration=True, encoding="utf-8")
+          PY
+
+      - name: Pytest Coverage Comment (Processor)
+        if: |
+          always() &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.fork == false &&
+          env.skip_processor_tests == 'false'
+        uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4  # v1.6.0
+        with:
+          pytest-xml-coverage-path: src/processor/reports/coverage.xml
+          junitxml-path: src/processor/pytest.xml
+          title: Processor Coverage Report
+          unique-id-for-comment: processor
+          report-only-changed-files: true
+
+      - name: Skip Processor Tests
+        if: env.skip_processor_tests == 'true'
+        run: |
+          echo "Skipping processor tests because no test files were found."

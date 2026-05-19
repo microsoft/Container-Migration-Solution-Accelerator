@@ -55,6 +55,9 @@
       },
       "vmSize": {
         "value": "${AZURE_ENV_VM_SIZE}"
+      },
+      "tags": {
+       "value": "${AZURE_ENV_TAGS}"
       }
     }
 }
