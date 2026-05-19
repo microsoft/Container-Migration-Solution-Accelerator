@@ -2,11 +2,8 @@
 # Licensed under the MIT License.
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-from libs.agent_framework import cosmos_checkpoint_storage as ccs
 from libs.agent_framework.cosmos_checkpoint_storage import (
     CosmosCheckpointStorage,
     CosmosWorkflowCheckpoint,

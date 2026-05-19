@@ -1,7 +1,5 @@
 """Tests for libs/sas/storage/shared_config.py."""
 
-import pytest
-
 from libs.sas.storage import shared_config as shared_config_module
 from libs.sas.storage.shared_config import (
     StorageConfig,

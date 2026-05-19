@@ -4,9 +4,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from steps.migration_processor import (
     MigrationProcessor,
