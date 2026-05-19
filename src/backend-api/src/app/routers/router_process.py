@@ -951,6 +951,7 @@ async def cancel_process(
             "CancelProcessError",
             {
                 "process_id": process_id,
+                "error": str(e),
                 "error_type": "TimeoutException",
             },
         )
@@ -965,6 +966,7 @@ async def cancel_process(
             "CancelProcessError",
             {
                 "process_id": process_id,
+                "error": str(e),
                 "error_type": "ConnectError",
             },
         )
@@ -1074,7 +1076,7 @@ async def get_cancel_status(
         logger_service.log_error(f"Timeout connecting to processor control API")
         track_event_if_configured(
             "GetCancelStatusError",
-            {"process_id": process_id, "error_type": "TimeoutException"},
+            {"process_id": process_id, "error": str(e), "error_type": "TimeoutException"},
         )
         _record_exception_on_span(e)
         raise HTTPException(
@@ -1085,7 +1087,7 @@ async def get_cancel_status(
         logger_service.log_error(f"Failed to connect to processor control API")
         track_event_if_configured(
             "GetCancelStatusError",
-            {"process_id": process_id, "error_type": "ConnectError"},
+            {"process_id": process_id, "error": str(e), "error_type": "ConnectError"},
         )
         _record_exception_on_span(e)
         raise HTTPException(
