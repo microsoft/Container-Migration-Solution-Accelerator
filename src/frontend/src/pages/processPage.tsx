@@ -132,7 +132,7 @@ const ProcessPage: React.FC = () => {
     details: '',
   });
 
-  // Helper function to clean phase name- removes "PHASE X - " prefix
+  // Helper function to clean phase name - removes "PHASE X - " prefix
   const cleanPhaseName = (phase: string): string => {
     if (!phase) return "";
     // Remove "PHASE X - " prefix (e.g., "PHASE 3 - SOURCE PLATFORM REVIEW" -> "SOURCE PLATFORM REVIEW")

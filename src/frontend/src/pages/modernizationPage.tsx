@@ -26,7 +26,11 @@ import {
   ArrowDownload24Regular,
 } from "@fluentui/react-icons"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
+import sqlLang from "highlight.js/lib/languages/sql"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
+
+const unwrapHljs = (mod: any) => (typeof mod === "function" ? mod : mod.default);
+SyntaxHighlighter.registerLanguage("sql", unwrapHljs(sqlLang))
 import { useNavigate, useParams } from "react-router-dom"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { getApiUrl, headerBuilder } from '../api/config';

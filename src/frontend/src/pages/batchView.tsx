@@ -28,6 +28,7 @@ import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import yamlLang from "highlight.js/lib/languages/yaml"
 import markdownLang from "highlight.js/lib/languages/markdown"
 import jsonLang from "highlight.js/lib/languages/json"
+import sqlLang from "highlight.js/lib/languages/sql"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -45,6 +46,7 @@ const unwrap = (mod: any) => (typeof mod === "function" ? mod : mod.default);
 SyntaxHighlighter.registerLanguage("yaml", unwrap(yamlLang))
 SyntaxHighlighter.registerLanguage("markdown", unwrap(markdownLang))
 SyntaxHighlighter.registerLanguage("json", unwrap(jsonLang))
+SyntaxHighlighter.registerLanguage("sql", unwrap(sqlLang))
 
 
 

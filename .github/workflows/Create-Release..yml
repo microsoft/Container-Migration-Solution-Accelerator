@@ -15,8 +15,6 @@ jobs:
      steps:
        - name: Checkout
          uses: actions/checkout@v6
-         with:
-           ref: ${{ github.event.workflow_run.head_sha }}
  
        - uses: codfish/semantic-release-action@v5
          id: semantic
