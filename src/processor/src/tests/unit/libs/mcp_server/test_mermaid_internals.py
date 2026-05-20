@@ -5,10 +5,7 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from libs.mcp_server.mermaid import mcp_mermaid as mod
 from libs.mcp_server.mermaid.mcp_mermaid import (
