@@ -10,8 +10,6 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from services.queue_service import QueueMigrationService, QueueServiceConfig
 from steps.analysis.models.step_param import Analysis_TaskParam
 
@@ -714,7 +712,6 @@ class TestCleanupBlobsSync:
 
     def test_output_cleanup_refuses_broad_prefix(self):
         s = _service()
-        tp = _task_param()
         # Force output_file_folder to broad path matching "<pid>"
         tp = Analysis_TaskParam(
             process_id="p1",
@@ -783,9 +780,6 @@ class TestStartService:
         s.is_running = False
         s._ensure_queues_exist = AsyncMock()
         s._control_watcher_loop = AsyncMock()
-
-        async def _no_op_worker(self_, worker_id):
-            return None
 
         # Patch worker loop to immediate return
         s._worker_loop = lambda wid: asyncio.sleep(0)  # type: ignore[assignment]

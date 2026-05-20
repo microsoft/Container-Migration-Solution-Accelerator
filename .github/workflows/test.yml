@@ -8,9 +8,11 @@ on:
     paths:
       - 'src/backend-api/**/*.py'
       - 'src/backend-api/pyproject.toml'
+      - 'src/backend-api/uv.lock'
       - 'src/backend-api/pytest.ini'
       - 'src/processor/**/*.py'
       - 'src/processor/pyproject.toml'
+      - 'src/processor/uv.lock'
       - '.github/workflows/test.yml'
   pull_request:
     types:
@@ -24,9 +26,11 @@ on:
     paths:
       - 'src/backend-api/**/*.py'
       - 'src/backend-api/pyproject.toml'
+      - 'src/backend-api/uv.lock'
       - 'src/backend-api/pytest.ini'
       - 'src/processor/**/*.py'
       - 'src/processor/pyproject.toml'
+      - 'src/processor/uv.lock'
       - '.github/workflows/test.yml'
 
 permissions:
