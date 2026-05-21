@@ -370,14 +370,13 @@ class MigrationProcessor:
                     )
                 elif event.type == "output":
                     # WorkflowEvent carries the step output (success or hard-termination).
+                    # Normalize executor_id once to avoid None in telemetry/reporting.
+                    executor_id = event.executor_id or "unknown"
                     # Note: a None payload is an error that must be surfaced clearly.
                     if event.data is None:
-                        report_collector.set_current_step(
-                            event.executor_id or "unknown"
-                        )
+                        report_collector.set_current_step(executor_id)
 
                         # Build a meaningful error message instead of generic "Workflow output is None"
-                        executor_id = event.executor_id or "unknown"
                         error_msg = f"Step '{executor_id}' completed without producing output. This may be caused by context length overflow, agent timeout, or an internal orchestration error. Check processor logs for '[AOAI_CTX_TRIM_STREAM]' or exception details."
 
                         report_collector.record_failure(
@@ -398,13 +397,13 @@ class MigrationProcessor:
 
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
-                            failed_step=event.executor_id or "unknown",
+                            failed_step=executor_id,
                             error_message=error_msg,
                             failure_details=failure_details,
                             execution_time_seconds=(
                                 time.perf_counter()
-                                - step_start_perf[event.executor_id]
-                                if event.executor_id in step_start_perf
+                                - step_start_perf[executor_id]
+                                if executor_id in step_start_perf
                                 else None
                             ),
                         )
@@ -414,7 +413,7 @@ class MigrationProcessor:
 
                         # Raise a rich exception so the queue worker reports a meaningful reason.
                         raise WorkflowExecutorFailedException({
-                            "executor_id": event.executor_id or "unknown",
+                            "executor_id": executor_id,
                             "error_type": "WorkflowOutputMissing",
                             "message": error_msg,
                             "traceback": None,
@@ -467,16 +466,14 @@ class MigrationProcessor:
                                 "error": f"security evidence scan failed: {type(e).__name__}: {e}",
                             }
 
-                        report_collector.set_current_step(
-                            event.executor_id or "unknown"
-                        )
+                        report_collector.set_current_step(executor_id)
                         report_collector.record_failure(
                             exception=ValueError(
                                 getattr(event.data, "reason", None)
-                                or f"Hard terminated in {event.executor_id} step"
+                                or f"Hard terminated in {executor_id} step"
                             ),
                             custom_message=getattr(event.data, "reason", None)
-                            or f"Hard terminated in {event.executor_id} step",
+                            or f"Hard terminated in {executor_id} step",
                         )
 
                         failure_details: Any = (
@@ -501,14 +498,14 @@ class MigrationProcessor:
 
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
-                            failed_step=event.executor_id or "unknown",
+                            failed_step=executor_id,
                             error_message=getattr(event.data, "reason", None)
-                            or f"Hard terminated in {event.executor_id} step",
+                            or f"Hard terminated in {executor_id} step",
                             failure_details=failure_details,
                             execution_time_seconds=(
                                 time.perf_counter()
-                                - step_start_perf[event.executor_id]
-                                if event.executor_id in step_start_perf
+                                - step_start_perf[executor_id]
+                                if executor_id in step_start_perf
                                 else None
                             ),
                         )
@@ -524,21 +521,21 @@ class MigrationProcessor:
                     logger.info("Workflow output (%s): %s", event.origin.value, event.data)
                     await telemetry.record_step_result(
                         process_id=input_data.process_id,
-                        step_name=event.executor_id,
+                        step_name=executor_id,
                         step_result=event.data,
                         execution_time_seconds=(
                             time.perf_counter()
-                            - step_start_perf[event.executor_id]
-                            if event.executor_id in step_start_perf
+                            - step_start_perf[executor_id]
+                            if executor_id in step_start_perf
                             else None
                         ),
                     )
 
-                    if event.executor_id in step_start_perf:
+                    if executor_id in step_start_perf:
                         report_collector.mark_step_completed(
-                            event.executor_id,
+                            executor_id,
                             execution_time=time.perf_counter()
-                            - step_start_perf[event.executor_id],
+                            - step_start_perf[executor_id],
                         )
 
                     try:
