@@ -14,6 +14,8 @@ ROLE_ASSISTANT = "assistant"
 
 
 class Message:
+    """Test stub for Message - the real Message in 1.3.0 uses contents= instead of text=."""
+
     def __init__(self, *, role, text=None, contents=None, author_name=None):
         self.role = role
         self.text = text
@@ -21,8 +23,10 @@ class Message:
         self.author_name = author_name
 
 
+# Patch at module level: middleware code references Message at runtime for isinstance
+# checks and construction. This is scoped to test execution only.
 middlewares_module.Message = Message
-from libs.agent_framework.middlewares import (
+from libs.agent_framework.middlewares import (  # noqa: E402
     DebuggingMiddleware,
     LoggingFunctionMiddleware,
 )
