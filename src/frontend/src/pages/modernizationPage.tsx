@@ -29,7 +29,7 @@ import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import sql from "react-syntax-highlighter/dist/cjs/languages/hljs/sql"
 import { useNavigate, useParams } from "react-router-dom"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect } from "react"
 import { getApiUrl, headerBuilder } from '../api/config';
 import BatchHistoryPanel from "../components/batchHistoryPanel"
 import PanelRight from "../components/Panels/PanelRight";
@@ -412,25 +412,6 @@ const fetchBatchSummary = async (batchId: string): Promise<any> => {
   }
 };
 
-
-enum ProcessingStage {
-  NotStarted = 1,
-  Queued = 10,
-  Starting = 20,
-  Parsing = 40,
-  Processing = 60,
-  FinalChecks = 95,
-  Completed = 100
-}
-
-enum Agents {
-  Verifier = "Semantic Verifier agent",
-  Checker = "Syntax Checker agent",
-  Picker = "Picker agent",
-  Migrator = "Migrator agent",
-  Agents = "Agent"
-}
-
 const getPrintFileStatus = (status: string): string => {
   switch (status) {
     case "completed":
@@ -481,7 +462,7 @@ const ModernizationPage = () => {
         const selectedFile = files.find((f) => f.id === selectedFileId);
         if (!selectedFile || !selectedFile.translatedCode) {
           setFileLoading(true);
-          const newFileUpdate = await fetchFileFromAPI(selectedFile?.fileId || "");
+          const _newFileUpdate = await fetchFileFromAPI(selectedFile?.fileId || "");
           setFileLoading(false);
         }
 

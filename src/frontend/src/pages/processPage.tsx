@@ -3,10 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { RootState } from "../store/store";
 import { togglePanel, closePanel } from "../slices/historyPanelSlice";
-import {
-  Button,
-  Tooltip,
-} from "@fluentui/react-components";
 import { MessageBar, MessageBarType } from "@fluentui/react";
 import Header from "../components/Header/Header";
 import HeaderTools from "../components/Header/HeaderTools";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
 import { useDispatch, useSelector } from 'react-redux';
 import { Card, Spinner, Tooltip } from "@fluentui/react-components";

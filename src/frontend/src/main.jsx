@@ -106,22 +106,6 @@ const Main = () => {
 
     initMsal(); // Call the async function inside useEffect
   }, []);
-  async function checkConnection() {
-    if (!config) return;
-
-    const baseURL = config.API_URL.replace(/\/api$/, ''); // Remove '/api' if it appears at the end
-    console.log('Checking connection to:', baseURL);
-    try {
-      const response = await fetch(`${baseURL}/health`);
-      if (response.ok) {
-        console.log('========> Backend connection successful');
-      } else {
-        console.log('========> Backend responded with error status:', response.status);
-      }
-    } catch (error) {
-      console.log('========> Backend not available (this is okay for frontend-only testing):', error.message);
-    }
-  }
 
   // useEffect(() => {
   //   if (config) {

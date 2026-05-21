@@ -271,10 +271,6 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                       const actionsMatch = raw.match(/📊\s*(\d+)\s*actions?/);
                       const actionCount = actionsMatch ? parseInt(actionsMatch[1]) : 0;
 
-                      // Extract blocking info from 🚧 segment
-                      const blockingMatch = raw.match(/🚧\s*Blocking\s*(\d+)/);
-                      const blockingCount = blockingMatch ? parseInt(blockingMatch[1]) : 0;
-
                       // Special handling for Coordinator: parse routing info from message
                       let coordinatorTarget = '';
                       let coordinatorInstruction = '';
