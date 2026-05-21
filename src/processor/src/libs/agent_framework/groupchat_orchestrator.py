@@ -30,7 +30,7 @@ from agent_framework import (
     SupportsAgentRun,
     Workflow,
     WorkflowBuilder as GroupChatBuilder,
-    WorkflowEvent as WorkflowOutputEvent,
+    WorkflowEvent,
 )
 from mem0 import AsyncMemory
 from pydantic import BaseModel, ValidationError
@@ -527,7 +527,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     # If the Coordinator requested finish=true, stop immediately.
                     if self._termination_requested:
                         break
-                elif isinstance(event, WorkflowOutputEvent):
+                elif isinstance(event, WorkflowEvent) and getattr(event, "type", None) == "output":
                     # Complete last agent's response before finishing
                     if self._last_executor_id and self._current_agent_response:
                         await self._complete_agent_response(

@@ -180,12 +180,11 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     .with_max_tokens(20_000)
                 )
                 # Prevent context window overflow by summarizing older tool results.
-                if ToolResultCompactionStrategy is not None:
-                    builder = builder.with_kwargs(
-                        compaction_strategy=ToolResultCompactionStrategy(
-                            keep_last_tool_call_groups=2
-                        )
+                builder = builder.with_kwargs(
+                    compaction_strategy=ToolResultCompactionStrategy(
+                        keep_last_tool_call_groups=2
                     )
+                )
 
             if agent_info.agent_name == "Coordinator":
                 # Routing-only: keep deterministic. Needs enough tokens for long instructions.
