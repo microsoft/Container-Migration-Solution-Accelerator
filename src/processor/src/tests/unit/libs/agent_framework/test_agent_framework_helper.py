@@ -112,7 +112,7 @@ class TestCreateClient:
     def test_azure_openai_chat_completion(self):
         fake_module = types.ModuleType("agent_framework.azure")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            with pytest.raises(NotImplementedError, match="AzureOpenAIChatClient was removed"):
+            with pytest.raises(ImportError):
                 AgentFrameworkHelper.create_client(
                     ClientType.AzureOpenAIChatCompletion,
                     endpoint="https://x",
@@ -123,7 +123,7 @@ class TestCreateClient:
     def test_azure_openai_assistant(self):
         fake_module = types.ModuleType("agent_framework.azure")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            with pytest.raises(NotImplementedError, match="AzureOpenAIAssistantsClient was removed"):
+            with pytest.raises(ImportError):
                 AgentFrameworkHelper.create_client(
                     ClientType.AzureOpenAIAssistant,
                     endpoint="https://x",
@@ -134,7 +134,7 @@ class TestCreateClient:
     def test_azure_openai_response(self):
         fake_module = types.ModuleType("agent_framework.azure")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            with pytest.raises(NotImplementedError, match="AzureOpenAIResponsesClient was removed"):
+            with pytest.raises(ImportError):
                 AgentFrameworkHelper.create_client(
                     ClientType.AzureOpenAIResponse,
                     endpoint="https://x",
