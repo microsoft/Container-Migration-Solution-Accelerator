@@ -62,9 +62,11 @@ def test_analysis_executor_sends_message_on_soft_completion(monkeypatch):
                     ),
                 )
 
-        # Avoid huge ASCII art in test output.
+        # Avoid huge ASCII art in test output (text2art may not be imported in this module).
         monkeypatch.setattr(
-            "steps.analysis.workflow.analysis_executor.text2art", lambda _s: "ART"
+            "steps.analysis.workflow.analysis_executor.text2art",
+            lambda _s: "ART",
+            raising=False,
         )
         monkeypatch.setattr(
             "steps.analysis.workflow.analysis_executor.AnalysisOrchestrator",
@@ -115,7 +117,9 @@ def test_analysis_executor_yields_output_on_hard_termination(monkeypatch):
                 )
 
         monkeypatch.setattr(
-            "steps.analysis.workflow.analysis_executor.text2art", lambda _s: "ART"
+            "steps.analysis.workflow.analysis_executor.text2art",
+            lambda _s: "ART",
+            raising=False,
         )
         monkeypatch.setattr(
             "steps.analysis.workflow.analysis_executor.AnalysisOrchestrator",
