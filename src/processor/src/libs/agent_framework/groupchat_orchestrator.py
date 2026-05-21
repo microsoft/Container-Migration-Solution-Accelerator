@@ -21,30 +21,17 @@ from dataclasses import asdict, dataclass, is_dataclass
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Generic, Mapping, Sequence, TypeVar
 
-try:
-    from agent_framework import (
-        Agent,
-        AgentResponseUpdate,
-        Executor,
-        Message,
-        Role,
-        SupportsAgentRun,
-        Workflow,
-        WorkflowBuilder as GroupChatBuilder,
-        WorkflowEvent as WorkflowOutputEvent,
-    )
-except ImportError:
-    from agent_framework import (
-        AgentProtocol as SupportsAgentRun,
-        AgentRunUpdateEvent as AgentResponseUpdate,
-        ChatAgent as Agent,
-        ChatMessage as Message,
-        Executor,
-        GroupChatBuilder,
-        Role,
-        Workflow,
-        WorkflowOutputEvent,
-    )
+from agent_framework import (
+    Agent,
+    AgentResponseUpdate,
+    Executor,
+    Message,
+    Role,
+    SupportsAgentRun,
+    Workflow,
+    WorkflowBuilder as GroupChatBuilder,
+    WorkflowEvent as WorkflowOutputEvent,
+)
 from mem0 import AsyncMemory
 from pydantic import BaseModel, ValidationError
 

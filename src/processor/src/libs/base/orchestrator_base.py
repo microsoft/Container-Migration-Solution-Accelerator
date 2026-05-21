@@ -9,15 +9,7 @@ import re
 from abc import abstractmethod
 from typing import Any, Callable, Generic, MutableMapping, Sequence, TypeVar
 
-try:
-    from agent_framework import Agent, FunctionTool, ToolResultCompactionStrategy
-except ImportError:
-    from agent_framework import ChatAgent as Agent, ToolProtocol as FunctionTool
-
-    try:
-        from agent_framework import ToolResultCompactionStrategy
-    except ImportError:
-        ToolResultCompactionStrategy = None  # type: ignore[assignment,misc]
+from agent_framework import Agent, FunctionTool, ToolResultCompactionStrategy
 
 from libs.agent_framework.agent_builder import AgentBuilder
 from libs.agent_framework.agent_framework_helper import ClientType

@@ -12,14 +12,13 @@ import random
 from dataclasses import dataclass
 from typing import Any, AsyncIterable, MutableSequence
 
-try:
-    from agent_framework.azure import AzureOpenAIResponsesClient
-except ImportError:
-    class AzureOpenAIResponsesClient:
-        def __init__(self, *args: Any, **kwargs: Any):
-            raise NotImplementedError(
-                "AzureOpenAIResponsesClient was removed from agent_framework.azure in 1.3.0."
-            )
+# agent_framework 1.3.0 removed AzureOpenAIResponsesClient from agent_framework.azure.
+# Keep this stub so legacy code paths fail explicitly if invoked.
+class AzureOpenAIResponsesClient:
+    def __init__(self, *args: Any, **kwargs: Any):
+        raise NotImplementedError(
+            "AzureOpenAIResponsesClient was removed from agent_framework.azure in 1.3.0."
+        )
 from tenacity import (
     AsyncRetrying,
     retry_if_exception,

@@ -5,10 +5,7 @@
 
 from typing import Any, Callable, MutableMapping, Sequence
 
-try:
-    from agent_framework import FunctionTool
-except ImportError:
-    from agent_framework import ToolProtocol as FunctionTool
+from agent_framework import FunctionTool
 from jinja2 import Template
 from openai import BaseModel
 from pydantic import Field

@@ -6,10 +6,7 @@
 from datetime import datetime
 from typing import Any, Callable, Optional
 
-try:
-    from agent_framework import AgentContext, AgentMiddleware
-except ImportError:
-    from agent_framework import AgentMiddleware, AgentRunContext as AgentContext
+from agent_framework import AgentContext, AgentMiddleware
 
 
 class AgentSpeakingCaptureMiddleware(AgentMiddleware):

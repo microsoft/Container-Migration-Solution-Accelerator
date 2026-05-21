@@ -6,26 +6,15 @@
 from collections.abc import Callable, MutableMapping, Sequence
 from typing import Any, Literal
 
-try:
-    from agent_framework import (
-        Agent,
-        AgentMiddleware,
-        BaseChatClient,
-        ChatMiddleware,
-        ContextProvider,
-        FunctionTool,
-        ToolMode,
-    )
-except ImportError:
-    from agent_framework import (
-        AgentMiddleware,
-        BaseChatClient,
-        ChatAgent as Agent,
-        ChatMiddleware,
-        ContextProvider,
-        ToolMode,
-        ToolProtocol as FunctionTool,
-    )
+from agent_framework import (
+    Agent,
+    AgentMiddleware,
+    BaseChatClient,
+    ChatMiddleware,
+    ContextProvider,
+    FunctionTool,
+    ToolMode,
+)
 from pydantic import BaseModel
 
 from libs.agent_framework.agent_info import AgentInfo

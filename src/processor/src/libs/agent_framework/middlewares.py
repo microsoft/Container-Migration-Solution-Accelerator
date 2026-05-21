@@ -6,28 +6,16 @@
 import time
 from collections.abc import Awaitable, Callable
 
-try:
-    from agent_framework import (
-        AgentContext,
-        AgentMiddleware,
-        ChatContext,
-        ChatMiddleware,
-        FunctionInvocationContext,
-        FunctionMiddleware,
-        Message,
-        Role,
-    )
-except ImportError:
-    from agent_framework import (
-        AgentMiddleware,
-        AgentRunContext as AgentContext,
-        ChatContext,
-        ChatMessage as Message,
-        ChatMiddleware,
-        FunctionInvocationContext,
-        FunctionMiddleware,
-        Role,
-    )
+from agent_framework import (
+    AgentContext,
+    AgentMiddleware,
+    ChatContext,
+    ChatMiddleware,
+    FunctionInvocationContext,
+    FunctionMiddleware,
+    Message,
+    Role,
+)
 
 
 ROLE_USER = getattr(Role, "USER", "user")

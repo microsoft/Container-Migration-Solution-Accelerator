@@ -18,17 +18,13 @@ import logging
 from collections.abc import MutableSequence, Sequence
 from typing import TYPE_CHECKING
 
-try:
-    from agent_framework import Context, ContextProvider, Message
-except ImportError:
-    try:
-        from agent_framework import ContextProvider, Message
-    except ImportError:
-        from agent_framework import ChatMessage as Message, ContextProvider
+from agent_framework import ContextProvider, Message
 
-    class Context:
-        def __init__(self, instructions: str | None = None, **kwargs):
-            self.instructions = instructions
+
+class Context:
+    def __init__(self, instructions: str | None = None, **kwargs):
+        self.instructions = instructions
+
 
 if TYPE_CHECKING:
     from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
