@@ -366,12 +366,7 @@ class AgentFrameworkHelper:
                 "OpenAIResponsesClient is not implemented in this context."
             )
         elif client_type == ClientType.AzureOpenAIChatCompletion:
-            try:
-                from agent_framework.azure import AzureOpenAIChatClient
-            except ImportError as exc:
-                raise NotImplementedError(
-                    "ClientType.AzureOpenAIChatCompletion is not supported in agent-framework 1.3.0; AzureOpenAIChatClient was removed."
-                ) from exc
+            from agent_framework.azure import AzureOpenAIChatClient
 
             return AzureOpenAIChatClient(
                 api_key=api_key,
@@ -390,12 +385,7 @@ class AgentFrameworkHelper:
                 instruction_role=instruction_role,
             )
         elif client_type == ClientType.AzureOpenAIAssistant:
-            try:
-                from agent_framework.azure import AzureOpenAIAssistantsClient
-            except ImportError as exc:
-                raise NotImplementedError(
-                    "ClientType.AzureOpenAIAssistant is not supported in agent-framework 1.3.0; AzureOpenAIAssistantsClient was removed."
-                ) from exc
+            from agent_framework.azure import AzureOpenAIAssistantsClient
 
             return AzureOpenAIAssistantsClient(
                 deployment_name=deployment_name,
@@ -416,12 +406,7 @@ class AgentFrameworkHelper:
                 env_file_encoding=env_file_encoding,
             )
         elif client_type == ClientType.AzureOpenAIResponse:
-            try:
-                from agent_framework.azure import AzureOpenAIResponsesClient
-            except ImportError as exc:
-                raise NotImplementedError(
-                    "ClientType.AzureOpenAIResponse is not supported in agent-framework 1.3.0; AzureOpenAIResponsesClient was removed."
-                ) from exc
+            from agent_framework.azure import AzureOpenAIResponsesClient
 
             return AzureOpenAIResponsesClient(
                 api_key=api_key,
