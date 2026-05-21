@@ -411,27 +411,11 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
   }
 }
 
-// SFI: install the Azure Monitor "Security" solution on the Log Analytics
-// workspace so that the Microsoft-SecurityEvent stream produced by the data
-// collection rule below populates the SecurityEvent table. Same gate as the
-// DCR. (ADO #43311)
-resource securitySolution 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = if (enablePrivateNetworking && enableMonitoring) {
-  name: 'Security(${logAnalyticsWorkspaceResourceName})'
-  location: solutionLocation
-  plan: {
-    name: 'Security(${logAnalyticsWorkspaceResourceName})'
-    publisher: 'Microsoft'
-    product: 'OMSGallery/Security'
-    promotionCode: ''
-  }
-  properties: {
-    workspaceResourceId: logAnalyticsWorkspaceResourceId
-  }
-}
-
 // SFI: data collection rule that captures Windows Security audit success
 // (EventID 4624) and audit failure (EventID 4625) events from the jumpbox VM
 // and routes them to Log Analytics via the Microsoft-SecurityEvent stream.
+// The SecurityEvent table is auto-provisioned by Azure Monitor on first
+// ingestion via the DCR; no legacy OMSGallery/Security solution is needed.
 // (ADO #43311)
 var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
 var dataCollectionRulesLocation = useExistingLogAnalytics
@@ -439,7 +423,6 @@ var dataCollectionRulesLocation = useExistingLogAnalytics
   : logAnalyticsWorkspace!.outputs.location
 module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (enablePrivateNetworking && enableMonitoring) {
   name: take('avm.res.insights.data-collection-rule.${dataCollectionRulesResourceName}', 64)
-  dependsOn: [securitySolution]
   params: {
     name: dataCollectionRulesResourceName
     tags: allTags

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "1101835156356663285"
+      "templateHash": "1952959724829141031"
     }
   },
   "parameters": {
@@ -347,25 +347,6 @@
       "properties": {
         "tags": "[union(variables('existingTags'), parameters('tags'), createObject('TemplateName', 'Container Migration', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', variables('deployerIdentityName')))]"
       }
-    },
-    "securitySolution": {
-      "condition": "[and(parameters('enablePrivateNetworking'), parameters('enableMonitoring'))]",
-      "type": "Microsoft.OperationsManagement/solutions",
-      "apiVersion": "2015-11-01-preview",
-      "name": "[format('Security({0})', variables('logAnalyticsWorkspaceResourceName'))]",
-      "location": "[variables('solutionLocation')]",
-      "plan": {
-        "name": "[format('Security({0})', variables('logAnalyticsWorkspaceResourceName'))]",
-        "publisher": "Microsoft",
-        "product": "OMSGallery/Security",
-        "promotionCode": ""
-      },
-      "properties": {
-        "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), reference('logAnalyticsWorkspace').outputs.resourceId.value)]"
-      },
-      "dependsOn": [
-        "logAnalyticsWorkspace"
-      ]
     },
     "existingAiFoundryAiServices": {
       "condition": "[variables('useExistingAiFoundryAiProject')]",
@@ -18457,8 +18438,7 @@
       },
       "dependsOn": [
         "existingLogAnalyticsWorkspace",
-        "logAnalyticsWorkspace",
-        "securitySolution"
+        "logAnalyticsWorkspace"
       ]
     },
     "avmPrivateDnsZones": {
@@ -27430,8 +27410,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
@@ -35154,8 +35134,8 @@
       "dependsOn": [
         "aiFoundryAiServices",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
