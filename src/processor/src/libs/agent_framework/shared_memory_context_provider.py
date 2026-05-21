@@ -18,7 +18,17 @@ import logging
 from collections.abc import MutableSequence, Sequence
 from typing import TYPE_CHECKING
 
-from agent_framework import ChatMessage, Context, ContextProvider
+try:
+    from agent_framework import Context, ContextProvider, Message
+except ImportError:
+    try:
+        from agent_framework import ContextProvider, Message
+    except ImportError:
+        from agent_framework import ChatMessage as Message, ContextProvider
+
+    class Context:
+        def __init__(self, instructions: str | None = None, **kwargs):
+            self.instructions = instructions
 
 if TYPE_CHECKING:
     from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
@@ -48,6 +58,11 @@ class SharedMemoryContextProvider(ContextProvider):
     - invoked(): only stores the LAST response per agent per step (avoids
       redundant embedding calls for intermediate turns)
     """
+
+    DEFAULT_CONTEXT_PROMPT = (
+        "The following are relevant memories from previous migration steps. "
+        "Use them as context to inform your current task:"
+    )
 
     def __init__(
         self,
@@ -87,7 +102,7 @@ class SharedMemoryContextProvider(ContextProvider):
 
     async def invoking(
         self,
-        messages: ChatMessage | MutableSequence[ChatMessage],
+        messages: Message | MutableSequence[Message],
         **kwargs,
     ) -> Context:
         """Called before the agent's LLM call. Injects relevant shared memories.
@@ -140,8 +155,8 @@ class SharedMemoryContextProvider(ContextProvider):
 
     async def invoked(
         self,
-        request_messages: ChatMessage | Sequence[ChatMessage],
-        response_messages: ChatMessage | Sequence[ChatMessage] | None = None,
+        request_messages: Message | Sequence[Message],
+        response_messages: Message | Sequence[Message] | None = None,
         invoke_exception: Exception | None = None,
         **kwargs,
     ) -> None:
@@ -249,7 +264,7 @@ class SharedMemoryContextProvider(ContextProvider):
             )
 
     def _extract_query(
-        self, messages: ChatMessage | MutableSequence[ChatMessage]
+        self, messages: Message | MutableSequence[Message]
     ) -> str:
         """Extract a search query from the input messages.
 
@@ -292,8 +307,8 @@ class SharedMemoryContextProvider(ContextProvider):
         return "\n".join(lines)
 
     @staticmethod
-    def _get_text(message: ChatMessage) -> str:
-        """Extract text content from a ChatMessage."""
+    def _get_text(message: Message) -> str:
+        """Extract text content from a Message."""
         if hasattr(message, "text") and message.text:
             return message.text
         if hasattr(message, "content"):
@@ -302,7 +317,7 @@ class SharedMemoryContextProvider(ContextProvider):
 
     @staticmethod
     def _extract_text(
-        messages: ChatMessage | Sequence[ChatMessage],
+        messages: Message | Sequence[Message],
     ) -> str:
         """Extract text content from response message(s)."""
         if not isinstance(messages, (list, Sequence)) or isinstance(messages, str):

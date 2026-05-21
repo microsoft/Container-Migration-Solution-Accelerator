@@ -7,8 +7,21 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from agent_framework import ChatMessage, Role
+import libs.agent_framework.middlewares as middlewares_module
 
+ROLE_USER = "user"
+ROLE_ASSISTANT = "assistant"
+
+
+class Message:
+    def __init__(self, *, role, text=None, contents=None, author_name=None):
+        self.role = role
+        self.text = text
+        self.contents = contents
+        self.author_name = author_name
+
+
+middlewares_module.Message = Message
 from libs.agent_framework.middlewares import (
     DebuggingMiddleware,
     LoggingFunctionMiddleware,
@@ -86,8 +99,8 @@ class TestInputObserverMiddleware:
     def test_replaces_user_messages_when_replacement_set(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg_user = ChatMessage(role=Role.USER, text="orig user")
-        msg_assistant = ChatMessage(role=Role.ASSISTANT, text="hi")
+        msg_user = Message(role=ROLE_USER, text="orig user")
+        msg_assistant = Message(role=ROLE_ASSISTANT, text="hi")
         ctx = MagicMock()
         ctx.messages = [msg_user, msg_assistant]
         next_fn = AsyncMock()
@@ -101,7 +114,7 @@ class TestInputObserverMiddleware:
     def test_no_replacement_keeps_text(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg = ChatMessage(role=Role.USER, text="keep me")
+        msg = Message(role=ROLE_USER, text="keep me")
         ctx = MagicMock()
         ctx.messages = [msg]
         mw = InputObserverMiddleware(replacement=None)

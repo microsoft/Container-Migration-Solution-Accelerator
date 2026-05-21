@@ -200,7 +200,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = "==24.1.0" },
-    { name = "azure-ai-agents", specifier = "==1.2.0b3" },
+    { name = "azure-ai-agents", specifier = "==1.2.0b6" },
     { name = "azure-appconfiguration", specifier = "==1.7.1" },
     { name = "azure-identity", specifier = "==1.25.0" },
     { name = "azure-monitor-opentelemetry", specifier = "==1.7.0" },
@@ -311,16 +311,16 @@ wheels = [
 
 [[package]]
 name = "azure-ai-agents"
-version = "1.2.0b3"
+version = "1.2.0b6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
     { name = "isodate" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/72/52/3c1af9ed86582f09343f135d527ca26f0bf9659c01ccbddb650bbb952963/azure_ai_agents-1.2.0b3.tar.gz", hash = "sha256:440d7fca98c0b13654a57dcd159cdf64d1024f9baacd1a4354ce91a290d3741e", size = 362563, upload-time = "2025-08-22T22:41:58.609Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/32/f4e534dc05dfb714705df56a190d690c5452cd4dd7e936612cb1adddc44f/azure_ai_agents-1.2.0b6.tar.gz", hash = "sha256:d3c10848c3b19dec98a292f8c10cee4ba4aac1050d4faabf9c2e2456b727f528", size = 396865, upload-time = "2025-10-24T18:04:47.877Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/a4/c916745e150b5e157688da9a7965d62efb82ad940f2991260d1d2b79fcf1/azure_ai_agents-1.2.0b3-py3-none-any.whl", hash = "sha256:fec3e92fac5de2c18dee2d4def734825c2a4880bee39b3c237a7ad8079bfa8a7", size = 208129, upload-time = "2025-08-22T22:42:00.249Z" },
+    { url = "https://files.pythonhosted.org/packages/96/d0/930c522f5fa9da163de057e57f8b44539424e13f46618c52624ebc712293/azure_ai_agents-1.2.0b6-py3-none-any.whl", hash = "sha256:ce23ad8fb9791118905be1ec8eae5c907cca2e536a455f1d3b830062c72cf2a7", size = 217950, upload-time = "2025-10-24T18:04:49.72Z" },
 ]
 
 [[package]]

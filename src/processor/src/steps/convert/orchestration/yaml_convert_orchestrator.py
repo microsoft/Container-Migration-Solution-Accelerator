@@ -13,11 +13,14 @@ import re
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
-from agent_framework import (
-    MCPStdioTool,
-    MCPStreamableHTTPTool,
-    ToolProtocol,
-)
+try:
+    from agent_framework import FunctionTool, MCPStdioTool, MCPStreamableHTTPTool
+except ImportError:
+    from agent_framework import (
+        MCPStdioTool,
+        MCPStreamableHTTPTool,
+        ToolProtocol as FunctionTool,
+    )
 
 from libs.agent_framework.agent_info import AgentInfo
 from libs.agent_framework.groupchat_orchestrator import (
@@ -107,10 +110,10 @@ class YamlConvertOrchestrator(
     async def prepare_mcp_tools(
         self,
     ) -> (
-        ToolProtocol
+        FunctionTool
         | Callable[..., Any]
         | MutableMapping[str, Any]
-        | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+        | Sequence[FunctionTool | Callable[..., Any] | MutableMapping[str, Any]]
     ):
         """Create and return the MCP tools used by conversion agents."""
         ms_doc_mcp_tool = MCPStreamableHTTPTool(

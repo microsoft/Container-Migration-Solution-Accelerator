@@ -110,45 +110,41 @@ class TestCreateClient:
         assert mock_cls.call_args.kwargs["ad_token_provider"] == "default-token"
 
     def test_azure_openai_chat_completion(self):
-        # Patch the lazily imported module
         fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureOpenAIChatClient = MagicMock(return_value="chat_client")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
-                ClientType.AzureOpenAIChatCompletion,
-                endpoint="https://x",
-                deployment_name="gpt-4",
-                ad_token_provider="t",
-            )
-        assert client == "chat_client"
+            with pytest.raises(NotImplementedError, match="AzureOpenAIChatClient was removed"):
+                AgentFrameworkHelper.create_client(
+                    ClientType.AzureOpenAIChatCompletion,
+                    endpoint="https://x",
+                    deployment_name="gpt-4",
+                    ad_token_provider="t",
+                )
 
     def test_azure_openai_assistant(self):
         fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureOpenAIAssistantsClient = MagicMock(return_value="asst_client")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
-                ClientType.AzureOpenAIAssistant,
-                endpoint="https://x",
-                deployment_name="gpt-4",
-                ad_token_provider="t",
-            )
-        assert client == "asst_client"
+            with pytest.raises(NotImplementedError, match="AzureOpenAIAssistantsClient was removed"):
+                AgentFrameworkHelper.create_client(
+                    ClientType.AzureOpenAIAssistant,
+                    endpoint="https://x",
+                    deployment_name="gpt-4",
+                    ad_token_provider="t",
+                )
 
     def test_azure_openai_response(self):
         fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureOpenAIResponsesClient = MagicMock(return_value="resp_client")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
-                ClientType.AzureOpenAIResponse,
-                endpoint="https://x",
-                deployment_name="gpt-4",
-                ad_token_provider="t",
-            )
-        assert client == "resp_client"
+            with pytest.raises(NotImplementedError, match="AzureOpenAIResponsesClient was removed"):
+                AgentFrameworkHelper.create_client(
+                    ClientType.AzureOpenAIResponse,
+                    endpoint="https://x",
+                    deployment_name="gpt-4",
+                    ad_token_provider="t",
+                )
 
     def test_azure_openai_agent(self):
         fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureAIAgentClient = MagicMock(return_value="agent_client")
+        fake_module.DurableAIAgentClient = MagicMock(return_value="agent_client")
         with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
             client = AgentFrameworkHelper.create_client(
                 ClientType.AzureOpenAIAgent,

@@ -5,7 +5,11 @@
 
 from datetime import datetime
 from typing import Any, Callable, Optional
-from agent_framework import AgentRunContext, AgentMiddleware
+
+try:
+    from agent_framework import AgentContext, AgentMiddleware
+except ImportError:
+    from agent_framework import AgentMiddleware, AgentRunContext as AgentContext
 
 
 class AgentSpeakingCaptureMiddleware(AgentMiddleware):
@@ -72,7 +76,7 @@ class AgentSpeakingCaptureMiddleware(AgentMiddleware):
             str, list[str]
         ] = {}  # Buffer for streaming responses
 
-    async def process(self, context: AgentRunContext, next):
+    async def process(self, context: AgentContext, next):
         """Process the agent invocation and capture the response.
 
         Args:

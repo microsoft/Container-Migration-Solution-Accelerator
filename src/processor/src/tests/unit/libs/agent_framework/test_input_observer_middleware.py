@@ -4,8 +4,20 @@
 import asyncio
 from types import SimpleNamespace
 
-from agent_framework import ChatMessage, Role
+import libs.agent_framework.middlewares as middlewares_module
 
+ROLE_USER = "user"
+
+
+class Message:
+    def __init__(self, *, role, text=None, contents=None, author_name=None):
+        self.role = role
+        self.text = text
+        self.contents = contents
+        self.author_name = author_name
+
+
+middlewares_module.Message = Message
 from libs.agent_framework.middlewares import InputObserverMiddleware
 
 
@@ -13,7 +25,7 @@ def test_input_observer_middleware_replaces_user_text_when_configured() -> None:
     async def _run() -> None:
         ctx = SimpleNamespace(
             messages=[
-                ChatMessage(role=Role.USER, text="original"),
+                Message(role=ROLE_USER, text="original"),
             ]
         )
 
@@ -24,7 +36,7 @@ def test_input_observer_middleware_replaces_user_text_when_configured() -> None:
 
         await mw.process(ctx, _next)
 
-        assert ctx.messages[0].role == Role.USER
+        assert ctx.messages[0].role == ROLE_USER
         assert ctx.messages[0].text == "replacement"
 
     asyncio.run(_run())

@@ -9,12 +9,23 @@ import re
 from abc import abstractmethod
 from typing import Any, Callable, Generic, MutableMapping, Sequence, TypeVar
 
-from agent_framework import ChatAgent, ManagerSelectionResponse, ToolProtocol
+try:
+    from agent_framework import Agent, FunctionTool, ToolResultCompactionStrategy
+except ImportError:
+    from agent_framework import ChatAgent as Agent, ToolProtocol as FunctionTool
+
+    try:
+        from agent_framework import ToolResultCompactionStrategy
+    except ImportError:
+        ToolResultCompactionStrategy = None  # type: ignore[assignment,misc]
 
 from libs.agent_framework.agent_builder import AgentBuilder
 from libs.agent_framework.agent_framework_helper import ClientType
 from libs.agent_framework.agent_info import AgentInfo
 from libs.agent_framework.azure_openai_response_retry import RateLimitRetryConfig
+from libs.agent_framework.coordinator_selection_response import (
+    CoordinatorSelectionResponse,
+)
 from libs.agent_framework.groupchat_orchestrator import (
     AgentResponse,
     AgentResponseStream,
@@ -60,10 +71,10 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
     async def initialize(self, process_id: str):
         self.mcp_tools: (
-            ToolProtocol
+            FunctionTool
             | Callable[..., Any]
             | MutableMapping[str, Any]
-            | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+            | Sequence[FunctionTool | Callable[..., Any] | MutableMapping[str, Any]]
         ) = await self.prepare_mcp_tools()
         self.agentinfos = await self.prepare_agent_infos()
 
@@ -90,7 +101,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         is stored in the shared memory before the next step begins.
         """
         for agent in (self.agents or {}).values():
-            # ChatAgent stores providers in agent.context_provider (AggregateContextProvider)
+            # Agent stores providers in agent.context_provider (ContextProvider)
             # which has a .providers list of individual ContextProvider instances
             agg_provider = getattr(agent, "context_provider", None)
             if agg_provider is None:
@@ -130,10 +141,10 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
     async def prepare_mcp_tools(
         self,
     ) -> (
-        ToolProtocol
+        FunctionTool
         | Callable[..., Any]
         | MutableMapping[str, Any]
-        | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+        | Sequence[FunctionTool | Callable[..., Any] | MutableMapping[str, Any]]
     ):
         pass
 
@@ -144,8 +155,8 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
     async def create_agents(
         self, agent_infos: list[AgentInfo], process_id: str
-    ) -> list[ChatAgent]:
-        agents = dict[str, ChatAgent]()
+    ) -> list[Agent]:
+        agents = dict[str, Agent]()
         agent_client = await self.get_client(thread_id=process_id)
 
         # Workspace context — injected into every agent's system instructions
@@ -176,13 +187,20 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     .with_temperature(0.0)
                     .with_max_tokens(20_000)
                 )
+                # Prevent context window overflow by summarizing older tool results.
+                if ToolResultCompactionStrategy is not None:
+                    builder = builder.with_kwargs(
+                        compaction_strategy=ToolResultCompactionStrategy(
+                            keep_last_tool_call_groups=2
+                        )
+                    )
 
             if agent_info.agent_name == "Coordinator":
                 # Routing-only: keep deterministic. Needs enough tokens for long instructions.
                 builder = (
                     builder
                     .with_temperature(0.0)
-                    .with_response_format(ManagerSelectionResponse)
+                    .with_response_format(CoordinatorSelectionResponse)
                     .with_max_tokens(4_000)
                     .with_tools(agent_info.tools)  # for checking file existence
                 )
@@ -292,7 +310,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
             # print different information. from Coordinator's response structure
             try:
                 response_dict = json.loads(response.message)
-                coordinator_response = ManagerSelectionResponse.model_validate(
+                coordinator_response = CoordinatorSelectionResponse.model_validate(
                     response_dict
                 )
 

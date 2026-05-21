@@ -27,12 +27,12 @@ from .azure_openai_response_retry import (
 )
 
 if TYPE_CHECKING:
-    from agent_framework.azure import (
-        AzureAIAgentClient,
-        AzureOpenAIAssistantsClient,
-        AzureOpenAIChatClient,
-        AzureOpenAIResponsesClient,
-    )
+    from agent_framework.azure import DurableAIAgentClient
+
+    # TODO: agent-framework 1.3.0 removed these azure clients with no replacement.
+    # from agent_framework.azure import AzureOpenAIAssistantsClient
+    # from agent_framework.azure import AzureOpenAIChatClient
+    # from agent_framework.azure import AzureOpenAIResponsesClient
 
 
 class ClientType(Enum):
@@ -147,7 +147,7 @@ class AgentFrameworkHelper:
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
-    ) -> "AzureOpenAIChatClient":
+    ) -> Any:
         pass
 
     @overload
@@ -171,7 +171,7 @@ class AgentFrameworkHelper:
         async_client: object | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
-    ) -> "AzureOpenAIAssistantsClient":
+    ) -> Any:
         pass
 
     @overload
@@ -193,7 +193,7 @@ class AgentFrameworkHelper:
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
-    ) -> "AzureOpenAIResponsesClient":
+    ) -> Any:
         pass
 
     @overload
@@ -233,7 +233,7 @@ class AgentFrameworkHelper:
         async_credential: object | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
-    ) -> "AzureAIAgentClient":
+    ) -> "DurableAIAgentClient":
         pass
 
     @staticmethod
@@ -366,7 +366,12 @@ class AgentFrameworkHelper:
                 "OpenAIResponsesClient is not implemented in this context."
             )
         elif client_type == ClientType.AzureOpenAIChatCompletion:
-            from agent_framework.azure import AzureOpenAIChatClient
+            try:
+                from agent_framework.azure import AzureOpenAIChatClient
+            except ImportError as exc:
+                raise NotImplementedError(
+                    "ClientType.AzureOpenAIChatCompletion is not supported in agent-framework 1.3.0; AzureOpenAIChatClient was removed."
+                ) from exc
 
             return AzureOpenAIChatClient(
                 api_key=api_key,
@@ -385,7 +390,12 @@ class AgentFrameworkHelper:
                 instruction_role=instruction_role,
             )
         elif client_type == ClientType.AzureOpenAIAssistant:
-            from agent_framework.azure import AzureOpenAIAssistantsClient
+            try:
+                from agent_framework.azure import AzureOpenAIAssistantsClient
+            except ImportError as exc:
+                raise NotImplementedError(
+                    "ClientType.AzureOpenAIAssistant is not supported in agent-framework 1.3.0; AzureOpenAIAssistantsClient was removed."
+                ) from exc
 
             return AzureOpenAIAssistantsClient(
                 deployment_name=deployment_name,
@@ -406,7 +416,12 @@ class AgentFrameworkHelper:
                 env_file_encoding=env_file_encoding,
             )
         elif client_type == ClientType.AzureOpenAIResponse:
-            from agent_framework.azure import AzureOpenAIResponsesClient
+            try:
+                from agent_framework.azure import AzureOpenAIResponsesClient
+            except ImportError as exc:
+                raise NotImplementedError(
+                    "ClientType.AzureOpenAIResponse is not supported in agent-framework 1.3.0; AzureOpenAIResponsesClient was removed."
+                ) from exc
 
             return AzureOpenAIResponsesClient(
                 api_key=api_key,
@@ -443,9 +458,12 @@ class AgentFrameworkHelper:
                 retry_config=retry_config,
             )
         elif client_type == ClientType.AzureOpenAIAgent:
-            from agent_framework.azure import AzureAIAgentClient
+            try:
+                from agent_framework.azure import DurableAIAgentClient
+            except ImportError:
+                from agent_framework.azure import AzureAIAgentClient as DurableAIAgentClient
 
-            return AzureAIAgentClient(
+            return DurableAIAgentClient(
                 project_client=project_client,
                 agent_id=agent_id,
                 agent_name=agent_name,

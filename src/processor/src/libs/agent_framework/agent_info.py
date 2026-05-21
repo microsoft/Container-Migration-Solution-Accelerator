@@ -4,7 +4,11 @@
 """Pydantic model describing an agent participant with Jinja2 template rendering."""
 
 from typing import Any, Callable, MutableMapping, Sequence
-from agent_framework import ToolProtocol
+
+try:
+    from agent_framework import FunctionTool
+except ImportError:
+    from agent_framework import ToolProtocol as FunctionTool
 from jinja2 import Template
 from openai import BaseModel
 from pydantic import Field
@@ -20,10 +24,10 @@ class AgentInfo(BaseModel):
     agent_instruction: str | None = Field(default=None)
     agent_framework_helper: AgentFrameworkHelper | None = Field(default=None)
     tools: (
-        ToolProtocol
+        FunctionTool
         | Callable[..., Any]
         | MutableMapping[str, Any]
-        | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+        | Sequence[FunctionTool | Callable[..., Any] | MutableMapping[str, Any]]
         | None
     ) = Field(default=None)
 
