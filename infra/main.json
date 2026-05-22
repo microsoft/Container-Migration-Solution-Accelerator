@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "7980127924624253038"
+      "version": "0.42.1.51946",
+      "templateHash": "16235959711463268871"
     }
   },
   "parameters": {
@@ -4717,8 +4717,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "4604761290796021104"
+              "version": "0.42.1.51946",
+              "templateHash": "2245351167779444314"
             }
           },
           "definitions": {
@@ -17207,7 +17207,7 @@
                   {
                     "name": "SecurityAuditEvents",
                     "streams": [
-                      "Microsoft-SecurityEvent"
+                      "Microsoft-Event"
                     ],
                     "xPathQueries": [
                       "Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]"
@@ -17283,7 +17283,7 @@
               "dataFlows": [
                 {
                   "streams": [
-                    "Microsoft-SecurityEvent"
+                    "Microsoft-Event"
                   ],
                   "destinations": [
                     "[variables('dcrLogAnalyticsDestinationName')]"
@@ -27476,8 +27476,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
@@ -31449,8 +31449,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "13516349791985095953"
+              "version": "0.42.1.51946",
+              "templateHash": "16866311185741009453"
             }
           },
           "definitions": {
@@ -35199,8 +35199,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
@@ -35238,8 +35238,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "17583277036649944863"
+              "version": "0.42.1.51946",
+              "templateHash": "16351752584270870112"
             }
           },
           "parameters": {

@@ -414,7 +414,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
 
 // SFI: data collection rule that captures Windows Security audit success and
 // audit failure events from the jumpbox VM and routes them to Log Analytics
-// via the Microsoft-SecurityEvent stream. The xPath filter uses the Windows
+// via the Microsoft-Event stream. The xPath filter uses the Windows
 // audit Keywords bitmask (0x30000000000000 = AuditSuccess|AuditFailure) and
 // excludes EventID 4624 (successful logon) because it is extremely
 // high-volume. Also collects a small set of Windows performance counters via
@@ -441,7 +441,7 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
           {
             name: 'SecurityAuditEvents'
             streams: [
-              'Microsoft-SecurityEvent'
+              'Microsoft-Event'
             ]
             xPathQueries: [
               'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
@@ -517,7 +517,7 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
       dataFlows: [
         {
           streams: [
-            'Microsoft-SecurityEvent'
+            'Microsoft-Event'
           ]
           destinations: [
             dcrLogAnalyticsDestinationName
