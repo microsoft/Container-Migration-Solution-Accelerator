@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "2025752793206914118"
+      "templateHash": "7980127924624253038"
     }
   },
   "parameters": {
@@ -8920,7 +8920,7 @@
           "enableTelemetry": {
             "value": "[parameters('enableTelemetry')]"
           },
-          "extensionMonitoringAgentConfig": "[if(parameters('enableMonitoring'), createObject('value', createObject('enabled', true(), 'tags', variables('allTags'), 'dataCollectionRuleAssociations', createArray(createObject('name', format('send-{0}', variables('logAnalyticsWorkspaceResourceName')), 'dataCollectionRuleResourceId', reference('windowsVmDataCollectionRules').outputs.resourceId.value)))), createObject('value', null()))]"
+          "extensionMonitoringAgentConfig": "[if(and(parameters('enablePrivateNetworking'), parameters('enableMonitoring')), createObject('value', createObject('enabled', true(), 'tags', variables('allTags'), 'dataCollectionRuleAssociations', createArray(createObject('name', format('send-{0}', variables('logAnalyticsWorkspaceResourceName')), 'dataCollectionRuleResourceId', reference('windowsVmDataCollectionRules').outputs.resourceId.value)))), createObject('value', null()))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -35199,9 +35199,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "virtualNetwork"
       ]
     },

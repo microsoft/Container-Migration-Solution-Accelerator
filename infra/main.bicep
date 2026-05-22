@@ -365,7 +365,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
     zone: 0
     // SFI: enable system-assigned managed identity on the jumpbox VM. Required so
     // the Azure Monitor Agent can authenticate to the Log Analytics workspace and
-    // honor the SecurityAuditEvents data collection rule association. (ADO #43311)
+    // honor the SecurityAuditEvents data collection rule association.
     managedIdentities: { systemAssigned: true }
     imageReference: {
       offer: 'WindowsServer'
@@ -415,10 +415,11 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
     enableTelemetry: enableTelemetry
     // SFI: associate the SecurityAuditEvents data collection rule with the
     // jumpbox VM via the Azure Monitor Agent extension. Routes Windows audit
-    // success (4624) / audit failure (4625) events to Log Analytics. Disabled
-    // when monitoring is off because the DCR is also gated on enableMonitoring.
-    // (ADO #43311)
-    extensionMonitoringAgentConfig: enableMonitoring
+    // success / audit failure events to Log Analytics. Gated on the same
+    // (enablePrivateNetworking && enableMonitoring) expression as the DCR
+    // module so the dereference of windowsVmDataCollectionRules!.outputs
+    // stays safe even if the outer jumpbox VM gate ever changes.
+    extensionMonitoringAgentConfig: (enablePrivateNetworking && enableMonitoring)
       ? {
           enabled: true
           tags: allTags
@@ -442,7 +443,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
 // Microsoft-Perf for the jumpbox so the same DCR provides basic VM health
 // signal. The SecurityEvent / Perf tables are auto-provisioned by Azure
 // Monitor on first ingestion via the DCR; no legacy OMSGallery/Security
-// solution is needed. (ADO #43311)
+// solution is needed.
 var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
 var dataCollectionRulesLocation = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspace!.location
@@ -625,7 +626,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     location: solutionLocation
     managedIdentities: { systemAssigned: true }
     minimumTlsVersion: 'TLS1_2'
-    // SFI: enable infrastructure (double) encryption at rest (ADO #43311)
+    // SFI: enable infrastructure (double) encryption at rest
     requireInfrastructureEncryption: true
     enableTelemetry: enableTelemetry
     tags: allTags
@@ -745,7 +746,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
     location: cosmosLocation
     tags: allTags
     enableTelemetry: enableTelemetry
-    // SFI: enable system-assigned managed identity for Cosmos DB account (ADO #43311)
+    // SFI: enable system-assigned managed identity for Cosmos DB account
     managedIdentities: { systemAssigned: true }
     sqlDatabases: [
       {
@@ -1299,7 +1300,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     // SFI: enable mTLS / end-to-end encryption between revisions within the
     // Container Apps environment (Container Apps equivalent of App Service's
     // endToEndEncryptionEnabled). Applies to Microsoft.App/managedEnvironments
-    // peerTrafficConfiguration.encryption.enabled. (ADO #43311)
+    // peerTrafficConfiguration.encryption.enabled.
     peerTrafficEncryption: true
 
     // <========== WAF related parameters
