@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "1952959724829141031"
+      "templateHash": "7325892054668959743"
     }
   },
   "parameters": {
@@ -272,6 +272,7 @@
     "bastionHostName": "[format('bas-{0}', variables('solutionSuffix'))]",
     "jumpboxVmName": "[take(format('vm-jumpbox-{0}', variables('solutionSuffix')), 15)]",
     "dataCollectionRulesResourceName": "[format('dcr-{0}', variables('solutionSuffix'))]",
+    "dcrLogAnalyticsDestinationName": "[format('la-{0}-destination', variables('logAnalyticsWorkspaceResourceName'))]",
     "processBlobContainerName": "processes",
     "processQueueName": "processes-queue",
     "privateDnsZones": [
@@ -17209,7 +17210,25 @@
                       "Microsoft-SecurityEvent"
                     ],
                     "xPathQueries": [
-                      "Security!*[System[(EventID=4624 or EventID=4625)]]"
+                      "Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]"
+                    ]
+                  }
+                ],
+                "performanceCounters": [
+                  {
+                    "name": "VMPerfCounters",
+                    "streams": [
+                      "Microsoft-Perf"
+                    ],
+                    "samplingFrequencyInSeconds": 60,
+                    "counterSpecifiers": [
+                      "\\Processor Information(_Total)\\% Processor Time",
+                      "\\Memory\\% Committed Bytes In Use",
+                      "\\Memory\\Available Bytes",
+                      "\\LogicalDisk(_Total)\\% Free Space",
+                      "\\LogicalDisk(_Total)\\Disk Reads/sec",
+                      "\\LogicalDisk(_Total)\\Disk Writes/sec",
+                      "\\Network Interface(*)\\Bytes Total/sec"
                     ]
                   }
                 ]
@@ -17218,7 +17237,7 @@
                 "logAnalytics": [
                   {
                     "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), reference('logAnalyticsWorkspace').outputs.resourceId.value)]",
-                    "name": "[format('la-{0}', variables('dataCollectionRulesResourceName'))]"
+                    "name": "[variables('dcrLogAnalyticsDestinationName')]"
                   }
                 ]
               },
@@ -17228,7 +17247,15 @@
                     "Microsoft-SecurityEvent"
                   ],
                   "destinations": [
-                    "[format('la-{0}', variables('dataCollectionRulesResourceName'))]"
+                    "[variables('dcrLogAnalyticsDestinationName')]"
+                  ]
+                },
+                {
+                  "streams": [
+                    "Microsoft-Perf"
+                  ],
+                  "destinations": [
+                    "[variables('dcrLogAnalyticsDestinationName')]"
                   ]
                 }
               ]
@@ -35134,8 +35161,8 @@
       "dependsOn": [
         "aiFoundryAiServices",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "virtualNetwork"
       ]
     },

@@ -411,16 +411,21 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
   }
 }
 
-// SFI: data collection rule that captures Windows Security audit success
-// (EventID 4624) and audit failure (EventID 4625) events from the jumpbox VM
-// and routes them to Log Analytics via the Microsoft-SecurityEvent stream.
-// The SecurityEvent table is auto-provisioned by Azure Monitor on first
-// ingestion via the DCR; no legacy OMSGallery/Security solution is needed.
-// (ADO #43311)
+// SFI: data collection rule that captures Windows Security audit success and
+// audit failure events from the jumpbox VM and routes them to Log Analytics
+// via the Microsoft-SecurityEvent stream. The xPath filter uses the Windows
+// audit Keywords bitmask (0x30000000000000 = AuditSuccess|AuditFailure) and
+// excludes EventID 4624 (successful logon) because it is extremely
+// high-volume. Also collects a small set of Windows performance counters via
+// Microsoft-Perf for the jumpbox so the same DCR provides basic VM health
+// signal. The SecurityEvent / Perf tables are auto-provisioned by Azure
+// Monitor on first ingestion via the DCR; no legacy OMSGallery/Security
+// solution is needed. (ADO #43311)
 var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
 var dataCollectionRulesLocation = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspace!.location
   : logAnalyticsWorkspace!.outputs.location
+var dcrLogAnalyticsDestinationName = 'la-${logAnalyticsWorkspaceResourceName}-destination'
 module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (enablePrivateNetworking && enableMonitoring) {
   name: take('avm.res.insights.data-collection-rule.${dataCollectionRulesResourceName}', 64)
   params: {
@@ -438,7 +443,25 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
               'Microsoft-SecurityEvent'
             ]
             xPathQueries: [
-              'Security!*[System[(EventID=4624 or EventID=4625)]]'
+              'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
+            ]
+          }
+        ]
+        performanceCounters: [
+          {
+            name: 'VMPerfCounters'
+            streams: [
+              'Microsoft-Perf'
+            ]
+            samplingFrequencyInSeconds: 60
+            counterSpecifiers: [
+              '\\Processor Information(_Total)\\% Processor Time'
+              '\\Memory\\% Committed Bytes In Use'
+              '\\Memory\\Available Bytes'
+              '\\LogicalDisk(_Total)\\% Free Space'
+              '\\LogicalDisk(_Total)\\Disk Reads/sec'
+              '\\LogicalDisk(_Total)\\Disk Writes/sec'
+              '\\Network Interface(*)\\Bytes Total/sec'
             ]
           }
         ]
@@ -447,7 +470,7 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
         logAnalytics: [
           {
             workspaceResourceId: logAnalyticsWorkspaceResourceId
-            name: 'la-${dataCollectionRulesResourceName}'
+            name: dcrLogAnalyticsDestinationName
           }
         ]
       }
@@ -457,7 +480,15 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
             'Microsoft-SecurityEvent'
           ]
           destinations: [
-            'la-${dataCollectionRulesResourceName}'
+            dcrLogAnalyticsDestinationName
+          ]
+        }
+        {
+          streams: [
+            'Microsoft-Perf'
+          ]
+          destinations: [
+            dcrLogAnalyticsDestinationName
           ]
         }
       ]
