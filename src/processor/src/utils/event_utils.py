@@ -16,12 +16,23 @@ logger = logging.getLogger(__name__)
 
 APP_INSIGHTS_CONN_STRING_ENV = "APPLICATIONINSIGHTS_CONNECTION_STRING"
 
+_UNCONFIGURED_WARNING = (
+    "APPLICATIONINSIGHTS_CONNECTION_STRING is not set; "
+    "track_event_if_configured(name=%s) is a no-op."
+)
+
 _warned_unconfigured: bool = False
 
 
 def _is_app_insights_configured() -> bool:
     value = os.environ.get(APP_INSIGHTS_CONN_STRING_ENV)
     return bool(value and value.strip())
+
+
+def reset_unconfigured_warning_for_tests() -> None:
+    """Test-only helper: reset the once-per-process warning latch."""
+    global _warned_unconfigured
+    _warned_unconfigured = False
 
 
 def track_event_if_configured(
@@ -36,11 +47,7 @@ def track_event_if_configured(
 
     if not _is_app_insights_configured():
         if not _warned_unconfigured:
-            logger.warning(
-                "APPLICATIONINSIGHTS_CONNECTION_STRING is not set; "
-                "track_event_if_configured(name=%s) is a no-op.",
-                name,
-            )
+            logger.warning(_UNCONFIGURED_WARNING, name)
             _warned_unconfigured = True
         return
 

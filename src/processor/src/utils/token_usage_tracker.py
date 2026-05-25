@@ -299,34 +299,23 @@ def extract_usage_from_response(response: Any) -> TokenUsageRecord | None:
     contents = getattr(response, "contents", None)
     if contents:
         for item in contents:
-            item_type = getattr(item, "type", None)
-            if item_type == "usage":
-                # SDK UsageContent uses "details"; fall back to "usage_details"
+            # Try usage-typed content items first, then any item with details
+            ud = None
+            if getattr(item, "type", None) == "usage":
                 ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
-                if isinstance(ud, dict):
-                    record = _parse_usage_object(ud)
-                    if record:
-                        return record
-                elif ud is not None:
-                    record = _parse_usage_object(ud)
-                    if record:
-                        return record
-            # Direct details/usage_details on content item
-            ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
-            if isinstance(ud, dict) and ud:
+            if ud is None:
+                ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
+            if ud is not None:
                 record = _parse_usage_object(ud)
                 if record:
                     return record
             # Dict content item
             if isinstance(item, dict):
-                if "details" in item:
-                    record = _parse_usage_object(item["details"])
-                    if record:
-                        return record
-                if "usage_details" in item:
-                    record = _parse_usage_object(item["usage_details"])
-                    if record:
-                        return record
+                for key in ("details", "usage_details"):
+                    if key in item:
+                        record = _parse_usage_object(item[key])
+                        if record:
+                            return record
                 if "input_token_count" in item or "total_token_count" in item:
                     record = _parse_usage_object(item)
                     if record:
@@ -352,52 +341,32 @@ def extract_usage_from_response(response: Any) -> TokenUsageRecord | None:
     return None
 
 
+def _get_field(obj: Any, *names: str) -> int:
+    """Read the first non-zero value from *obj* for the given field names.
+
+    Works uniformly for dicts (via ``get``) and objects (via ``getattr``).
+    """
+    getter = obj.get if isinstance(obj, dict) else lambda k, d=0: getattr(obj, k, d)
+    for name in names:
+        val = getter(name, 0)
+        if val:
+            return int(val)
+    return 0
+
+
 def _parse_usage_object(usage: Any) -> TokenUsageRecord | None:
     """Parse a usage object (dict or object with attrs) into a TokenUsageRecord."""
     if usage is None:
         return None
 
-    if isinstance(usage, dict):
-        inp = (
-            usage.get("input_token_count", 0)
-            or usage.get("prompt_tokens", 0)
-            or usage.get("input_tokens", 0)
-            or 0
-        )
-        out = (
-            usage.get("output_token_count", 0)
-            or usage.get("completion_tokens", 0)
-            or usage.get("output_tokens", 0)
-            or 0
-        )
-        tot = (
-            usage.get("total_token_count", 0)
-            or usage.get("total_tokens", 0)
-            or (inp + out)
-        )
-    else:
-        inp = (
-            getattr(usage, "input_token_count", 0)
-            or getattr(usage, "prompt_tokens", 0)
-            or getattr(usage, "input_tokens", 0)
-            or 0
-        )
-        out = (
-            getattr(usage, "output_token_count", 0)
-            or getattr(usage, "completion_tokens", 0)
-            or getattr(usage, "output_tokens", 0)
-            or 0
-        )
-        tot = (
-            getattr(usage, "total_token_count", 0)
-            or getattr(usage, "total_tokens", 0)
-            or (inp + out)
-        )
+    inp = _get_field(usage, "input_token_count", "prompt_tokens", "input_tokens")
+    out = _get_field(usage, "output_token_count", "completion_tokens", "output_tokens")
+    tot = _get_field(usage, "total_token_count", "total_tokens") or (inp + out)
 
     if tot > 0 or inp > 0 or out > 0:
         return TokenUsageRecord(
-            input_tokens=int(inp),
-            output_tokens=int(out),
-            total_tokens=int(tot) if tot > 0 else int(inp) + int(out),
+            input_tokens=inp,
+            output_tokens=out,
+            total_tokens=tot if tot > 0 else inp + out,
         )
     return None

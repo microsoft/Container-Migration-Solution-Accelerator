@@ -484,6 +484,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._tool_call_emitted.clear()
         self._tool_call_recorded.clear()
         self._tool_call_index.clear()
+        self._streaming_captured_usage = False
         self._conversation: list[ChatMessage] = []  # Track conversation during workflow
 
         try:
@@ -686,76 +687,62 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         await self._process_tool_calls(event, agent_name, stream_callback)
 
         # Extract token usage from the streaming update if tracker is active.
-        # Check multiple paths where usage data may appear.
         if self.token_usage_tracker is not None:
             try:
-                data = event.data
-                # Path 1: data.contents with Content(type="usage")
-                contents = getattr(data, "contents", None)
-                if contents:
-                    for item in contents:
-                        ctype = getattr(item, "type", None)
-                        if ctype == "usage":
-                            # SDK UsageContent uses "details"; fall back to "usage_details"
-                            ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
-                            if ud:
-                                record = _parse_usage_object(ud)
-                                if record and record.total_tokens > 0:
-                                    self.token_usage_tracker.record(
-                                        input_tokens=record.input_tokens,
-                                        output_tokens=record.output_tokens,
-                                        total_tokens=record.total_tokens,
-                                        agent_name=agent_name,
-                                        step_name=self.name,
-                                    )
-                                    self._streaming_captured_usage = True
-                                    logger.info(
-                                        "[TOKEN_ORCH] recorded from contents: agent=%s step=%s tokens=%s",
-                                        agent_name, self.name, record.total_tokens,
-                                    )
-                                    return
-                # Path 2: data.usage direct attribute
-                usage = getattr(data, "usage", None)
-                if usage is not None:
-                    record = _parse_usage_object(usage)
-                    if record and record.total_tokens > 0:
-                        self.token_usage_tracker.record(
-                            input_tokens=record.input_tokens,
-                            output_tokens=record.output_tokens,
-                            total_tokens=record.total_tokens,
-                            agent_name=agent_name,
-                            step_name=self.name,
-                        )
-                        self._streaming_captured_usage = True
-                        logger.info(
-                            "[TOKEN_ORCH] recorded from usage attr: agent=%s step=%s tokens=%s",
-                            agent_name, self.name, record.total_tokens,
-                        )
-                        return
-                # Path 3: event itself may carry usage
-                event_usage = getattr(event, "usage", None)
-                if event_usage is not None:
-                    record = _parse_usage_object(event_usage)
-                    if record and record.total_tokens > 0:
-                        self.token_usage_tracker.record(
-                            input_tokens=record.input_tokens,
-                            output_tokens=record.output_tokens,
-                            total_tokens=record.total_tokens,
-                            agent_name=agent_name,
-                            step_name=self.name,
-                        )
-                        self._streaming_captured_usage = True
-                        logger.info(
-                            "[TOKEN_ORCH] recorded from event.usage: agent=%s step=%s tokens=%s",
-                            agent_name, self.name, record.total_tokens,
-                        )
-                        return
+                self._try_record_streaming_usage(event, agent_name)
             except Exception:
                 logger.debug(
                     "Failed to extract token usage from update (agent=%s)",
                     agent_name,
                     exc_info=True,
                 )
+
+    def _try_record_streaming_usage(self, event: Any, agent_name: str) -> None:
+        """Try to extract and record token usage from a streaming event.
+
+        Checks three paths in priority order:
+        1. event.data.contents with Content(type="usage")
+        2. event.data.usage direct attribute
+        3. event.usage top-level attribute
+        """
+        candidates: list[tuple[Any, str]] = []
+        data = event.data
+
+        # Path 1: data.contents with Content(type="usage")
+        contents = getattr(data, "contents", None)
+        if contents:
+            for item in contents:
+                if getattr(item, "type", None) == "usage":
+                    ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
+                    if ud:
+                        candidates.append((ud, "contents"))
+
+        # Path 2: data.usage
+        usage = getattr(data, "usage", None)
+        if usage is not None:
+            candidates.append((usage, "data.usage"))
+
+        # Path 3: event.usage
+        event_usage = getattr(event, "usage", None)
+        if event_usage is not None:
+            candidates.append((event_usage, "event.usage"))
+
+        for candidate, source in candidates:
+            record = _parse_usage_object(candidate)
+            if record and record.total_tokens > 0:
+                self.token_usage_tracker.record(
+                    input_tokens=record.input_tokens,
+                    output_tokens=record.output_tokens,
+                    total_tokens=record.total_tokens,
+                    agent_name=agent_name,
+                    step_name=self.name,
+                )
+                self._streaming_captured_usage = True
+                logger.info(
+                    "[TOKEN_ORCH] recorded from %s: agent=%s step=%s tokens=%s",
+                    source, agent_name, self.name, record.total_tokens,
+                )
+                return
 
     def _normalize_executor_id(self, executor_id: str) -> str:
         """Normalize executor id to agent name.
