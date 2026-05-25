@@ -16,3 +16,4 @@ class Analysis_TaskParam(BaseModel):
     source_file_folder: str = Field(description="Path to the source files folder")
     output_file_folder: str = Field(description="Path to the output files folder")
     workspace_file_folder: str = Field(description="Path to the workspace files folder")
+    user_id: str = Field(default="", description="User identifier for token usage tracking")

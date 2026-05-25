@@ -36,7 +36,8 @@ RUN curl -fsSLo /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using UV
-RUN uv sync --frozen --python 3.12
+# Re-lock to pick up any pyproject.toml changes (e.g. new deps), then install.
+RUN uv lock --python 3.12 && uv sync --frozen --python 3.12
 
 # Copy the entire source code
 COPY src/ ./src/
