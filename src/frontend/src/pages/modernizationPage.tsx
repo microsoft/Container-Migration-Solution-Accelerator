@@ -462,7 +462,7 @@ const ModernizationPage = () => {
         const selectedFile = files.find((f) => f.id === selectedFileId);
         if (!selectedFile || !selectedFile.translatedCode) {
           setFileLoading(true);
-          const _newFileUpdate = await fetchFileFromAPI(selectedFile?.fileId || "");
+          await fetchFileFromAPI(selectedFile?.fileId || "");
           setFileLoading(false);
         }
 

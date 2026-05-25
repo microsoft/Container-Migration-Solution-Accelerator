@@ -38,7 +38,7 @@ import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
 import ConfirmationDialog from "../commonComponents/ConfirmationDialog/confirmationDialogue";
-import { renderErrorSection, useStyles, renderFileError, BatchSummary, fileErrorCounter } from "../api/utils";
+import { renderErrorSection, useStyles, renderFileError, BatchSummary } from "../api/utils";
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
 import { format } from "sql-formatter";
 
