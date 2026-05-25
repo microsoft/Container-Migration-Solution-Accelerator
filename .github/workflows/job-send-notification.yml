@@ -1,4 +1,4 @@
-﻿name: Send Notification Job
+name: Send Notification Job
 
 on:
   workflow_call:
@@ -105,6 +105,9 @@ jobs:
           CLEANUP_PILL: ${{ steps.cleanup.outputs.CLEANUP_PILL }}
           CONFIG_LABEL: ${{ steps.config.outputs.CONFIG_LABEL }}
         run: |
+          html_escape() {
+            printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g' -e "s/'/\&#39;/g"
+          }
           RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           PILL_BASE="display:inline-block; min-width:70px; text-align:center; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; line-height:1.4;"
           DEPLOY_PILL="<span style=\"${PILL_BASE} background:#f8d7da; color:#721c24;\">&#x274C; FAILED</span>"
@@ -178,8 +181,13 @@ jobs:
           CONFIG_LABEL: ${{ steps.config.outputs.CONFIG_LABEL }}
           CLEANUP_PILL: ${{ steps.cleanup.outputs.CLEANUP_PILL }}
         run: |
+          html_escape() {
+            printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g' -e "s/'/\&#39;/g"
+          }
           RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
+          RESOURCE_GROUP="$(html_escape "$INPUT_RESOURCE_GROUP_NAME")"
+          ACTOR="$(html_escape "${{ github.actor }}")"
+          BRANCH="$(html_escape "${{ env.BRANCH_NAME }}")"
           PILL_BASE="display:inline-block; min-width:70px; text-align:center; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; line-height:1.4;"
           DEPLOY_PILL="<span style=\"${PILL_BASE} background:#f8d7da; color:#721c24;\">&#x274C; FAILED</span>"
 
@@ -213,9 +221,9 @@ jobs:
                     <tr><td style="padding:8px 0; font-size:13px; color:#6b7280; width:140px;">Resource Group</td>
                         <td style="padding:8px 0; font-size:13px; color:#111827; font-family:'Cascadia Code','Courier New',monospace;">${RESOURCE_GROUP}</td></tr>
                     <tr><td style="padding:8px 0; font-size:13px; color:#6b7280;">Triggered By</td>
-                        <td style="padding:8px 0; font-size:13px; color:#111827;">${{ github.actor }}</td></tr>
+                      <td style="padding:8px 0; font-size:13px; color:#111827;">${ACTOR}</td></tr>
                     <tr><td style="padding:8px 0; font-size:13px; color:#6b7280;">Branch</td>
-                        <td style="padding:8px 0; font-size:13px; color:#111827; font-family:'Cascadia Code','Courier New',monospace;">${{ env.BRANCH_NAME }}</td></tr>
+                      <td style="padding:8px 0; font-size:13px; color:#111827; font-family:'Cascadia Code','Courier New',monospace;">${BRANCH}</td></tr>
                   </table>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0;">
                     <a href="${RUN_URL}" style="display:inline-block; background:#dc2626; color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:13px; font-weight:600; letter-spacing:0.3px;">INVESTIGATE FAILURE</a>
@@ -263,6 +271,8 @@ jobs:
           RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           WEBAPP_URL="$(html_escape "${INPUT_WEB_APPURL:-$INPUT_EXISTING_WEBAPP_URL}")"
           RESOURCE_GROUP="$(html_escape "$INPUT_RESOURCE_GROUP_NAME")"
+          ACTOR="$(html_escape "${{ github.actor }}")"
+          BRANCH="$(html_escape "${{ env.BRANCH_NAME }}")"
           PILL_BASE="display:inline-block; min-width:70px; text-align:center; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; line-height:1.4;"
           DEPLOY_PILL="<span style=\"${PILL_BASE} background:#d4edda; color:#155724;\">&#x2705; SUCCESS</span>"
 
@@ -295,9 +305,9 @@ jobs:
                     <tr><td style="padding:8px 0; font-size:13px; color:#6b7280;">Web App URL</td>
                         <td style="padding:8px 0; font-size:13px;"><a href="${WEBAPP_URL}" style="color:#2563eb; text-decoration:none; font-family:'Cascadia Code','Courier New',monospace;">${WEBAPP_URL}</a></td></tr>
                     <tr><td style="padding:8px 0; font-size:13px; color:#6b7280;">Triggered By</td>
-                        <td style="padding:8px 0; font-size:13px; color:#111827;">${{ github.actor }}</td></tr>
+                      <td style="padding:8px 0; font-size:13px; color:#111827;">${ACTOR}</td></tr>
                     <tr><td style="padding:8px 0; font-size:13px; color:#6b7280;">Branch</td>
-                        <td style="padding:8px 0; font-size:13px; color:#111827; font-family:'Cascadia Code','Courier New',monospace;">${{ env.BRANCH_NAME }}</td></tr>
+                      <td style="padding:8px 0; font-size:13px; color:#111827; font-family:'Cascadia Code','Courier New',monospace;">${BRANCH}</td></tr>
                   </table>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0;">
                     <a href="${RUN_URL}" style="display:inline-block; background:#111827; color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:13px; font-weight:600; letter-spacing:0.3px;">VIEW PIPELINE RUN</a>
