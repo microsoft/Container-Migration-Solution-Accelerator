@@ -188,10 +188,12 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 )
             elif agent_info.agent_name == "ResultGenerator":
                 # Structured JSON generation; deterministic and bounded.
+                # Use 25_000 to prevent truncation of complex nested JSON schemas
+                # which causes "model produced invalid content" errors.
                 builder = (
                     builder
                     .with_temperature(0.0)
-                    .with_max_tokens(12_000)
+                    .with_max_tokens(25_000)
                     .with_tool_choice("none")
                 )
 

@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agent-framework==1.0.0b260107",
-    "aiohttp==3.13.3",
+    "aiohttp==3.13.4",
     "art==6.5",
     "azure-ai-agents==1.2.0b5",
     "azure-ai-inference==1.0.0b9",
@@ -18,7 +18,7 @@ dependencies = [
     "azure-storage-blob==12.28.0",
     "azure-storage-file-datalake==12.23.0",
     "azure-storage-queue==12.15.0",
-    "fastmcp==2.14.5",
+    "fastmcp==3.2.0",
     "jinja2==3.1.6",
     "kafka-python==2.3.0",
     "mcp==1.25.0",
@@ -33,7 +33,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pre-commit==4.5.1",
-    "pytest==9.0.2",
+    "pytest==9.0.3",
 ]
 
 [tool.ruff]
@@ -54,5 +54,12 @@ indent-style = "space"
 testpaths = ["src/tests"]
 pythonpath = ["src"]
 
+[tool.coverage.run]
+omit = ["src/tests/*"]
+
 [tool.uv]
 prerelease = "allow"
+override-dependencies = [
+    "urllib3==2.7.0",
+    "authlib==1.7.1",
+]

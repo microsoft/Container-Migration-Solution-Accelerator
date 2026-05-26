@@ -16,7 +16,8 @@ if str(_SRC_DIR) not in sys.path:
 # pick up our `src/sitecustomize.py` unless `PYTHONPATH=src` is set. Import it
 # explicitly after adding `src/` to `sys.path` so test collection works.
 try:
-    import sitecustomize  # noqa: F401
+    import sitecustomize  # noqa: F401  # Intentional side-effect import for compatibility hook
+    _ = sitecustomize  # Prevent unused-import warnings
 except Exception:
     # Tests should still be able to run even if the compatibility hook is absent.
     pass
