@@ -7,9 +7,16 @@ on:
   schedule:
     - cron: '30 6 * * 3' # Wednesday 12:00 PM IST (6:30 AM UTC)
   pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
     branches:
       - main
       - dev
+      - demo
+      - hotfix
     paths:
       - 'infra/**/*.bicep'
       - 'infra/**/*.parameters.json'
