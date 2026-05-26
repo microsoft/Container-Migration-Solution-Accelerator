@@ -202,6 +202,9 @@ jobs:
           if [[ "$ENABLE_SCALABILITY_VALUE" != "true" && "$ENABLE_SCALABILITY_VALUE" != "false" ]]; then
             echo "❌ ERROR: enable_scalability must be 'true' or 'false', got: '$ENABLE_SCALABILITY_VALUE'"
             VALIDATION_FAILED=true
+          elif [[ "$ENABLE_SCALABILITY_VALUE" == "true" && "$INPUT_WAF_ENABLED" != "true" ]]; then
+            echo "❌ ERROR: enable_scalability can only be enabled when waf_enabled is 'true'"
+            VALIDATION_FAILED=true
           else
             echo "✅ enable_scalability: '$ENABLE_SCALABILITY_VALUE' is valid"
           fi
