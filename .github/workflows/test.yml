@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - dev
+      - demo
+      - hotfix
     paths:
       - 'src/backend-api/**/*.py'
       - 'src/backend-api/pyproject.toml'
@@ -23,6 +25,8 @@ on:
     branches:
       - main
       - dev
+      - demo
+      - hotfix
     paths:
       - 'src/backend-api/**/*.py'
       - 'src/backend-api/pyproject.toml'

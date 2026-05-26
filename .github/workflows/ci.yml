@@ -11,6 +11,7 @@ on:
       - main
       - dev
       - demo
+      - hotfix
     paths:
       - 'infra/**'
       - 'azure.yaml'
@@ -18,8 +19,16 @@ on:
       - 'scripts/**'
       - '.github/workflows/ci.yml'
   pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
     branches:
+      - main
       - dev
+      - demo
+      - hotfix
     paths:
       - 'infra/**'
       - 'azure.yaml'
