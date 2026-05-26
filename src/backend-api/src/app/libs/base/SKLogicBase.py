@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Type, TypeVar, overload
+from typing import Any, Type, TypeVar, overload
 
 from pydantic import BaseModel, Field
 from semantic_kernel.agents import (
@@ -81,7 +81,7 @@ class SKLogicBase(ABC, SKBaseModel):
         """
         raise NotImplementedError("This method should be overridden in subclasses")
 
-    async def execute(func_params: dict[str, any]):
+    async def execute(self, func_params: dict[str, Any]):
         raise NotImplementedError("Execute method not implemented")
 
     @overload
@@ -92,7 +92,7 @@ class SKLogicBase(ABC, SKBaseModel):
         thread: AgentThread | AssistantAgentThread | AzureAIAgentThread = None,
     ) -> tuple[str, AgentThread | AssistantAgentThread | AzureAIAgentThread]:
         """When response_format is None, returns string response."""
-        ...
+        pass
 
     @overload
     async def execute_thread(
@@ -102,7 +102,7 @@ class SKLogicBase(ABC, SKBaseModel):
         thread: AgentThread | AssistantAgentThread | AzureAIAgentThread = None,
     ) -> tuple[T, AgentThread | AssistantAgentThread | AzureAIAgentThread]:
         """When response_format is provided, returns typed Pydantic BaseModel response."""
-        ...
+        pass
 
     @abstractmethod
     async def execute_thread(

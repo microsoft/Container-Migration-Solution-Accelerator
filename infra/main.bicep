@@ -872,7 +872,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
         principalType: 'ServicePrincipal'
       }
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1123,6 +1123,12 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
   params: {
     name: 'cae-${solutionSuffix}'
     location: location
+    tags: {
+      ...resourceGroup().tags
+      ...existingTags
+      ...allTags
+      ...tags
+    }
     managedIdentities: { systemAssigned: true }
     appLogsConfiguration: enableMonitoring
       ? {

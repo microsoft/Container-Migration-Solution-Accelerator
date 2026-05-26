@@ -27,7 +27,7 @@
     "js-yaml": "^4.1.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.471.2",
-    "mermaid": "^11.13.0",
+    "mermaid": "^11.15.0",
     "messagebar": "^0.2.1",
     "postcss": "^8.5.0",
     "react": "^18.3.1",
@@ -43,7 +43,7 @@
     "sql-formatter": "^15.4.11",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.17",
-    "uuid": "^11.0.5"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -69,6 +69,7 @@
     "follow-redirects": "1.16.0",
     "@babel/runtime": "7.26.10",
     "prismjs": "1.30.0",
-    "yaml": "2.8.3"
+    "yaml": "2.8.3",
+    "uuid": "$uuid"
   }
 }
