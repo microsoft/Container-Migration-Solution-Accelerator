@@ -180,7 +180,6 @@ dependencies = [
     { name = "azure-appconfiguration" },
     { name = "azure-identity" },
     { name = "azure-monitor-opentelemetry" },
-    { name = "azure-search-documents" },
     { name = "azure-storage-blob" },
     { name = "azure-storage-queue" },
     { name = "fastapi", extra = ["standard"] },
@@ -190,7 +189,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "sas-cosmosdb" },
-    { name = "semantic-kernel", extra = ["azure"] },
+    { name = "semantic-kernel" },
     { name = "uvicorn" },
 ]
 
@@ -208,7 +207,6 @@ requires-dist = [
     { name = "azure-appconfiguration", specifier = "==1.8.0" },
     { name = "azure-identity", specifier = "==1.25.3" },
     { name = "azure-monitor-opentelemetry", specifier = "==1.8.7" },
-    { name = "azure-search-documents", specifier = "==11.7.0b2" },
     { name = "azure-storage-blob", specifier = "==12.28.0" },
     { name = "azure-storage-queue", specifier = "==12.15.0" },
     { name = "fastapi", extras = ["standard"], specifier = "==0.135.3" },
@@ -218,7 +216,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-multipart", specifier = "==0.0.27" },
     { name = "sas-cosmosdb", specifier = "==0.1.5" },
-    { name = "semantic-kernel", extras = ["azure"], specifier = "==1.41.1" },
+    { name = "semantic-kernel", specifier = "==1.41.1" },
     { name = "uvicorn", specifier = "==0.42.0" },
 ]
 
@@ -336,20 +334,6 @@ wheels = [
 ]
 
 [[package]]
-name = "azure-ai-inference"
-version = "1.0.0b9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "azure-core" },
-    { name = "isodate" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/6a/ed85592e5c64e08c291992f58b1a94dab6869f28fb0f40fd753dced73ba6/azure_ai_inference-1.0.0b9.tar.gz", hash = "sha256:1feb496bd84b01ee2691befc04358fa25d7c344d8288e99364438859ad7cd5a4", size = 182408, upload-time = "2025-02-15T00:37:28.464Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/0f/27520da74769db6e58327d96c98e7b9a07ce686dff582c9a5ec60b03f9dd/azure_ai_inference-1.0.0b9-py3-none-any.whl", hash = "sha256:49823732e674092dad83bb8b0d1b65aa73111fab924d61349eb2a8cdc0493990", size = 124885, upload-time = "2025-02-15T00:37:29.964Z" },
-]
-
-[[package]]
 name = "azure-ai-projects"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -377,15 +361,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0f/de/d75d8f35bc1dbf77ddf005f1b0d61ae43361fa2f654cbe98e0947684b9b2/azure_appconfiguration-1.8.0.tar.gz", hash = "sha256:168e7b01b350f5d806a2d935a8ec3694c59c6394d5a1c409eb05fef0b56b1aa0", size = 131718, upload-time = "2026-01-27T19:54:19.16Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0a/7a/a39fadd3ec377fe669dfa54e37faf27396e1f722cb6ae4adec6f81bec044/azure_appconfiguration-1.8.0-py3-none-any.whl", hash = "sha256:fcfcfaa51712a59067d2cf837004327e73c0649d63f2d298020e5db2c77f7821", size = 106898, upload-time = "2026-01-27T19:54:20.744Z" },
-]
-
-[[package]]
-name = "azure-common"
-version = "1.1.28"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3e/71/f6f71a276e2e69264a97ad39ef850dca0a04fce67b12570730cb38d0ccac/azure-common-1.1.28.zip", hash = "sha256:4ac0cd3214e36b6a1b6a442686722a5d8cc449603aa833f3f0f40bda836704a3", size = 20914, upload-time = "2022-02-03T19:39:44.373Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/55/7f118b9c1b23ec15ca05d15a578d8207aa1706bc6f7c87218efffbbf875d/azure_common-1.1.28-py2.py3-none-any.whl", hash = "sha256:5c12d3dcf4ec20599ca6b0d3e09e86e146353d443e7fcc050c9a19c1f9df20ad", size = 14462, upload-time = "2022-02-03T19:39:42.417Z" },
 ]
 
 [[package]]
@@ -482,21 +457,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bc/a4/a6cd2d389bc1009300bcd57c9e2ace4b7e7ae1e5dc0bda415ee803629cf2/azure_monitor_opentelemetry_exporter-1.0.0b51.tar.gz", hash = "sha256:a6171c34326bcd6216938bb40d715c15f1f22984ac1986fc97231336d8ac4c3c", size = 319837, upload-time = "2026-04-06T21:45:46.378Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/1a/6b0b7a6181b42709103a65a676c89fd5055cb1d1b281ebe10c49254a170f/azure_monitor_opentelemetry_exporter-1.0.0b51-py2.py3-none-any.whl", hash = "sha256:6572cac11f96e3b18ae1187cb35cf3b40d0004655dae8048896c41c765bea530", size = 242104, upload-time = "2026-04-06T21:45:47.856Z" },
-]
-
-[[package]]
-name = "azure-search-documents"
-version = "11.7.0b2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "azure-common" },
-    { name = "azure-core" },
-    { name = "isodate" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/ba/bde0f03e0a742ba3bbcc929f91ed2f3b1420c2bb84c9a7f878f3b87ebfce/azure_search_documents-11.7.0b2.tar.gz", hash = "sha256:b6e039f8038ff2210d2057e704e867c6e29bb46bfcd400da4383e45e4b8bb189", size = 423956, upload-time = "2025-11-14T20:09:32.876Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/26/ed4498374f9088818278ac225f2bea688b4ec979d81bf83a5355c8c366af/azure_search_documents-11.7.0b2-py3-none-any.whl", hash = "sha256:f82117b321344a84474269ed26df194c24cca619adc024d981b1b86aee3c6f05", size = 432037, upload-time = "2025-11-14T20:09:34.347Z" },
 ]
 
 [[package]]
@@ -3009,14 +2969,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/0c/900c25aa8a8b8b533335a3805b6a08d9d23338bf529e0b84fe4f39a2c704/semantic_kernel-1.41.1.tar.gz", hash = "sha256:3bd0320c189545131b74f1b0f95bc175b4b64aace858f17e7bca6ff200a4c9d6", size = 611711, upload-time = "2026-03-25T06:51:53.304Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/78/25808dba1f4c5915ce7b52ed6031b088aa9dee9062c8999a9c5675cbcb5f/semantic_kernel-1.41.1-py3-none-any.whl", hash = "sha256:9b54d73bcb2ef9701aeb06b0b1340385388417d96fe7ef8e1ac6547ab10084bc", size = 923912, upload-time = "2026-03-25T06:51:51.33Z" },
-]
-
-[package.optional-dependencies]
-azure = [
-    { name = "azure-ai-inference" },
-    { name = "azure-core-tracing-opentelemetry" },
-    { name = "azure-cosmos" },
-    { name = "azure-search-documents" },
 ]
 
 [[package]]
