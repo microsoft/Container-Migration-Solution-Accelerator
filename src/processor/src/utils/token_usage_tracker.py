@@ -8,19 +8,29 @@ Tracks token usage across four dimensions:
 - Per user/process
 - Per model deployment
 
-Usage data is emitted to Application Insights as custom events and can be
-persisted to Cosmos DB via the TelemetryManager.
+ses the cross-accelerator ``llm_token_telemetry`` module for extraction
+and emission, keeping this tracker as a thin orchestration-specific layer
+that adds thread-safe aggregation and per-step tracking.
 """
 from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from utils.event_utils import track_event_if_configured
+from utils.llm_token_telemetry import (
+    TokenUsage,
+    TokenUsageEmitter,
+    extract_usage,
+    extract_usage_from_dict,
+    extract_usage_from_stream_chunk,
+)
 
 logger = logging.getLogger(__name__)
+
+# Module-level emitter instance shared across the processor service.
+_emitter = TokenUsageEmitter()
 
 
 @dataclass
@@ -60,8 +70,8 @@ class TokenUsageTracker:
     """Thread-safe tracker that aggregates LLM token usage across multiple dimensions.
 
     Accumulates usage per agent, per step (team), per model, and overall per process.
-    Emits Application Insights custom events for each recorded interaction and
-    provides summary emission at process completion.
+    Emits Application Insights custom events via ``TokenUsageEmitter`` from the
+    cross-accelerator ``llm_token_telemetry`` module.
     """
 
     def __init__(self, process_id: str, user_id: str = ""):
@@ -95,8 +105,8 @@ class TokenUsageTracker:
     ) -> None:
         """Record a single LLM call's token usage.
 
-        Accumulates into all relevant dimensions and emits a per-call
-        Application Insights event.
+        Accumulates into all relevant dimensions and emits per-call
+        Application Insights events via ``TokenUsageEmitter``.
         """
         if total_tokens <= 0 and input_tokens <= 0 and output_tokens <= 0:
             return
@@ -132,23 +142,20 @@ class TokenUsageTracker:
                     self._by_model[model_deployment_name] = AggregatedTokenUsage()
                 self._by_model[model_deployment_name].add(record)
 
-        # Emit per-call event to Application Insights
-        try:
-            track_event_if_configured(
-                "LLM_Token_Usage",
-                {
-                    "process_id": self.process_id,
-                    "user_id": self.user_id,
-                    "agent_name": agent_name,
-                    "step_name": step_name,
-                    "model_deployment_name": model_deployment_name,
-                    "input_tokens": str(input_tokens),
-                    "output_tokens": str(output_tokens),
-                    "total_tokens": str(total_tokens),
-                },
-            )
-        except Exception:
-            logger.debug("Failed to emit per-call token usage event", exc_info=True)
+        # Emit per-call events via the cross-accelerator emitter
+        usage = TokenUsage(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+        )
+        _emitter.emit_all(
+            agent_name=agent_name or "unknown",
+            model_deployment_name=model_deployment_name or "unknown",
+            usage=usage,
+            process_id=self.process_id,
+            user_id=self.user_id,
+            step_name=step_name,
+        )
 
         logger.info(
             "[TOKEN] Recorded: agent=%s step=%s model=%s input=%d output=%d total=%d | cumulative=%d",
@@ -177,72 +184,75 @@ class TokenUsageTracker:
         """Emit summary-level Application Insights custom events.
 
         Call this at the end of a process/workflow to produce aggregated events
-        that are easy to query in KQL.
+        that are easy to query in KQL. Uses ``TokenUsageEmitter`` from
+        ``llm_token_telemetry`` for all event emission.
         """
         summary = self.get_summary()
 
         try:
+            total = summary["total"]
+            total_usage = TokenUsage(
+                input_tokens=total["input_tokens"],
+                output_tokens=total["output_tokens"],
+                total_tokens=total["total_tokens"],
+            )
+
             # Overall summary
-            track_event_if_configured(
-                "LLM_Token_Usage_Summary",
-                {
-                    "process_id": self.process_id,
-                    "user_id": self.user_id,
-                    "total_input_tokens": str(summary["total"]["input_tokens"]),
-                    "total_output_tokens": str(summary["total"]["output_tokens"]),
-                    "total_tokens": str(summary["total"]["total_tokens"]),
-                    "total_calls": str(summary["total"]["call_count"]),
-                    "agent_count": str(len(summary["by_agent"])),
-                    "model_count": str(len(summary["by_model"])),
-                    "step_count": str(len(summary["by_step"])),
-                },
+            _emitter.emit_summary(
+                usage=total_usage,
+                agent_count=len(summary["by_agent"]),
+                model_count=len(summary["by_model"]),
+                process_id=self.process_id,
+                user_id=self.user_id,
+                total_calls=str(total["call_count"]),
+                step_count=str(len(summary["by_step"])),
             )
 
             # Per-agent events
-            for agent_name, usage in summary["by_agent"].items():
+            for agent_name, usage_dict in summary["by_agent"].items():
                 model = self._agent_model_map.get(agent_name, "")
-                track_event_if_configured(
-                    "LLM_Agent_Token_Usage",
-                    {
-                        "process_id": self.process_id,
-                        "user_id": self.user_id,
-                        "agent_name": agent_name,
-                        "model_deployment_name": model,
-                        "input_tokens": str(usage["input_tokens"]),
-                        "output_tokens": str(usage["output_tokens"]),
-                        "total_tokens": str(usage["total_tokens"]),
-                        "call_count": str(usage["call_count"]),
-                    },
+                agent_usage = TokenUsage(
+                    input_tokens=usage_dict["input_tokens"],
+                    output_tokens=usage_dict["output_tokens"],
+                    total_tokens=usage_dict["total_tokens"],
+                )
+                _emitter.emit_agent(
+                    agent_name=agent_name,
+                    model_deployment_name=model,
+                    usage=agent_usage,
+                    process_id=self.process_id,
+                    user_id=self.user_id,
+                    call_count=str(usage_dict["call_count"]),
                 )
 
             # Per-model events
-            for model_name, usage in summary["by_model"].items():
-                track_event_if_configured(
-                    "LLM_Model_Token_Usage",
-                    {
-                        "process_id": self.process_id,
-                        "user_id": self.user_id,
-                        "model_deployment_name": model_name,
-                        "input_tokens": str(usage["input_tokens"]),
-                        "output_tokens": str(usage["output_tokens"]),
-                        "total_tokens": str(usage["total_tokens"]),
-                        "call_count": str(usage["call_count"]),
-                    },
+            for model_name, usage_dict in summary["by_model"].items():
+                model_usage = TokenUsage(
+                    input_tokens=usage_dict["input_tokens"],
+                    output_tokens=usage_dict["output_tokens"],
+                    total_tokens=usage_dict["total_tokens"],
+                )
+                _emitter.emit_model(
+                    model_deployment_name=model_name,
+                    usage=model_usage,
+                    process_id=self.process_id,
+                    user_id=self.user_id,
+                    call_count=str(usage_dict["call_count"]),
                 )
 
             # Per-step (team) events
-            for step_name, usage in summary["by_step"].items():
-                track_event_if_configured(
-                    "LLM_Step_Token_Usage",
-                    {
-                        "process_id": self.process_id,
-                        "user_id": self.user_id,
-                        "step_name": step_name,
-                        "input_tokens": str(usage["input_tokens"]),
-                        "output_tokens": str(usage["output_tokens"]),
-                        "total_tokens": str(usage["total_tokens"]),
-                        "call_count": str(usage["call_count"]),
-                    },
+            for step_name, usage_dict in summary["by_step"].items():
+                step_usage = TokenUsage(
+                    input_tokens=usage_dict["input_tokens"],
+                    output_tokens=usage_dict["output_tokens"],
+                    total_tokens=usage_dict["total_tokens"],
+                )
+                _emitter.emit_team(
+                    team_name=step_name,
+                    usage=step_usage,
+                    process_id=self.process_id,
+                    user_id=self.user_id,
+                    call_count=str(usage_dict["call_count"]),
                 )
 
             logger.info(
@@ -259,114 +269,29 @@ class TokenUsageTracker:
 def extract_usage_from_response(response: Any) -> TokenUsageRecord | None:
     """Extract token usage from an agent_framework or OpenAI SDK response object.
 
-    Handles multiple response shapes:
-    1. response.usage (OpenAI SDK ChatCompletion)
-    2. response.usage_details (agent_framework Content objects)
-    3. response dict with usage keys
-    4. AgentResponseUpdate with contents containing usage
+    Delegates to ``llm_token_telemetry.extract_usage()`` and converts the
+    result to a ``TokenUsageRecord`` for backward compatibility.
     """
-    if response is None:
+    usage = extract_usage(response)
+    if usage is None:
         return None
-
-    # 1. Direct .usage attribute (OpenAI ChatCompletion, Responses API)
-    usage = getattr(response, "usage", None)
-    if usage is not None:
-        record = _parse_usage_object(usage)
-        if record:
-            return record
-
-    # 2. .usage_details or .details attribute
-    usage_details = getattr(response, "details", None) or getattr(response, "usage_details", None)
-    if usage_details is not None:
-        record = _parse_usage_object(usage_details)
-        if record:
-            return record
-
-    # 3. raw_representation with usage
-    raw = getattr(response, "raw_representation", None)
-    if raw is not None:
-        raw_usage = getattr(raw, "usage", None)
-        if raw_usage is not None:
-            record = _parse_usage_object(raw_usage)
-            if record:
-                return record
-        if isinstance(raw, dict) and "usage" in raw:
-            record = _parse_usage_object(raw["usage"])
-            if record:
-                return record
-
-    # 4. contents list with usage items (AgentResponseUpdate)
-    contents = getattr(response, "contents", None)
-    if contents:
-        for item in contents:
-            # Try usage-typed content items first, then any item with details
-            ud = None
-            if getattr(item, "type", None) == "usage":
-                ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
-            if ud is None:
-                ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
-            if ud is not None:
-                record = _parse_usage_object(ud)
-                if record:
-                    return record
-            # Dict content item
-            if isinstance(item, dict):
-                for key in ("details", "usage_details"):
-                    if key in item:
-                        record = _parse_usage_object(item[key])
-                        if record:
-                            return record
-                if "input_token_count" in item or "total_token_count" in item:
-                    record = _parse_usage_object(item)
-                    if record:
-                        return record
-
-    # 5. additional_properties
-    addl = getattr(response, "additional_properties", None)
-    if isinstance(addl, dict) and "usage" in addl:
-        record = _parse_usage_object(addl["usage"])
-        if record:
-            return record
-
-    # 6. Dict response
-    if isinstance(response, dict):
-        if "usage" in response:
-            record = _parse_usage_object(response["usage"])
-            if record:
-                return record
-        record = _parse_usage_object(response)
-        if record:
-            return record
-
-    return None
-
-
-def _get_field(obj: Any, *names: str) -> int:
-    """Read the first non-zero value from *obj* for the given field names.
-
-    Works uniformly for dicts (via ``get``) and objects (via ``getattr``).
-    """
-    getter = obj.get if isinstance(obj, dict) else lambda k, d=0: getattr(obj, k, d)
-    for name in names:
-        val = getter(name, 0)
-        if val:
-            return int(val)
-    return 0
+    return TokenUsageRecord(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        total_tokens=usage.total_tokens,
+    )
 
 
 def _parse_usage_object(usage: Any) -> TokenUsageRecord | None:
-    """Parse a usage object (dict or object with attrs) into a TokenUsageRecord."""
-    if usage is None:
+    """Parse a usage object (dict or object with attrs) into a TokenUsageRecord.
+
+    Delegates to ``llm_token_telemetry.extract_usage_from_dict()``.
+    """
+    result = extract_usage_from_dict(usage)
+    if result is None:
         return None
-
-    inp = _get_field(usage, "input_token_count", "prompt_tokens", "input_tokens")
-    out = _get_field(usage, "output_token_count", "completion_tokens", "output_tokens")
-    tot = _get_field(usage, "total_token_count", "total_tokens") or (inp + out)
-
-    if tot > 0 or inp > 0 or out > 0:
-        return TokenUsageRecord(
-            input_tokens=inp,
-            output_tokens=out,
-            total_tokens=tot if tot > 0 else inp + out,
-        )
-    return None
+    return TokenUsageRecord(
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+        total_tokens=result.total_tokens,
+    )
