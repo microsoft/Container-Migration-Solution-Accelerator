@@ -25,10 +25,10 @@ import {
   Warning24Regular
 } from "@fluentui/react-icons"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
-import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
-import yaml from "react-syntax-highlighter/dist/esm/languages/hljs/yaml"
-import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown"
-import json from "react-syntax-highlighter/dist/esm/languages/hljs/json"
+import yamlLang from "highlight.js/lib/languages/yaml"
+import markdownLang from "highlight.js/lib/languages/markdown"
+import jsonLang from "highlight.js/lib/languages/json"
+import sqlLang from "highlight.js/lib/languages/sql"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -42,10 +42,11 @@ import { determineFileStatus, filesLogsBuilder, renderErrorSection, useStyles, r
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
 
 
-SyntaxHighlighter.registerLanguage("sql", sql)
-SyntaxHighlighter.registerLanguage("yaml", yaml)
-SyntaxHighlighter.registerLanguage("markdown", markdown)
-SyntaxHighlighter.registerLanguage("json", json)
+const unwrap = (mod: any) => (typeof mod === "function" ? mod : mod.default);
+SyntaxHighlighter.registerLanguage("yaml", unwrap(yamlLang))
+SyntaxHighlighter.registerLanguage("markdown", unwrap(markdownLang))
+SyntaxHighlighter.registerLanguage("json", unwrap(jsonLang))
+SyntaxHighlighter.registerLanguage("sql", unwrap(sqlLang))
 
 
 
@@ -205,7 +206,6 @@ const BatchStoryPage = () => {
 
   // Helper function to format content based on file type
   const formatContent = (content: string, _fileName: string) => {
-    // Return content as-is for all file types.
     return content;
   };
 

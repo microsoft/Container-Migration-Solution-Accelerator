@@ -9,7 +9,8 @@ import {
   Button
 } from "@fluentui/react-components";
 import { Dismiss24Regular } from "@fluentui/react-icons";
-import Lottie from 'lottie-react';
+import LottieImport from 'lottie-react';
+const Lottie = ('default' in LottieImport ? (LottieImport as any).default : LottieImport) as typeof LottieImport;
 import documentLoader from "../../../public/images/loader.json";
 
 interface ProgressModalProps {

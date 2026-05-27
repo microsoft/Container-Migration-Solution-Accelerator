@@ -61,6 +61,9 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.26.2' = {
     allowBlobPublicAccess: false
     allowSharedKeyAccess: false
     allowCrossTenantReplication: false
+    // SFI: enable infrastructure (double) encryption at rest
+    requireInfrastructureEncryption: true
+    keyType: 'Service'
     blobServices: {
       deleteRetentionPolicyEnabled: true
       deleteRetentionPolicyDays: 7
