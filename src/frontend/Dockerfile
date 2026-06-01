@@ -13,6 +13,7 @@ RUN npm install
 COPY . .
 
 # Build the app
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # Runtime stage

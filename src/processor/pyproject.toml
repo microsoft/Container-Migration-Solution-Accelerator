@@ -15,6 +15,7 @@ dependencies = [
     "azure-core==1.38.0",
     "azure-cosmos==4.15.0",
     "azure-identity==1.26.0b1",
+    "azure-monitor-events-extension==0.1.0",
     "azure-storage-blob==12.28.0",
     "azure-storage-file-datalake==12.23.0",
     "azure-storage-queue==12.15.0",
