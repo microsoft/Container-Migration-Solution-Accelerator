@@ -84,7 +84,7 @@ param enableTelemetry bool = true
 param enablePrivateNetworking bool = false
 
 @description('Optional. Enable monitoring applicable resources, aligned with the Well Architected Framework recommendations. This setting enables Application Insights and Log Analytics and configures all the resources applicable resources to send logs. Defaults to false.')
-param enableMonitoring bool = true
+param enableMonitoring bool = false
 
 @description('Optional. Enable scalability for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false.')
 param enableScalability bool = false
@@ -285,16 +285,6 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
     // SAME workspace causes duplicate ingestion of platform logs.
     // Source: AB#37816 — see CKM #811 reference implementation.
     workspaceResourceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
-  }
-}
-
-// ========== LLM Token Usage Workbook ========== //
-module tokenUsageWorkbook './modules/tokenUsageWorkbook.bicep' = if (enableMonitoring) {
-  name: take('module.token-usage-workbook.${solutionSuffix}', 64)
-  params: {
-    location: solutionLocation
-    applicationInsightsResourceId: applicationInsights!.outputs.resourceId
-    tags: allTags
   }
 }
 
