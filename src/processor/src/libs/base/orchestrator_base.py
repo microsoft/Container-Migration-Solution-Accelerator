@@ -26,6 +26,7 @@ from libs.agent_framework.shared_memory_context_provider import (
 )
 from utils.agent_telemetry import TelemetryManager
 from utils.console_util import format_agent_message
+from utils.token_usage_tracker import TokenUsageTracker
 
 from .agent_base import AgentBase
 
@@ -42,6 +43,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
         self.initialized = False
         self.memory_store: QdrantMemoryStore | None = None
         self.step_name: str = ""
+        self.token_tracker: TokenUsageTracker | None = None
 
     def is_console_summarization_enabled(self) -> bool:
         """Return True if console summarization (extra LLM call per turn) is enabled.
@@ -82,6 +84,23 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
         self.agents = await self.create_agents(self.agentinfos, process_id=process_id)
         self.initialized = True
+
+        # Resolve workflow-level token usage tracker from AppContext (if registered)
+        if self.app_context.is_registered(TokenUsageTracker):
+            try:
+                self.token_tracker = self.app_context.get_service(TokenUsageTracker)
+                # Register model deployment name for all agents so per-model tracking works
+                try:
+                    deployment_name = self.agent_framework_helper.settings.get_service_config(
+                        "default"
+                    ).chat_deployment_name
+                    if deployment_name and self.token_tracker:
+                        for agent_name in (self.agents or {}):
+                            self.token_tracker.set_agent_model(agent_name, deployment_name)
+                except Exception:
+                    logger.debug("Could not register agent-model mapping", exc_info=True)
+            except Exception:
+                self.token_tracker = None
 
     async def flush_agent_memories(self) -> None:
         """Flush buffered memories from all agent context providers.
@@ -188,10 +207,12 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 )
             elif agent_info.agent_name == "ResultGenerator":
                 # Structured JSON generation; deterministic and bounded.
+                # Use 25_000 to prevent truncation of complex nested JSON schemas
+                # which causes "model produced invalid content" errors.
                 builder = (
                     builder
                     .with_temperature(0.0)
-                    .with_max_tokens(12_000)
+                    .with_max_tokens(25_000)
                     .with_tool_choice("none")
                 )
 
