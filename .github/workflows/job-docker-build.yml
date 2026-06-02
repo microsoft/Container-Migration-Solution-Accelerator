@@ -29,7 +29,7 @@ jobs:
       IMAGE_TAG: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Unique Docker Image Tag
         id: generate_docker_tag
@@ -46,7 +46,7 @@ jobs:
           echo "Generated unique Docker tag: $UNIQUE_TAG"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -60,37 +60,40 @@ jobs:
 
       - name: Build and Push Backend API Docker Image
         id: build_push_image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
           context: ./src/backend-api
           file: ./src/backend-api/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
 
       - name: Build and Push Processor Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
           context: ./src/processor
           file: ./src/processor/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
       
       - name: Build and Push Front End Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
           context: ./src/frontend
           file: ./src/frontend/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
