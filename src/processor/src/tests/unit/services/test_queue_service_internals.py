@@ -189,7 +189,7 @@ class TestControlWatcher:
             try:
                 await task
             except (asyncio.CancelledError, Exception):
-                pass
+                pass  # Expected during task cancellation cleanup
 
         _run(_go())
 
