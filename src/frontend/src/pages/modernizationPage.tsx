@@ -26,21 +26,21 @@ import {
   ArrowDownload24Regular,
 } from "@fluentui/react-icons"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
+import sqlLang from "highlight.js/lib/languages/sql"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
-import sql from "react-syntax-highlighter/dist/cjs/languages/hljs/sql"
+
+const unwrapHljs = (mod: any) => (typeof mod === "function" ? mod : mod.default);
+SyntaxHighlighter.registerLanguage("sql", unwrapHljs(sqlLang))
 import { useNavigate, useParams } from "react-router-dom"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect } from "react"
 import { getApiUrl, headerBuilder } from '../api/config';
 import BatchHistoryPanel from "../components/batchHistoryPanel"
 import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import PanelRightToggles from "../components/Header/PanelRightToggles";
 import { filesLogsBuilder, BatchSummary, completedFiles, filesErrorCounter, hasFiles, renderFileError, fileErrorCounter, renderErrorContent, filesFinalErrorCounter, fileWarningCounter } from "../api/utils";
-import { format } from "sql-formatter";
 
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
-
-SyntaxHighlighter.registerLanguage("sql", sql)
 
 const useStyles = makeStyles({
   root: {
@@ -412,25 +412,6 @@ const fetchBatchSummary = async (batchId: string): Promise<any> => {
   }
 };
 
-
-enum ProcessingStage {
-  NotStarted = 1,
-  Queued = 10,
-  Starting = 20,
-  Parsing = 40,
-  Processing = 60,
-  FinalChecks = 95,
-  Completed = 100
-}
-
-enum Agents {
-  Verifier = "Semantic Verifier agent",
-  Checker = "Syntax Checker agent",
-  Picker = "Picker agent",
-  Migrator = "Migrator agent",
-  Agents = "Agent"
-}
-
 const getPrintFileStatus = (status: string): string => {
   switch (status) {
     case "completed":
@@ -481,7 +462,7 @@ const ModernizationPage = () => {
         const selectedFile = files.find((f) => f.id === selectedFileId);
         if (!selectedFile || !selectedFile.translatedCode) {
           setFileLoading(true);
-          const newFileUpdate = await fetchFileFromAPI(selectedFile?.fileId || "");
+          await fetchFileFromAPI(selectedFile?.fileId || "");
           setFileLoading(false);
         }
 
@@ -977,7 +958,7 @@ useEffect(() => {
                     backgroundColor: tokens.colorNeutralBackground1,
                   }}
                 >
-                  {format(selectedFile.translatedCode, { language: "tsql" })}
+                  {selectedFile.translatedCode}
                 </SyntaxHighlighter>
               ) : selectedFile.status === "completed" && !selectedFile.translatedCode && !selectedFile.errorCount ? (
                 <div style={{ padding: "20px", textAlign: "center" }}>

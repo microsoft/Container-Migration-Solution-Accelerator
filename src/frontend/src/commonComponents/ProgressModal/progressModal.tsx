@@ -9,7 +9,8 @@ import {
   Button
 } from "@fluentui/react-components";
 import { Dismiss24Regular } from "@fluentui/react-icons";
-import Lottie from 'lottie-react';
+import LottieImport from 'lottie-react';
+const Lottie = ('default' in LottieImport ? (LottieImport as any).default : LottieImport) as typeof LottieImport;
 import documentLoader from "../../../public/images/loader.json";
 
 interface ProgressModalProps {
@@ -270,10 +271,6 @@ const ProgressModal: React.FC<ProgressModalProps> = ({
                       // Extract action count from 📊 segment
                       const actionsMatch = raw.match(/📊\s*(\d+)\s*actions?/);
                       const actionCount = actionsMatch ? parseInt(actionsMatch[1]) : 0;
-
-                      // Extract blocking info from 🚧 segment
-                      const blockingMatch = raw.match(/🚧\s*Blocking\s*(\d+)/);
-                      const blockingCount = blockingMatch ? parseInt(blockingMatch[1]) : 0;
 
                       // Special handling for Coordinator: parse routing info from message
                       let coordinatorTarget = '';

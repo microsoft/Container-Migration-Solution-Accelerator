@@ -34,7 +34,6 @@ class Message:
 groupchat_module.Message = Message
 from libs.agent_framework.groupchat_orchestrator import (  # noqa: E402
     AgentResponse,
-    AgentResponseStream,
     GroupChatOrchestrator,
     OrchestrationResult,
 )

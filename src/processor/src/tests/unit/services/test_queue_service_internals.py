@@ -10,8 +10,6 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from services.queue_service import QueueMigrationService, QueueServiceConfig
 from steps.analysis.models.step_param import Analysis_TaskParam
 

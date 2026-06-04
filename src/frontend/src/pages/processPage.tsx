@@ -3,10 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { RootState } from "../store/store";
 import { togglePanel, closePanel } from "../slices/historyPanelSlice";
-import {
-  Button,
-  Tooltip,
-} from "@fluentui/react-components";
 import { MessageBar, MessageBarType } from "@fluentui/react";
 import Header from "../components/Header/Header";
 import HeaderTools from "../components/Header/HeaderTools";
@@ -15,7 +11,8 @@ import PanelRight from "../components/Panels/PanelRight";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
 import { HistoryRegular, HistoryFilled, bundleIcon } from "@fluentui/react-icons";
 import { CircleCheck } from "lucide-react";
-import Lottie from 'lottie-react';
+import LottieImport from 'lottie-react';
+const Lottie = ('default' in LottieImport ? (LottieImport as any).default : LottieImport) as typeof LottieImport;
 import documentLoader from "../../public/images/loader.json";
 import { apiService } from '../services/ApiService';
 import ProgressModal from "../commonComponents/ProgressModal/progressModal";

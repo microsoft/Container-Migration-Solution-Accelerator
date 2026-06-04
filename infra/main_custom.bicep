@@ -341,6 +341,10 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     tags: allTags
     zone: 0
+    // SFI: enable system-assigned managed identity on the jumpbox VM. Required so
+    // the Azure Monitor Agent can authenticate to the Log Analytics workspace and
+    // honor the SecurityAuditEvents data collection rule association.
+    managedIdentities: { systemAssigned: true }
     imageReference: {
       offer: 'WindowsServer'
       publisher: 'MicrosoftWindowsServer'
@@ -387,6 +391,148 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enable
       }
     ]
     enableTelemetry: enableTelemetry
+    // SFI: associate the SecurityAuditEvents data collection rule with the
+    // jumpbox VM via the Azure Monitor Agent extension. Routes Windows audit
+    // success / audit failure events to Log Analytics. Gated on the same
+    // (enablePrivateNetworking && enableMonitoring) expression as the DCR
+    // module so the dereference of windowsVmDataCollectionRules!.outputs
+    // stays safe even if the outer jumpbox VM gate ever changes.
+    extensionMonitoringAgentConfig: (enablePrivateNetworking && enableMonitoring)
+      ? {
+          enabled: true
+          tags: allTags
+          dataCollectionRuleAssociations: [
+            {
+              name: 'send-${logAnalyticsWorkspaceResourceName}'
+              dataCollectionRuleResourceId: windowsVmDataCollectionRules!.outputs.resourceId
+            }
+          ]
+        }
+      : null
+  }
+}
+
+// SFI: data collection rule that captures Windows Security audit success and
+// audit failure events from the jumpbox VM and routes them to Log Analytics
+// via the Microsoft-Event stream. The xPath filter uses the Windows
+// audit Keywords bitmask (0x30000000000000 = AuditSuccess|AuditFailure) and
+// excludes EventID 4624 (successful logon) because it is extremely
+// high-volume. Also collects a small set of Windows performance counters via
+// Microsoft-Perf for the jumpbox so the same DCR provides basic VM health
+// signal. The SecurityEvent / Perf tables are auto-provisioned by Azure
+// Monitor on first ingestion via the DCR; no legacy OMSGallery/Security
+// solution is needed.
+var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
+var dataCollectionRulesLocation = useExistingLogAnalytics
+  ? existingLogAnalyticsWorkspace!.location
+  : logAnalyticsWorkspace!.outputs.location
+var dcrLogAnalyticsDestinationName = 'la-${logAnalyticsWorkspaceResourceName}-destination'
+module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (enablePrivateNetworking && enableMonitoring) {
+  name: take('avm.res.insights.data-collection-rule.${dataCollectionRulesResourceName}', 64)
+  params: {
+    name: dataCollectionRulesResourceName
+    tags: allTags
+    enableTelemetry: enableTelemetry
+    location: dataCollectionRulesLocation
+    dataCollectionRuleProperties: {
+      kind: 'Windows'
+      dataSources: {
+        windowsEventLogs: [
+          {
+            name: 'SecurityAuditEvents'
+            streams: [
+              'Microsoft-Event'
+            ]
+            xPathQueries: [
+              'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
+            ]
+          }
+        ]
+        performanceCounters: [
+          {
+            name: 'perfCounterDataSource60'
+            streams: [
+              'Microsoft-Perf'
+            ]
+            samplingFrequencyInSeconds: 60
+            counterSpecifiers: [
+              '\\Processor Information(_Total)\\% Processor Time'
+              '\\Processor Information(_Total)\\% Privileged Time'
+              '\\Processor Information(_Total)\\% User Time'
+              '\\Processor Information(_Total)\\Processor Frequency'
+              '\\System\\Processes'
+              '\\Process(_Total)\\Thread Count'
+              '\\Process(_Total)\\Handle Count'
+              '\\System\\System Up Time'
+              '\\System\\Context Switches/sec'
+              '\\System\\Processor Queue Length'
+              '\\Memory\\% Committed Bytes In Use'
+              '\\Memory\\Available Bytes'
+              '\\Memory\\Committed Bytes'
+              '\\Memory\\Cache Bytes'
+              '\\Memory\\Pool Paged Bytes'
+              '\\Memory\\Pool Nonpaged Bytes'
+              '\\Memory\\Pages/sec'
+              '\\Memory\\Page Faults/sec'
+              '\\Process(_Total)\\Working Set'
+              '\\Process(_Total)\\Working Set - Private'
+              '\\LogicalDisk(_Total)\\% Disk Time'
+              '\\LogicalDisk(_Total)\\% Disk Read Time'
+              '\\LogicalDisk(_Total)\\% Disk Write Time'
+              '\\LogicalDisk(_Total)\\% Idle Time'
+              '\\LogicalDisk(_Total)\\Disk Bytes/sec'
+              '\\LogicalDisk(_Total)\\Disk Read Bytes/sec'
+              '\\LogicalDisk(_Total)\\Disk Write Bytes/sec'
+              '\\LogicalDisk(_Total)\\Disk Transfers/sec'
+              '\\LogicalDisk(_Total)\\Disk Reads/sec'
+              '\\LogicalDisk(_Total)\\Disk Writes/sec'
+              '\\LogicalDisk(_Total)\\Avg. Disk sec/Transfer'
+              '\\LogicalDisk(_Total)\\Avg. Disk sec/Read'
+              '\\LogicalDisk(_Total)\\Avg. Disk sec/Write'
+              '\\LogicalDisk(_Total)\\Avg. Disk Queue Length'
+              '\\LogicalDisk(_Total)\\Avg. Disk Read Queue Length'
+              '\\LogicalDisk(_Total)\\Avg. Disk Write Queue Length'
+              '\\LogicalDisk(_Total)\\% Free Space'
+              '\\LogicalDisk(_Total)\\Free Megabytes'
+              '\\Network Interface(*)\\Bytes Total/sec'
+              '\\Network Interface(*)\\Bytes Sent/sec'
+              '\\Network Interface(*)\\Bytes Received/sec'
+              '\\Network Interface(*)\\Packets/sec'
+              '\\Network Interface(*)\\Packets Sent/sec'
+              '\\Network Interface(*)\\Packets Received/sec'
+              '\\Network Interface(*)\\Packets Outbound Errors'
+              '\\Network Interface(*)\\Packets Received Errors'
+            ]
+          }
+        ]
+      }
+      destinations: {
+        logAnalytics: [
+          {
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+            name: dcrLogAnalyticsDestinationName
+          }
+        ]
+      }
+      dataFlows: [
+        {
+          streams: [
+            'Microsoft-Event'
+          ]
+          destinations: [
+            dcrLogAnalyticsDestinationName
+          ]
+        }
+        {
+          streams: [
+            'Microsoft-Perf'
+          ]
+          destinations: [
+            dcrLogAnalyticsDestinationName
+          ]
+        }
+      ]
+    }
   }
 }
 
@@ -458,6 +604,8 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     location: solutionLocation
     managedIdentities: { systemAssigned: true }
     minimumTlsVersion: 'TLS1_2'
+    // SFI: enable infrastructure (double) encryption at rest
+    requireInfrastructureEncryption: true
     enableTelemetry: enableTelemetry
     tags: allTags
     accessTier: 'Hot'
@@ -563,6 +711,8 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
     location: cosmosLocation
     tags: allTags
     enableTelemetry: enableTelemetry
+    // SFI: enable system-assigned managed identity for Cosmos DB account
+    managedIdentities: { systemAssigned: true }
     sqlDatabases: [
       {
         name: cosmosDatabaseName
@@ -697,6 +847,8 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
     softDeletePolicyStatus: 'disabled'
     tags: allTags
     networkRuleBypassOptions: 'AzureServices'
+    // SFI: enable system-assigned managed identity for the container registry
+    managedIdentities: { systemAssigned: true }
     roleAssignments: [
       {
         roleDefinitionIdOrName: acrPullRole
@@ -760,7 +912,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
       }
     ]
   }
@@ -814,7 +966,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
         principalType: 'ServicePrincipal'
       }
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1100,6 +1252,11 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     ]
     enableTelemetry: enableTelemetry
     publicNetworkAccess: 'Enabled' // Always enabled for Container Apps Environment
+    // SFI: enable mTLS / end-to-end encryption between revisions within the
+    // Container Apps environment (Container Apps equivalent of App Service's
+    // endToEndEncryptionEnabled). Applies to Microsoft.App/managedEnvironments
+    // peerTrafficConfiguration.encryption.enabled.
+    peerTrafficEncryption: true
 
     // <========== WAF related parameters
 
