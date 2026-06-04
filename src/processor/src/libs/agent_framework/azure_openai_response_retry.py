@@ -12,13 +12,17 @@ import random
 from dataclasses import dataclass
 from typing import Any, AsyncIterable, MutableSequence
 
-from agent_framework.azure import AzureOpenAIResponsesClient
 from tenacity import (
     AsyncRetrying,
     retry_if_exception,
     stop_after_attempt,
 )
 from tenacity.wait import wait_base
+
+
+# agent_framework 1.3.0 removed AzureOpenAIResponsesClient; alias to its replacement.
+from agent_framework.openai import OpenAIChatClient as AzureOpenAIResponsesClient
+
 
 logger = logging.getLogger(__name__)
 
@@ -76,14 +80,6 @@ def _looks_like_rate_limit(error: BaseException) -> bool:
 
     # Server errors (5xx) are transient and should be retried.
     if isinstance(status, int) and 500 <= status < 600:
-        return True
-
-    # "The model produced invalid content" is a transient error from Azure OpenAI
-    # when the model output fails content/schema validation — worth retrying.
-    if any(
-        s in msg
-        for s in ["model produced invalid content", "invalid content"]
-    ):
         return True
 
     cause = getattr(error, "__cause__", None)
@@ -524,15 +520,31 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
         self,
         *args: Any,
         retry_config: RateLimitRetryConfig | None = None,
+        # Legacy parameter names (mapped to OpenAIChatClient equivalents)
+        deployment_name: str | None = None,
+        endpoint: str | None = None,
+        ad_token: str | None = None,
+        ad_token_provider: object | None = None,
+        token_endpoint: str | None = None,
         **kwargs: Any,
     ):
+        # Map legacy params to OpenAIChatClient params
+        if deployment_name and "model" not in kwargs:
+            kwargs["model"] = deployment_name
+        if endpoint and "azure_endpoint" not in kwargs:
+            kwargs["azure_endpoint"] = endpoint
+        if ad_token_provider and kwargs.get("credential") is None:
+            kwargs["credential"] = ad_token_provider
+
         super().__init__(*args, **kwargs)
         self._retry_config = retry_config or RateLimitRetryConfig.from_env()
         self._context_trim_config = ContextTrimConfig.from_env()
 
     async def _inner_get_response(
-        self, *, messages: MutableSequence[Any], chat_options: Any, **kwargs: Any
+        self, *, messages: MutableSequence[Any], chat_options: Any = None, options: Any = None, stream: bool = False, **kwargs: Any
     ) -> Any:
+        # Support both old (chat_options) and new (options) parameter names
+        effective_options = options if options is not None else chat_options
         parent_inner_get_response = super(
             AzureOpenAIResponseClientWithRetry, self
         )._inner_get_response
@@ -558,7 +570,7 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
         try:
             return await _retry_call(
                 lambda: parent_inner_get_response(
-                    messages=effective_messages, chat_options=chat_options, **kwargs
+                    messages=effective_messages, options=effective_options, stream=stream, **kwargs
                 ),
                 config=self._retry_config,
             )
@@ -606,16 +618,22 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
             await asyncio.sleep(trim_delay)
             return await _retry_call(
                 lambda: parent_inner_get_response(
-                    messages=trimmed, chat_options=chat_options, **kwargs
+                    messages=trimmed, options=effective_options, stream=stream, **kwargs
                 ),
                 config=self._retry_config,
             )
 
     async def _inner_get_streaming_response(
-        self, *, messages: MutableSequence[Any], chat_options: Any, **kwargs: Any
+        self, *, messages: MutableSequence[Any], chat_options: Any = None, options: Any = None, **kwargs: Any
     ) -> AsyncIterable[Any]:
+        """Streaming with retry. Delegates to parent._inner_get_response(stream=True).
+
+        This method is kept for backward compatibility in case any internal code path
+        calls it directly. The new framework uses _inner_get_response(stream=True).
+        """
         # Conservative retry: only retries failures before the first yielded update.
         attempts = self._retry_config.max_retries + 1
+        effective_options = options if options is not None else chat_options
 
         effective_messages: MutableSequence[Any] | list[Any] = messages
         if self._context_trim_config.enabled:
@@ -638,8 +656,8 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
         for attempt_index in range(attempts):
             stream = super(
                 AzureOpenAIResponseClientWithRetry, self
-            )._inner_get_streaming_response(
-                messages=effective_messages, chat_options=chat_options, **kwargs
+            )._inner_get_response(
+                messages=effective_messages, options=effective_options, stream=True, **kwargs
             )
 
             iterator = stream.__aiter__()

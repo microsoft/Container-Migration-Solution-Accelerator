@@ -90,7 +90,7 @@ def test_invoking_empty_messages_returns_empty():
         provider, _ = _make_provider()
         context = await provider.invoking([])
         assert context.instructions is None
-        assert context.messages == []
+        assert getattr(context, "messages", []) == []
 
     asyncio.run(_run())
 

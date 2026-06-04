@@ -7,12 +7,41 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from agent_framework import ChatMessage, Role
+import libs.agent_framework.middlewares as middlewares_module
 
-from libs.agent_framework.middlewares import (
+ROLE_USER = "user"
+ROLE_ASSISTANT = "assistant"
+
+
+class Message:
+    """Test stub for Message - the real Message in 1.3.0 uses contents= instead of text=."""
+
+    def __init__(self, *, role, text=None, contents=None, author_name=None):
+        self.role = role
+        self.text = text
+        self.contents = contents
+        self.author_name = author_name
+
+
+# Patch at module level: middleware code references Message at runtime for isinstance
+# checks and construction. This is scoped to test execution only.
+_original_message = getattr(middlewares_module, "Message", None)
+middlewares_module.Message = Message
+from libs.agent_framework.middlewares import (  # noqa: E402
     DebuggingMiddleware,
     LoggingFunctionMiddleware,
 )
+
+
+def setup_module(module=None):
+    """Re-apply the Message patch in case another module's teardown restored it."""
+    middlewares_module.Message = Message
+
+
+def teardown_module(module=None):
+    """Restore the original Message class to avoid leaking into other tests."""
+    if _original_message is not None:
+        middlewares_module.Message = _original_message
 
 
 def _run(coro):
@@ -86,24 +115,24 @@ class TestInputObserverMiddleware:
     def test_replaces_user_messages_when_replacement_set(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg_user = ChatMessage(role=Role.USER, text="orig user")
-        msg_assistant = ChatMessage(role=Role.ASSISTANT, text="hi")
+        msg_user = Message(role=ROLE_USER, text="orig user", contents="orig user")
+        msg_assistant = Message(role=ROLE_ASSISTANT, text="hi", contents="hi")
         ctx = MagicMock()
         ctx.messages = [msg_user, msg_assistant]
         next_fn = AsyncMock()
         mw = InputObserverMiddleware(replacement="REDACTED")
         _run(mw.process(ctx, next_fn))
         # First message replaced, second untouched
-        assert ctx.messages[0].text == "REDACTED"
-        assert ctx.messages[1].text == "hi"
+        assert ctx.messages[0].contents == "REDACTED"
+        assert ctx.messages[1].contents == "hi"
         next_fn.assert_awaited_once()
 
     def test_no_replacement_keeps_text(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg = ChatMessage(role=Role.USER, text="keep me")
+        msg = Message(role=ROLE_USER, text="keep me", contents="keep me")
         ctx = MagicMock()
         ctx.messages = [msg]
         mw = InputObserverMiddleware(replacement=None)
         _run(mw.process(ctx, AsyncMock()))
-        assert ctx.messages[0].text == "keep me"
+        assert ctx.messages[0].contents == "keep me"

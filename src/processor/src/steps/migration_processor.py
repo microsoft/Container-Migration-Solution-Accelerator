@@ -32,16 +32,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from agent_framework import (
-    ExecutorCompletedEvent,
-    ExecutorFailedEvent,
-    ExecutorInvokedEvent,
-    Workflow,
-    WorkflowBuilder,
-    WorkflowFailedEvent,
-    WorkflowOutputEvent,
-    WorkflowStartedEvent,
-)
+from agent_framework import Workflow, WorkflowBuilder, WorkflowEvent
 
 from openai import AsyncAzureOpenAI
 
@@ -368,7 +359,7 @@ class MigrationProcessor:
                 }
 
             async for event in self.workflow.run_stream(input_data):
-                if isinstance(event, WorkflowStartedEvent):
+                if event.type == "started":
                     logger.info("Workflow started (%s)", event.origin.value)
 
                     report_collector.set_current_step("analysis", step_phase="start")
@@ -377,16 +368,15 @@ class MigrationProcessor:
                     await telemetry.init_process(
                         process_id=input_data.process_id, step="analysis", phase="start"
                     )
-                elif isinstance(event, WorkflowOutputEvent):
-                    # WorkflowOutputEvent carries the step output (success or hard-termination).
+                elif event.type == "output":
+                    # WorkflowEvent carries the step output (success or hard-termination).
+                    # Normalize executor_id once to avoid None in telemetry/reporting.
+                    executor_id = event.executor_id or "unknown"
                     # Note: a None payload is an error that must be surfaced clearly.
                     if event.data is None:
-                        report_collector.set_current_step(
-                            event.source_executor_id or "unknown"
-                        )
+                        report_collector.set_current_step(executor_id)
 
                         # Build a meaningful error message instead of generic "Workflow output is None"
-                        executor_id = event.source_executor_id or "unknown"
                         error_msg = f"Step '{executor_id}' completed without producing output. This may be caused by context length overflow, agent timeout, or an internal orchestration error. Check processor logs for '[AOAI_CTX_TRIM_STREAM]' or exception details."
 
                         report_collector.record_failure(
@@ -407,13 +397,13 @@ class MigrationProcessor:
 
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
-                            failed_step=event.source_executor_id or "unknown",
+                            failed_step=executor_id,
                             error_message=error_msg,
                             failure_details=failure_details,
                             execution_time_seconds=(
                                 time.perf_counter()
-                                - step_start_perf[event.source_executor_id]
-                                if event.source_executor_id in step_start_perf
+                                - step_start_perf[executor_id]
+                                if executor_id in step_start_perf
                                 else None
                             ),
                         )
@@ -423,7 +413,7 @@ class MigrationProcessor:
 
                         # Raise a rich exception so the queue worker reports a meaningful reason.
                         raise WorkflowExecutorFailedException({
-                            "executor_id": event.source_executor_id or "unknown",
+                            "executor_id": executor_id,
                             "error_type": "WorkflowOutputMissing",
                             "message": error_msg,
                             "traceback": None,
@@ -476,16 +466,14 @@ class MigrationProcessor:
                                 "error": f"security evidence scan failed: {type(e).__name__}: {e}",
                             }
 
-                        report_collector.set_current_step(
-                            event.source_executor_id or "unknown"
-                        )
+                        report_collector.set_current_step(executor_id)
                         report_collector.record_failure(
                             exception=ValueError(
                                 getattr(event.data, "reason", None)
-                                or f"Hard terminated in {event.source_executor_id} step"
+                                or f"Hard terminated in {executor_id} step"
                             ),
                             custom_message=getattr(event.data, "reason", None)
-                            or f"Hard terminated in {event.source_executor_id} step",
+                            or f"Hard terminated in {executor_id} step",
                         )
 
                         failure_details: Any = (
@@ -510,14 +498,14 @@ class MigrationProcessor:
 
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
-                            failed_step=event.source_executor_id or "unknown",
+                            failed_step=executor_id,
                             error_message=getattr(event.data, "reason", None)
-                            or f"Hard terminated in {event.source_executor_id} step",
+                            or f"Hard terminated in {executor_id} step",
                             failure_details=failure_details,
                             execution_time_seconds=(
                                 time.perf_counter()
-                                - step_start_perf[event.source_executor_id]
-                                if event.source_executor_id in step_start_perf
+                                - step_start_perf[executor_id]
+                                if executor_id in step_start_perf
                                 else None
                             ),
                         )
@@ -533,21 +521,21 @@ class MigrationProcessor:
                     logger.info("Workflow output (%s): %s", event.origin.value, event.data)
                     await telemetry.record_step_result(
                         process_id=input_data.process_id,
-                        step_name=event.source_executor_id,
+                        step_name=executor_id,
                         step_result=event.data,
                         execution_time_seconds=(
                             time.perf_counter()
-                            - step_start_perf[event.source_executor_id]
-                            if event.source_executor_id in step_start_perf
+                            - step_start_perf[executor_id]
+                            if executor_id in step_start_perf
                             else None
                         ),
                     )
 
-                    if event.source_executor_id in step_start_perf:
+                    if executor_id in step_start_perf:
                         report_collector.mark_step_completed(
-                            event.source_executor_id,
+                            executor_id,
                             execution_time=time.perf_counter()
-                            - step_start_perf[event.source_executor_id],
+                            - step_start_perf[executor_id],
                         )
 
                     try:
@@ -572,10 +560,10 @@ class MigrationProcessor:
                     )
 
                     return event.data
-                elif isinstance(event, ExecutorFailedEvent):
-                    pass
-                    # will handle in WorkflowFailedEvent
-                elif isinstance(event, WorkflowFailedEvent):
+                elif event.type == "executor_failed":
+                    # Intentionally ignored — actionable details arrive in the subsequent "failed" event.
+                    continue
+                elif event.type == "failed":
                     logger.error(
                         "Executor failed (%s): %s [%s]: %s (traceback: %s)",
                         event.origin.value,
@@ -644,7 +632,7 @@ class MigrationProcessor:
                     # Raise a rich exception containing the full WorkflowErrorDetails payload.
                     raise WorkflowExecutorFailedException(event.details)
 
-                elif isinstance(event, ExecutorInvokedEvent):
+                elif event.type == "executor_invoked":
                     # The bug. the first executor's event fired after completing execution.
                     if event.executor_id != "analysis":
                         telemetry: TelemetryManager = (
@@ -675,7 +663,7 @@ class MigrationProcessor:
                     # near-zero and incorrect.
                     if event.executor_id not in step_start_perf:
                         step_start_perf[event.executor_id] = time.perf_counter()
-                elif isinstance(event, ExecutorCompletedEvent):
+                elif event.type == "executor_completed":
                     # print(f"Executor completed ({event.executor_id}): {event.data}")
 
                     # Log shared memory stats after each step
