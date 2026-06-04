@@ -33,7 +33,7 @@ from libs.agent_framework.middlewares import (  # noqa: E402
 )
 
 
-def teardown_module():
+def teardown_module(module=None):
     """Restore the original Message class to avoid leaking into other tests."""
     if _original_message is not None:
         middlewares_module.Message = _original_message
@@ -110,22 +110,22 @@ class TestInputObserverMiddleware:
     def test_replaces_user_messages_when_replacement_set(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg_user = Message(role=ROLE_USER, text="orig user")
-        msg_assistant = Message(role=ROLE_ASSISTANT, text="hi")
+        msg_user = Message(role=ROLE_USER, text="orig user", contents="orig user")
+        msg_assistant = Message(role=ROLE_ASSISTANT, text="hi", contents="hi")
         ctx = MagicMock()
         ctx.messages = [msg_user, msg_assistant]
         next_fn = AsyncMock()
         mw = InputObserverMiddleware(replacement="REDACTED")
         _run(mw.process(ctx, next_fn))
         # First message replaced, second untouched
-        assert ctx.messages[0].text == "REDACTED"
-        assert ctx.messages[1].text == "hi"
+        assert ctx.messages[0].contents == "REDACTED"
+        assert ctx.messages[1].contents == "hi"
         next_fn.assert_awaited_once()
 
     def test_no_replacement_keeps_text(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg = Message(role=ROLE_USER, text="keep me")
+        msg = Message(role=ROLE_USER, text="keep me", contents="keep me")
         ctx = MagicMock()
         ctx.messages = [msg]
         mw = InputObserverMiddleware(replacement=None)

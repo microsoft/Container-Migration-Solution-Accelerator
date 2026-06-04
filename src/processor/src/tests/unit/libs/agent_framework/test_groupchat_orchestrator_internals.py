@@ -40,7 +40,7 @@ from libs.agent_framework.groupchat_orchestrator import (  # noqa: E402
 )
 
 
-def teardown_module():
+def teardown_module(module=None):
     """Restore the original Message class to avoid leaking into other tests."""
     if _original_message is not None:
         groupchat_module.Message = _original_message
