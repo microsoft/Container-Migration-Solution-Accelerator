@@ -53,6 +53,6 @@ def test_input_observer_middleware_replaces_user_text_when_configured() -> None:
         await mw.process(ctx, _next)
 
         assert ctx.messages[0].role == ROLE_USER
-        assert ctx.messages[0].text == "replacement"
+        assert ctx.messages[0].contents == "replacement"
 
     asyncio.run(_run())
