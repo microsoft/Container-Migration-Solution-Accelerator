@@ -146,7 +146,6 @@ class InputObserverMiddleware(ChatMiddleware):
 
         # Modify user messages by creating new messages with enhanced text
         modified_messages: list[Message] = []
-        modified_count = 0
 
         for message in context.messages:
             if message.role == ROLE_USER and message.text:
@@ -161,7 +160,6 @@ class InputObserverMiddleware(ChatMiddleware):
 
                 modified_message = Message(role=message.role, text=updated_text, contents=updated_text)
                 modified_messages.append(modified_message)
-                modified_count += 1
             else:
                 modified_messages.append(message)
 
