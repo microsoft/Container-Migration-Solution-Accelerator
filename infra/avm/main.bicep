@@ -1,4 +1,5 @@
-// ========== main.bicep ========== //
+// ========== main.bicep (AVM flavor) ========== //
+// Uses Azure Verified Modules (br/public:avm/...) via toolkit wrappers.
 targetScope = 'resourceGroup'
 
 // ==============================================================================
@@ -99,6 +100,9 @@ param existingLogAnalyticsWorkspaceId string = ''
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags object = {}
 
+@description('Optional. Enable/Disable usage telemetry for module.')
+param enableTelemetry bool = true
+
 // ==============================================================================
 // Variables
 // ==============================================================================
@@ -116,8 +120,6 @@ var solutionSuffix = toLower(trim(replace(
 )))
 
 var deployerInfo = deployer()
-var deployingUserPrincipalId = deployerInfo.objectId
-var deployingUserPrincipalType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
 var createdBy = contains(deployerInfo, 'userPrincipalName')
   ? split(deployerInfo.userPrincipalName, '@')[0]
@@ -149,7 +151,6 @@ var aiModelDeployments = [
   }
 ]
 
-// Cosmos DB containers for migration solution
 var cosmosDatabaseName = 'migration_db'
 var cosmosContainers = [
   { name: 'processes', partitionKeyPath: '/_partitionKey' }
@@ -159,7 +160,6 @@ var cosmosContainers = [
   { name: 'process_statuses', partitionKeyPath: '/_partitionKey' }
 ]
 
-// Storage containers
 var processBlobContainerName = 'processes'
 var processQueueName = 'processes-queue'
 
@@ -187,8 +187,8 @@ module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExisti
   params: {
     solutionName: solutionSuffix
     location: solutionLocation
+    enableTelemetry: enableTelemetry
   }
-  scope: resourceGroup(resourceGroup().name)
 }
 
 var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
@@ -197,12 +197,12 @@ var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
 
 // ========== AI Foundry and related resources ========== //
 
-// Deploy new AI Services account + AI Foundry project (no connections, no deployments)
 module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (empty(existingFoundryProjectResourceId)) {
   name: take('module.ai-foundry-project.${solutionName}', 64)
   params: {
     solutionName: solutionSuffix
     location: azureAiServiceLocation
+    enableTelemetry: enableTelemetry
   }
   scope: resourceGroup(resourceGroup().name)
 }
@@ -214,7 +214,6 @@ var aiProjectResourceName = useExistingAIProject ? split(existingFoundryProjectR
 var aiServiceSubscription = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[2] : subscription().subscriptionId
 var aiServiceResourceGroup = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
 
-// Reference existing AI Foundry project (identity only)
 module existing_project_setup './modules/ai/existing-project-setup.bicep' = if (useExistingAIProject) {
   name: take('module.existing-project-setup.${solutionName}', 64)
   scope: resourceGroup(aiServiceSubscription, aiServiceResourceGroup)
@@ -224,7 +223,6 @@ module existing_project_setup './modules/ai/existing-project-setup.bicep' = if (
   }
 }
 
-// Storage Blob connection (single call for both existing and new paths)
 module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-storage-conn.${solutionName}', 64)
   scope: resourceGroup(aiServiceSubscription, aiServiceResourceGroup)
@@ -243,7 +241,6 @@ module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
   }
 }
 
-// Model deployments (single loop for both existing and new paths)
 @batchSize(1)
 module model_deployments './modules/ai/ai-foundry-model-deployment.bicep' = [for (deployment, i) in aiModelDeployments: {
   name: take('module.model-deployment-${i}.${solutionName}', 64)
@@ -259,7 +256,6 @@ module model_deployments './modules/ai/ai-foundry-model-deployment.bicep' = [for
   }
 }]
 
-// ========== AI outputs (ternary: existing vs new) ========== //
 var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.aiFoundryEndpoint : ai_foundry_project!.outputs.endpoint
 var projectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
 var aiFoundryResourceId = !useExistingAIProject ? ai_foundry_project!.outputs.resourceId : ''
@@ -275,6 +271,7 @@ module storage_account './modules/data/storage-account.bicep' = {
     containers: [
       { name: 'data', publicAccess: 'None' }
     ]
+    enableTelemetry: enableTelemetry
   }
   scope: resourceGroup(resourceGroup().name)
 }
@@ -288,6 +285,7 @@ module cosmosDBModule './modules/data/cosmos-db.bicep' = {
     location: cosmosLocation
     databaseName: cosmosDatabaseName
     containers: cosmosContainers
+    enableTelemetry: enableTelemetry
   }
   scope: resourceGroup(resourceGroup().name)
 }
@@ -300,6 +298,7 @@ module containerAppEnv './modules/compute/container-app-environment.bicep' = {
     location: solutionLocation
     tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
+    enableTelemetry: enableTelemetry
   }
 }
 
@@ -318,6 +317,7 @@ module ca_backend_api './modules/compute/container-app.bicep' = {
     environmentResourceId: containerAppEnv.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 80
+    enableTelemetry: enableTelemetry
     containers: [
       {
         name: 'backend-api'
@@ -370,6 +370,7 @@ module ca_frontend './modules/compute/container-app.bicep' = {
     environmentResourceId: containerAppEnv.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 3000
+    enableTelemetry: enableTelemetry
     containers: [
       {
         name: 'frontend'
@@ -405,6 +406,7 @@ module ca_processor './modules/compute/container-app.bicep' = {
     ingressExternal: false
     ingressTargetPort: 8080
     ingressAllowInsecure: true
+    enableTelemetry: enableTelemetry
     containers: [
       {
         name: 'processor'
@@ -454,8 +456,6 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     storageAccountResourceId: storage_account.outputs.resourceId
     aiProjectPrincipalId: aiProjectPrincipalId
     aiSearchPrincipalId: ''
-    deployerPrincipalId: deployingUserPrincipalId
-    deployerPrincipalType: deployingUserPrincipalType
     backendAppServicePrincipalId: ca_backend_api.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
     existingAiProjectPrincipalId: !empty(existingFoundryProjectResourceId) ? existing_project_setup!.outputs.aiProjectPrincipalId : ''
