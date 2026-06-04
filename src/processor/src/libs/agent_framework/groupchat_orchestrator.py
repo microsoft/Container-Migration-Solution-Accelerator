@@ -22,7 +22,6 @@ from datetime import datetime
 from typing import Any, Awaitable, Callable, Generic, Mapping, TypeVar
 
 from agent_framework import (
-    Agent,
     AgentResponseUpdate,
     Executor,
     Message,
