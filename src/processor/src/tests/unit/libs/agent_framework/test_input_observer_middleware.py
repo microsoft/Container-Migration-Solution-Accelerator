@@ -26,6 +26,11 @@ middlewares_module.Message = Message
 from libs.agent_framework.middlewares import InputObserverMiddleware  # noqa: E402
 
 
+def setup_module(module=None):
+    """Re-apply the Message patch in case another module's teardown restored it."""
+    middlewares_module.Message = Message
+
+
 def teardown_module(module=None):
     """Restore the original Message class to avoid leaking into other tests."""
     if _original_message is not None:

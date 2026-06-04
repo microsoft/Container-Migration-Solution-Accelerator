@@ -33,6 +33,11 @@ from libs.agent_framework.middlewares import (  # noqa: E402
 )
 
 
+def setup_module(module=None):
+    """Re-apply the Message patch in case another module's teardown restored it."""
+    middlewares_module.Message = Message
+
+
 def teardown_module(module=None):
     """Restore the original Message class to avoid leaking into other tests."""
     if _original_message is not None:
@@ -130,4 +135,4 @@ class TestInputObserverMiddleware:
         ctx.messages = [msg]
         mw = InputObserverMiddleware(replacement=None)
         _run(mw.process(ctx, AsyncMock()))
-        assert ctx.messages[0].text == "keep me"
+        assert ctx.messages[0].contents == "keep me"
