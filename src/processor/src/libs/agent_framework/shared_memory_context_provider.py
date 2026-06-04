@@ -307,6 +307,8 @@ class SharedMemoryContextProvider(ContextProvider):
         """Extract text content from a Message."""
         if hasattr(message, "text") and message.text:
             return message.text
+        if hasattr(message, "contents") and message.contents:
+            return str(message.contents) if not isinstance(message.contents, str) else message.contents
         if hasattr(message, "content"):
             return str(message.content) if message.content else ""
         return str(message) if message else ""

@@ -989,7 +989,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         if agent_name != self.coordinator_name:
             self._progress_counter += 1
 
-        # Detect manager termination signal (finish=true) from Coordinator.
+        # Detect Coordinator termination signal (finish=true) via CoordinatorSelectionResponse.
         # NOTE: The underlying WorkflowBuilder does not automatically stop on finish,
         # so we enforce it here.
         if agent_name == self.coordinator_name:

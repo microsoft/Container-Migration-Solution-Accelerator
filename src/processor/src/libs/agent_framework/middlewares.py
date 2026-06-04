@@ -149,8 +149,10 @@ class InputObserverMiddleware(ChatMiddleware):
         modified_count = 0
 
         for message in context.messages:
-            if message.role == ROLE_USER and message.text:
-                original_text = message.text
+            original_text = message.text if message.text else (
+                str(message.contents) if hasattr(message, "contents") and message.contents else None
+            )
+            if message.role == ROLE_USER and original_text:
                 updated_text = original_text
 
                 if self.replacement:

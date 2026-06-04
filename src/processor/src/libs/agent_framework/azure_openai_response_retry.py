@@ -228,9 +228,13 @@ def _get_message_role(message: Any) -> str | None:
         return None
     if isinstance(message, dict):
         role = message.get("role")
-        return role if isinstance(role, str) else None
+        if role is None:
+            return None
+        return role if isinstance(role, str) else getattr(role, "value", str(role))
     role = getattr(message, "role", None)
-    return role if isinstance(role, str) else None
+    if role is None:
+        return None
+    return role if isinstance(role, str) else getattr(role, "value", str(role))
 
 
 def _set_message_text(message: Any, new_text: str) -> Any:
@@ -251,13 +255,21 @@ def _set_message_text(message: Any, new_text: str) -> Any:
             out["content"] = new_text
         return out
 
-    for attr in ("content", "text"):
+    for attr in ("content", "text", "contents"):
         if hasattr(message, attr):
             try:
                 setattr(message, attr, new_text)
-                return message
             except Exception:
                 pass
+            else:
+                if attr != "contents":
+                    # Also update contents if it exists for agent-framework 1.3.0 compat
+                    if hasattr(message, "contents"):
+                        try:
+                            setattr(message, "contents", new_text)
+                        except Exception:
+                            pass
+                return message
     return message
 
 
