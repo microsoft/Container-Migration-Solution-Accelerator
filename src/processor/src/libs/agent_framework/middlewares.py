@@ -159,7 +159,7 @@ class InputObserverMiddleware(ChatMiddleware):
                         f"[InputObserverMiddleware] Updated: '{original_text}' -> '{updated_text}'"
                     )
 
-                modified_message = Message(role=message.role, contents=updated_text)
+                modified_message = Message(role=message.role, text=updated_text, contents=updated_text)
                 modified_messages.append(modified_message)
                 modified_count += 1
             else:
