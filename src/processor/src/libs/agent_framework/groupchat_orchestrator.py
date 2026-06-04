@@ -19,7 +19,7 @@ from collections import deque
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Generic, Mapping, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Generic, Mapping, TypeVar
 
 from agent_framework import (
     Agent,
@@ -190,8 +190,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self,
         name: str,
         process_id: str,
-        participants: Mapping[str, SupportsAgentRun | Executor]
-        | Sequence[SupportsAgentRun | Executor],
+        participants: Mapping[str, SupportsAgentRun | Executor],
         memory_client: AsyncMemory,
         coordinator_name: str = "Coordinator",
         max_rounds: int = 100,
@@ -204,7 +203,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         Args:
             name: Friendly workflow name (used for logging/diagnostics)
             process_id: Workflow/process identifier (used for tracing)
-            participants: Mapping/sequence of pre-created agents (including the Coordinator)
+            participants: Mapping of pre-created agents (including the Coordinator)
             memory_client: Mem0 async memory client for multi-agent memory (may be None depending on runtime)
             coordinator_name: Name of the coordinator/manager agent
             max_rounds: Maximum conversation rounds before termination
@@ -227,7 +226,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self.result_format = result_output_format
 
         # Runtime state
-        self.agents: dict[str, Agent] = participants
+        self.agents: dict[str, SupportsAgentRun | Executor] = dict(participants)
         self.agent_tool_usage: dict[str, list[dict[str, Any]]] = {}
         self.agent_responses: list[AgentResponse] = []
         self._initialized: bool = False

@@ -561,8 +561,8 @@ class MigrationProcessor:
 
                     return event.data
                 elif event.type == "executor_failed":
-                    pass
-                    # will handle in WorkflowFailedEvent
+                    # Intentionally ignored — actionable details arrive in the subsequent "failed" event.
+                    continue
                 elif event.type == "failed":
                     logger.error(
                         "Executor failed (%s): %s [%s]: %s (traceback: %s)",

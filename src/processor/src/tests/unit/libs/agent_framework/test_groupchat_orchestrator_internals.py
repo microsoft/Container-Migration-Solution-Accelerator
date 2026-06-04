@@ -31,12 +31,19 @@ class Message:
         self.author_name = author_name
 
 
+_original_message = getattr(groupchat_module, "Message", None)
 groupchat_module.Message = Message
 from libs.agent_framework.groupchat_orchestrator import (  # noqa: E402
     AgentResponse,
     GroupChatOrchestrator,
     OrchestrationResult,
 )
+
+
+def teardown_module():
+    """Restore the original Message class to avoid leaking into other tests."""
+    if _original_message is not None:
+        groupchat_module.Message = _original_message
 
 
 def _run(coro):

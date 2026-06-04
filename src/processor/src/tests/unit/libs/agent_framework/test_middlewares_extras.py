@@ -25,11 +25,18 @@ class Message:
 
 # Patch at module level: middleware code references Message at runtime for isinstance
 # checks and construction. This is scoped to test execution only.
+_original_message = getattr(middlewares_module, "Message", None)
 middlewares_module.Message = Message
 from libs.agent_framework.middlewares import (  # noqa: E402
     DebuggingMiddleware,
     LoggingFunctionMiddleware,
 )
+
+
+def teardown_module():
+    """Restore the original Message class to avoid leaking into other tests."""
+    if _original_message is not None:
+        middlewares_module.Message = _original_message
 
 
 def _run(coro):
