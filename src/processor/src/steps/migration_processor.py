@@ -32,7 +32,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from agent_framework import Workflow, WorkflowBuilder, WorkflowEvent
+from agent_framework import Workflow, WorkflowBuilder
 
 from openai import AsyncAzureOpenAI
 
