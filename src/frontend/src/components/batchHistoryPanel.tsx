@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Card, Spinner, Tooltip } from "@fluentui/react-components";
 import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../commonComponents/ConfirmationDialog/confirmationDialogue";
