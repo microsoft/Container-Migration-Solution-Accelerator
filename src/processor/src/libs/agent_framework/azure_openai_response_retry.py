@@ -539,12 +539,27 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
         # Map legacy params to OpenAIChatClient params
         if deployment_name and "model" not in kwargs:
             kwargs["model"] = deployment_name
-        if endpoint and "azure_endpoint" not in kwargs:
+        if endpoint and not kwargs.get("azure_endpoint"):
             kwargs["azure_endpoint"] = endpoint
         if ad_token_provider and kwargs.get("credential") is None:
             kwargs["credential"] = ad_token_provider
 
+        # Remove None-valued keys that would conflict with env-based settings
+        for k in list(kwargs):
+            if kwargs[k] is None:
+                del kwargs[k]
+
         super().__init__(*args, **kwargs)
+
+        # OpenAIChatClient appends /v1/ to azure_endpoint but Azure AI Foundry
+        # endpoints expect /openai/responses (without /v1/). Fix the base URL.
+        if hasattr(self, "client") and self.client is not None:
+            base = str(self.client.base_url)
+            if "/openai/v1/" in base:
+                import httpx
+                corrected = base.replace("/openai/v1/", "/openai/")
+                self.client._base_url = httpx.URL(corrected)
+
         self._retry_config = retry_config or RateLimitRetryConfig.from_env()
         self._context_trim_config = ContextTrimConfig.from_env()
 

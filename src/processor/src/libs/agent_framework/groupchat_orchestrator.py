@@ -28,9 +28,9 @@ from agent_framework import (
     Role,
     SupportsAgentRun,
     Workflow,
-    WorkflowBuilder as GroupChatBuilder,
     WorkflowEvent,
 )
+from agent_framework_orchestrations import GroupChatBuilder
 from mem0 import AsyncMemory
 from pydantic import BaseModel, ValidationError
 
@@ -491,7 +491,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             # Execute with streaming
             conversation: list[Message] = []
 
-            async for event in group_chat_workflow.run_stream(task_prompt):
+            async for event in group_chat_workflow.run(task_prompt, stream=True):
                 # Enforce wall-clock timeout if configured.
                 if self.max_seconds is not None:
                     elapsed = (datetime.now() - start_time).total_seconds()
@@ -1114,9 +1114,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         ]
 
         return (
-            GroupChatBuilder()
-            .set_manager(coordinator)
-            .participants(participants)
+            GroupChatBuilder(
+                participants=participants,
+                orchestrator_agent=coordinator,
+            )
             .build()
         )
 
