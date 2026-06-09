@@ -1142,7 +1142,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         result = await result_generator.run(
             final_conversation,
-            response_format=result_format,
+            options={"response_format": result_format},
         )
 
         text = result.messages[-1].text
@@ -1175,7 +1175,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             )
             retry_result = await result_generator.run(
                 retry_conversation,
-                response_format=result_format,
+                options={"response_format": result_format},
             )
             retry_text = retry_result.messages[-1].text
             retry_json_payload = self._extract_first_json_payload(retry_text)
