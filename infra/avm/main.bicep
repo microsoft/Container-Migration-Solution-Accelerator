@@ -103,6 +103,23 @@ param tags object = {}
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
 
+@description('Optional. Enable private networking for applicable resources.')
+param enablePrivateNetworking bool = false
+
+@description('Optional. Enable monitoring for applicable resources.')
+param enableMonitoring bool = false
+
+@secure()
+@description('Optional. The user name for the administrator account of the virtual machine. Required by Azure at provisioning time but not used for login when Entra ID is enabled.')
+param vmAdminUsername string?
+
+@secure()
+@description('Optional. The password for the administrator account of the virtual machine. Auto-generated if not provided. Not used for login when Entra ID is enabled.')
+param vmAdminPassword string?
+
+@description('Optional. The size of the virtual machine. Defaults to Standard_D2s_v5.')
+param vmSize string = 'Standard_D2s_v5'
+
 // ==============================================================================
 // Variables
 // ==============================================================================
@@ -120,6 +137,8 @@ var solutionSuffix = toLower(trim(replace(
 )))
 
 var deployerInfo = deployer()
+var deployingUserPrincipalId = deployerInfo.objectId
+var deployingUserPrincipalType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
 var createdBy = contains(deployerInfo, 'userPrincipalName')
   ? split(deployerInfo.userPrincipalName, '@')[0]
@@ -441,6 +460,32 @@ module ca_processor './modules/compute/container-app.bicep' = {
       maxReplicas: 1
       minReplicas: 1
     }
+  }
+}
+
+// ========== Jumpbox VM (WAF — private networking) ========== //
+// Login is via Microsoft Entra ID through Azure Bastion (not local credentials)
+module virtualMachine './modules/compute/virtual-machine.bicep' = if (enablePrivateNetworking) {
+  name: take('module.virtual-machine.${solutionName}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
+    enableTelemetry: enableTelemetry
+    vmSize: vmSize
+    adminUsername: vmAdminUsername ?? 'testvmuser'
+    adminPassword: vmAdminPassword ?? 'Vm!${uniqueString(subscription().subscriptionId, solutionName)}${guid(subscription().subscriptionId, solutionName, 'vm-admin-password')}'
+    subnetResourceId: '' // TODO: wire to virtualNetwork!.outputs.administrationSubnetResourceId when VNet module is added
+    deployingUserPrincipalId: deployingUserPrincipalId
+    deployingUserPrincipalType: deployingUserPrincipalType
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: '1c0163c0-47e6-4577-8991-ea5c82e286e4' // Virtual Machine Administrator Login
+        principalId: deployingUserPrincipalId
+        principalType: deployingUserPrincipalType
+      }
+    ]
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
   }
 }
 
