@@ -9,7 +9,7 @@ import re
 from abc import abstractmethod
 from typing import Any, Callable, Generic, MutableMapping, Sequence, TypeVar
 
-from agent_framework import Agent, FunctionTool, InMemoryHistoryProvider, ToolResultCompactionStrategy
+from agent_framework import Agent, FunctionTool, ToolResultCompactionStrategy
 
 from libs.agent_framework.agent_builder import AgentBuilder
 from libs.agent_framework.agent_framework_helper import ClientType
@@ -169,7 +169,6 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                 AgentBuilder(agent_client)
                 .with_name(agent_info.agent_name)
                 .with_instructions(instruction)
-                .with_store(False)
             )
 
             # Only attach tools when provided. (Coordinator should typically have none.)
@@ -207,19 +206,18 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     .with_tool_choice("none")
                 )
 
-            # Attach context providers to expert agents
+            # Attach shared memory context provider to expert agents
             # (not Coordinator, not ResultGenerator — they don't need memory)
-            if agent_info.agent_name not in ("Coordinator", "ResultGenerator"):
-                providers: list = [InMemoryHistoryProvider()]
-                if self.memory_store is not None:
-                    providers.append(
-                        SharedMemoryContextProvider(
-                            memory_store=self.memory_store,
-                            agent_name=agent_info.agent_name,
-                            step=self.step_name,
-                        )
-                    )
-                builder = builder.with_context_providers(providers)
+            if (
+                self.memory_store is not None
+                and agent_info.agent_name not in ("Coordinator", "ResultGenerator")
+            ):
+                memory_provider = SharedMemoryContextProvider(
+                    memory_store=self.memory_store,
+                    agent_name=agent_info.agent_name,
+                    step=self.step_name,
+                )
+                builder = builder.with_context_providers(memory_provider)
 
             agent = builder.build()
             agents[agent_info.agent_name] = agent

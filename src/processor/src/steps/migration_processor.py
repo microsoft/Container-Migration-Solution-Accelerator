@@ -157,18 +157,30 @@ class MigrationProcessor:
         Workflow
             The built workflow ready to execute.
         """
-        analysis = AnalysisExecutor(id="analysis", app_context=self.app_context)
-        design = DesignExecutor(id="design", app_context=self.app_context)
-        yaml_convert = YamlConvertExecutor(id="yaml", app_context=self.app_context)
-        documentation = DocumentationExecutor(
-            id="documentation", app_context=self.app_context
-        )
-
         workflow = (
-            WorkflowBuilder(start_executor=analysis)
-            .add_edge(analysis, design)
-            .add_edge(design, yaml_convert)
-            .add_edge(yaml_convert, documentation)
+            WorkflowBuilder()
+            .register_executor(
+                lambda: AnalysisExecutor(id="analysis", app_context=self.app_context),
+                name="analysis",
+            )
+            .register_executor(
+                lambda: DesignExecutor(id="design", app_context=self.app_context),
+                name="design",
+            )
+            .register_executor(
+                lambda: YamlConvertExecutor(id="yaml", app_context=self.app_context),
+                name="yaml",
+            )
+            .register_executor(
+                lambda: DocumentationExecutor(
+                    id="documentation", app_context=self.app_context
+                ),
+                name="documentation",
+            )
+            .set_start_executor("analysis")
+            .add_edge("analysis", "design")
+            .add_edge("design", "yaml")
+            .add_edge("yaml", "documentation")
             .build()
         )
 
@@ -346,7 +358,7 @@ class MigrationProcessor:
                     "top_remediations": remediation_titles,
                 }
 
-            async for event in self.workflow.run(input_data, stream=True):
+            async for event in self.workflow.run_stream(input_data):
                 if event.type == "started":
                     logger.info("Workflow started (%s)", event.origin.value)
 

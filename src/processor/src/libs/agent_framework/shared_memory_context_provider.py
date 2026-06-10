@@ -77,7 +77,6 @@ class SharedMemoryContextProvider(ContextProvider):
             top_k: Number of relevant memories to retrieve per turn.
             score_threshold: Minimum similarity score for memory retrieval.
         """
-        super().__init__(source_id=f"shared_memory_{agent_name}_{step}")
         self._memory_store = memory_store
         self._agent_name = agent_name
         self._step = step
@@ -97,14 +96,11 @@ class SharedMemoryContextProvider(ContextProvider):
                 break
         self._prior_steps = _STEP_ORDER[:step_idx] if step_idx else []
 
-    async def before_run(
+    async def invoking(
         self,
-        *,
-        agent,
-        session,
-        context,
-        state,
-    ) -> None:
+        messages: Message | MutableSequence[Message],
+        **kwargs,
+    ) -> Context:
         """Called before the agent's LLM call. Injects relevant shared memories.
 
         Only searches memories from PREVIOUS steps. Within the current step,
@@ -112,13 +108,12 @@ class SharedMemoryContextProvider(ContextProvider):
         """
         # Skip if this is the first step (no prior memories exist)
         if not self._prior_steps:
-            return
+            return Context()
 
-        # Extract query from the most recent messages in context
-        messages = context.get_messages()
+        # Extract query from the most recent messages
         query = self._extract_query(messages)
         if not query:
-            return
+            return Context()
 
         try:
             memories = await self._memory_store.search(
@@ -132,15 +127,15 @@ class SharedMemoryContextProvider(ContextProvider):
                 self._agent_name,
                 e,
             )
-            return
+            return Context()
 
         if not memories:
-            return
+            return Context()
 
         # Format memories into context instructions
         formatted = self._format_memories(memories)
         if not formatted:
-            return
+            return Context()
 
         instructions = f"{self.DEFAULT_CONTEXT_PROMPT}\n\n{formatted}"
 
@@ -152,15 +147,14 @@ class SharedMemoryContextProvider(ContextProvider):
             len(instructions),
         )
 
-        context.extend_instructions(self.source_id, instructions)
+        return Context(instructions=instructions)
 
-    async def after_run(
+    async def invoked(
         self,
-        *,
-        agent,
-        session,
-        context,
-        state,
+        request_messages: Message | Sequence[Message],
+        response_messages: Message | Sequence[Message] | None = None,
+        invoke_exception: Exception | None = None,
+        **kwargs,
     ) -> None:
         """Called after the agent's LLM response. Buffers the response for storage.
 
@@ -169,26 +163,33 @@ class SharedMemoryContextProvider(ContextProvider):
         This means only the agent's last response per step gets stored,
         which is the most complete and useful summary.
         """
-        response = context.response
-        if response is None:
+        if invoke_exception is not None:
             logger.debug(
-                "[MEMORY] after_run() skipped for %s — no response",
+                "[MEMORY] invoked() skipped for %s — exception: %s",
+                self._agent_name,
+                invoke_exception,
+            )
+            return
+
+        if response_messages is None:
+            logger.debug(
+                "[MEMORY] invoked() skipped for %s — no response_messages",
                 self._agent_name,
             )
             return
 
         # Extract text from response
-        content = response.text if hasattr(response, "text") else None
+        content = self._extract_text(response_messages)
         if not content or len(content) < MIN_CONTENT_LENGTH_TO_STORE:
             logger.debug(
-                "[MEMORY] after_run() skipped for %s — content too short (%d chars)",
+                "[MEMORY] invoked() skipped for %s — content too short (%d chars)",
                 self._agent_name,
                 len(content) if content else 0,
             )
             return
 
         logger.info(
-            "[MEMORY] after_run() buffering for %s (step=%s, %d chars)",
+            "[MEMORY] invoked() buffering for %s (step=%s, %d chars)",
             self._agent_name,
             self._step,
             len(content),

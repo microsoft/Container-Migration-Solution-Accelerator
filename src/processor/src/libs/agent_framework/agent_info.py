@@ -5,14 +5,12 @@
 
 from typing import Any, Callable, MutableMapping, Sequence
 
-from agent_framework import FunctionTool, MCPStdioTool, MCPStreamableHTTPTool
+from agent_framework import FunctionTool
 from jinja2 import Template
 from openai import BaseModel
 from pydantic import Field
 
 from .agent_framework_helper import AgentFrameworkHelper, ClientType
-
-ToolType = FunctionTool | MCPStreamableHTTPTool | MCPStdioTool | Callable[..., Any] | MutableMapping[str, Any]
 
 
 class AgentInfo(BaseModel):
@@ -23,8 +21,10 @@ class AgentInfo(BaseModel):
     agent_instruction: str | None = Field(default=None)
     agent_framework_helper: AgentFrameworkHelper | None = Field(default=None)
     tools: (
-        ToolType
-        | Sequence[ToolType]
+        FunctionTool
+        | Callable[..., Any]
+        | MutableMapping[str, Any]
+        | Sequence[FunctionTool | Callable[..., Any] | MutableMapping[str, Any]]
         | None
     ) = Field(default=None)
 
