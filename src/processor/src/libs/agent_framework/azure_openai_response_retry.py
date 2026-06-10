@@ -82,14 +82,6 @@ def _looks_like_rate_limit(error: BaseException) -> bool:
     if isinstance(status, int) and 500 <= status < 600:
         return True
 
-    # "The model produced invalid content" is a transient error from Azure OpenAI
-    # when the model output fails content/schema validation — worth retrying.
-    if any(
-        s in msg
-        for s in ["model produced invalid content", "invalid content"]
-    ):
-        return True
-
     cause = getattr(error, "__cause__", None)
     if cause and cause is not error:
         return _looks_like_rate_limit(cause)
