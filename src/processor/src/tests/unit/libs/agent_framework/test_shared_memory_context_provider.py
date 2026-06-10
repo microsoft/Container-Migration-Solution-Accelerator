@@ -61,8 +61,36 @@ def _make_provider(store=None):
     ), store
 
 
+def _make_context(messages=None, response_text=None):
+    """Create a mock SessionContext for before_run/after_run calls."""
+    ctx = MagicMock()
+    ctx.get_messages = MagicMock(return_value=messages or [])
+    ctx.extend_instructions = MagicMock()
+    if response_text is not None:
+        ctx.response = MagicMock()
+        ctx.response.text = response_text
+    else:
+        ctx.response = None
+    return ctx
+
+
+async def _call_before_run(provider, messages):
+    """Helper to call before_run and return the instructions that were injected."""
+    ctx = _make_context(messages=messages)
+    await provider.before_run(agent=MagicMock(), session=MagicMock(), context=ctx, state={})
+    if ctx.extend_instructions.called:
+        return ctx.extend_instructions.call_args[0][1]  # second positional arg = instructions
+    return None
+
+
+async def _call_after_run(provider, response_text):
+    """Helper to call after_run with a response."""
+    ctx = _make_context(response_text=response_text)
+    await provider.after_run(agent=MagicMock(), session=MagicMock(), context=ctx, state={})
+
+
 # ---------------------------------------------------------------------------
-# invoking() — Pre-LLM memory injection
+# before_run() — Pre-LLM memory injection
 # ---------------------------------------------------------------------------
 
 
@@ -75,11 +103,11 @@ def test_invoking_injects_memories():
         ]
         messages = [_make_chat_message("How should we handle storage configuration?")]
 
-        context = await provider.invoking(messages)
+        instructions = await _call_before_run(provider, messages)
 
-        assert context.instructions is not None
-        assert "GKE Filestore CSI" in context.instructions
-        assert "Azure Files for AKS" in context.instructions
+        assert instructions is not None
+        assert "GKE Filestore CSI" in instructions
+        assert "Azure Files for AKS" in instructions
         store.search.assert_called_once()
 
     asyncio.run(_run())
@@ -88,9 +116,8 @@ def test_invoking_injects_memories():
 def test_invoking_empty_messages_returns_empty():
     async def _run():
         provider, _ = _make_provider()
-        context = await provider.invoking([])
-        assert context.instructions is None
-        assert getattr(context, "messages", []) == []
+        instructions = await _call_before_run(provider, [])
+        assert instructions is None
 
     asyncio.run(_run())
 
@@ -101,8 +128,8 @@ def test_invoking_no_memories_returns_empty():
         store.search.return_value = []
         messages = [_make_chat_message("What is the overall migration plan for AKS?")]
 
-        context = await provider.invoking(messages)
-        assert context.instructions is None
+        instructions = await _call_before_run(provider, messages)
+        assert instructions is None
 
     asyncio.run(_run())
 
@@ -113,8 +140,8 @@ def test_invoking_search_failure_graceful():
         store.search.side_effect = Exception("search failed")
         messages = [_make_chat_message("What is the networking plan for AKS?")]
 
-        context = await provider.invoking(messages)
-        assert context.instructions is None
+        instructions = await _call_before_run(provider, messages)
+        assert instructions is None
 
     asyncio.run(_run())
 
@@ -125,7 +152,7 @@ def test_invoking_truncates_long_query():
         long_text = "x" * 5000
         messages = [_make_chat_message(long_text)]
 
-        await provider.invoking(messages)
+        await _call_before_run(provider, messages)
 
         query = store.search.call_args.kwargs["query"]
         assert len(query) <= 2000
@@ -142,7 +169,7 @@ def test_invoking_uses_last_message_as_query():
             _make_chat_message("Latest question about storage"),
         ]
 
-        await provider.invoking(messages)
+        await _call_before_run(provider, messages)
 
         query = store.search.call_args.kwargs["query"]
         assert "Latest question about storage" in query
@@ -159,10 +186,10 @@ def test_invoking_respects_max_context_chars():
         store.search.return_value = large_memories
         messages = [_make_chat_message("What storage configuration should we use for persistent volumes?")]
 
-        context = await provider.invoking(messages)
+        instructions = await _call_before_run(provider, messages)
 
-        assert context.instructions is not None
-        assert len(context.instructions) <= MAX_MEMORY_CONTEXT_CHARS + 200
+        assert instructions is not None
+        assert len(instructions) <= MAX_MEMORY_CONTEXT_CHARS + 200
 
     asyncio.run(_run())
 
@@ -175,10 +202,10 @@ def test_invoking_formats_with_agent_and_step():
         ]
         messages = [_make_chat_message("What storage class should we choose for the cluster?")]
 
-        context = await provider.invoking(messages)
+        instructions = await _call_before_run(provider, messages)
 
-        assert "Chief Architect" in context.instructions
-        assert "design" in context.instructions
+        assert "Chief Architect" in instructions
+        assert "design" in instructions
 
     asyncio.run(_run())
 
@@ -189,26 +216,25 @@ def test_invoking_with_single_message():
         store.search.return_value = [_make_memory_entry("some memory")]
         single = _make_chat_message("What about networking configuration for AKS?")
 
-        context = await provider.invoking(single)
+        instructions = await _call_before_run(provider, [single])
 
-        assert context.instructions is not None
+        assert instructions is not None
         store.search.assert_called_once()
 
     asyncio.run(_run())
 
 
 # ---------------------------------------------------------------------------
-# invoked() — Post-LLM memory storage
+# after_run() — Post-LLM memory storage
 # ---------------------------------------------------------------------------
 
 
 def test_invoked_stores_response():
     async def _run():
         provider, store = _make_provider()
-        request = [_make_chat_message("What is the networking plan for AKS?")]
-        response = [_make_chat_message("We should use Azure CNI for networking configuration in the AKS cluster")]
+        response_text = "We should use Azure CNI for networking configuration in the AKS cluster"
 
-        await provider.invoked(request, response)
+        await _call_after_run(provider, response_text)
         await provider.flush()
 
         store.add.assert_called_once()
@@ -222,10 +248,9 @@ def test_invoked_stores_response():
 def test_invoked_skips_on_exception():
     async def _run():
         provider, store = _make_provider()
-        request = [_make_chat_message("Q")]
-        response = [_make_chat_message("A" * 100)]
-
-        await provider.invoked(request, response, invoke_exception=Exception("fail"))
+        # after_run with no response simulates exception path
+        ctx = _make_context(response_text=None)
+        await provider.after_run(agent=MagicMock(), session=MagicMock(), context=ctx, state={})
         store.add.assert_not_called()
 
     asyncio.run(_run())
@@ -234,9 +259,8 @@ def test_invoked_skips_on_exception():
 def test_invoked_skips_none_response():
     async def _run():
         provider, store = _make_provider()
-        request = [_make_chat_message("Q")]
-
-        await provider.invoked(request, None)
+        ctx = _make_context(response_text=None)
+        await provider.after_run(agent=MagicMock(), session=MagicMock(), context=ctx, state={})
         store.add.assert_not_called()
 
     asyncio.run(_run())
@@ -245,10 +269,8 @@ def test_invoked_skips_none_response():
 def test_invoked_skips_short_response():
     async def _run():
         provider, store = _make_provider()
-        request = [_make_chat_message("Q")]
-        short = [_make_chat_message("x" * (MIN_CONTENT_LENGTH_TO_STORE - 1))]
-
-        await provider.invoked(request, short)
+        short_text = "x" * (MIN_CONTENT_LENGTH_TO_STORE - 1)
+        await _call_after_run(provider, short_text)
         store.add.assert_not_called()
 
     asyncio.run(_run())
@@ -257,10 +279,8 @@ def test_invoked_skips_short_response():
 def test_invoked_stores_long_response():
     async def _run():
         provider, store = _make_provider()
-        request = [_make_chat_message("Q")]
-        long_resp = [_make_chat_message("x" * (MIN_CONTENT_LENGTH_TO_STORE + 1))]
-
-        await provider.invoked(request, long_resp)
+        long_text = "x" * (MIN_CONTENT_LENGTH_TO_STORE + 1)
+        await _call_after_run(provider, long_text)
         await provider.flush()
         store.add.assert_called_once()
 
@@ -270,11 +290,10 @@ def test_invoked_stores_long_response():
 def test_invoked_increments_turn_counter():
     async def _run():
         provider, store = _make_provider()
-        request = [_make_chat_message("Q")]
-        response = [_make_chat_message("A" * 100)]
+        response_text = "A" * 100
 
-        await provider.invoked(request, response)
-        await provider.invoked(request, response)
+        await _call_after_run(provider, response_text)
+        await _call_after_run(provider, response_text)
         assert provider._turn_counter == 2
 
     asyncio.run(_run())
@@ -284,10 +303,9 @@ def test_invoked_store_failure_does_not_raise():
     async def _run():
         provider, store = _make_provider()
         store.add.side_effect = Exception("store failed")
-        request = [_make_chat_message("Q")]
-        response = [_make_chat_message("A" * 100)]
+        response_text = "A" * 100
 
-        await provider.invoked(request, response)
+        await _call_after_run(provider, response_text)
         await provider.flush()  # Should not raise
 
     asyncio.run(_run())
@@ -296,10 +314,9 @@ def test_invoked_store_failure_does_not_raise():
 def test_invoked_with_single_message():
     async def _run():
         provider, store = _make_provider()
-        request = _make_chat_message("What is the question about networking?")
-        response = _make_chat_message("We should use Azure CNI Overlay for the networking configuration in AKS")
+        response_text = "We should use Azure CNI Overlay for the networking configuration in AKS"
 
-        await provider.invoked(request, response)
+        await _call_after_run(provider, response_text)
         await provider.flush()
         store.add.assert_called_once()
 
