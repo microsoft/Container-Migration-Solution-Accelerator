@@ -27,12 +27,12 @@ from .azure_openai_response_retry import (
 )
 
 if TYPE_CHECKING:
-    from agent_framework.azure import DurableAIAgentClient
-
-    # TODO: agent-framework 1.3.0 removed these azure clients with no replacement.
-    # from agent_framework.azure import AzureOpenAIAssistantsClient
-    # from agent_framework.azure import AzureOpenAIChatClient
-    # from agent_framework.azure import AzureOpenAIResponsesClient
+    from agent_framework.azure import (
+        AzureAIAgentClient,
+        AzureOpenAIAssistantsClient,
+        AzureOpenAIChatClient,
+        AzureOpenAIResponsesClient,
+    )
 
 
 class ClientType(Enum):
@@ -147,7 +147,7 @@ class AgentFrameworkHelper:
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
-    ) -> Any:
+    ) -> "AzureOpenAIChatClient":
         pass
 
     @overload
@@ -171,7 +171,7 @@ class AgentFrameworkHelper:
         async_client: object | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
-    ) -> Any:
+    ) -> "AzureOpenAIAssistantsClient":
         pass
 
     @overload
@@ -193,7 +193,7 @@ class AgentFrameworkHelper:
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
-    ) -> Any:
+    ) -> "AzureOpenAIResponsesClient":
         pass
 
     @overload
@@ -233,7 +233,7 @@ class AgentFrameworkHelper:
         async_credential: object | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
-    ) -> "DurableAIAgentClient":
+    ) -> "AzureAIAgentClient":
         pass
 
     @staticmethod
@@ -443,12 +443,9 @@ class AgentFrameworkHelper:
                 retry_config=retry_config,
             )
         elif client_type == ClientType.AzureOpenAIAgent:
-            try:
-                from agent_framework.azure import DurableAIAgentClient
-            except ImportError:
-                from agent_framework.azure import AzureAIAgentClient as DurableAIAgentClient
+            from agent_framework.azure import AzureAIAgentClient
 
-            return DurableAIAgentClient(
+            return AzureAIAgentClient(
                 project_client=project_client,
                 agent_id=agent_id,
                 agent_name=agent_name,

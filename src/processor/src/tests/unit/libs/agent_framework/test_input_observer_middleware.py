@@ -4,44 +4,16 @@
 import asyncio
 from types import SimpleNamespace
 
-import libs.agent_framework.middlewares as middlewares_module
+from agent_framework import ChatMessage, Role
 
-ROLE_USER = "user"
-
-
-class Message:
-    """Test stub for Message - the real Message in 1.3.0 uses contents= instead of text=."""
-
-    def __init__(self, *, role, text=None, contents=None, author_name=None):
-        self.role = role
-        self.text = text
-        self.contents = contents
-        self.author_name = author_name
-
-
-# Patch at module level: middleware code references Message at runtime for isinstance
-# checks and construction. This is scoped to test execution only.
-_original_message = getattr(middlewares_module, "Message", None)
-middlewares_module.Message = Message
-from libs.agent_framework.middlewares import InputObserverMiddleware  # noqa: E402
-
-
-def setup_module(module=None):
-    """Re-apply the Message patch in case another module's teardown restored it."""
-    middlewares_module.Message = Message
-
-
-def teardown_module(module=None):
-    """Restore the original Message class to avoid leaking into other tests."""
-    if _original_message is not None:
-        middlewares_module.Message = _original_message
+from libs.agent_framework.middlewares import InputObserverMiddleware
 
 
 def test_input_observer_middleware_replaces_user_text_when_configured() -> None:
     async def _run() -> None:
         ctx = SimpleNamespace(
             messages=[
-                Message(role=ROLE_USER, text="original"),
+                ChatMessage(role=Role.USER, text="original"),
             ]
         )
 
@@ -52,7 +24,7 @@ def test_input_observer_middleware_replaces_user_text_when_configured() -> None:
 
         await mw.process(ctx, _next)
 
-        assert ctx.messages[0].role == ROLE_USER
-        assert ctx.messages[0].contents == "replacement"
+        assert ctx.messages[0].role == Role.USER
+        assert ctx.messages[0].text == "replacement"
 
     asyncio.run(_run())

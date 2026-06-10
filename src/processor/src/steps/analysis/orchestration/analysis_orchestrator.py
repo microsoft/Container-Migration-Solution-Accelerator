@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
-from agent_framework import FunctionTool, MCPStdioTool, MCPStreamableHTTPTool
+from agent_framework import MCPStdioTool, MCPStreamableHTTPTool, ToolProtocol
 
 from libs.agent_framework.agent_info import AgentInfo
 from libs.agent_framework.groupchat_orchestrator import (
@@ -98,10 +98,10 @@ class AnalysisOrchestrator(
     async def prepare_mcp_tools(
         self,
     ) -> (
-        FunctionTool
+        ToolProtocol
         | Callable[..., Any]
         | MutableMapping[str, Any]
-        | Sequence[FunctionTool | Callable[..., Any] | MutableMapping[str, Any]]
+        | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
     ):
         """Create and return the MCP tools used by analysis agents.
 
