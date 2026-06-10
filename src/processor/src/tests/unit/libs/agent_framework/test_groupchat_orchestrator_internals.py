@@ -17,38 +17,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import libs.agent_framework.groupchat_orchestrator as groupchat_module
-
-ROLE_USER = "user"
-ROLE_ASSISTANT = "assistant"
-
-
-class Message:
-    def __init__(self, *, role, text=None, contents=None, author_name=None):
-        self.role = role
-        self.text = text
-        self.contents = contents
-        self.author_name = author_name
-
-
-_original_message = getattr(groupchat_module, "Message", None)
-groupchat_module.Message = Message
-from libs.agent_framework.groupchat_orchestrator import (  # noqa: E402
+from libs.agent_framework.groupchat_orchestrator import (
     AgentResponse,
     GroupChatOrchestrator,
     OrchestrationResult,
 )
-
-
-def setup_module(module=None):
-    """Re-apply the Message patch in case another module's teardown restored it."""
-    groupchat_module.Message = Message
-
-
-def teardown_module(module=None):
-    """Restore the original Message class to avoid leaking into other tests."""
-    if _original_message is not None:
-        groupchat_module.Message = _original_message
 
 
 def _run(coro):
@@ -57,7 +30,7 @@ def _run(coro):
 
 @dataclass
 class _Msg:
-    """Lightweight stand-in for a Message."""
+    """Lightweight stand-in for a ChatMessage."""
 
     source: str = ""
     content: str = ""
@@ -628,27 +601,30 @@ class TestExtractFunctionCalls:
 
 class TestBackfillToolUsage:
     def test_skips_non_assistant(self):
+        from agent_framework import Role
         orch = _make_orch()
-        msg = SimpleNamespace(role=ROLE_USER, contents=[])
+        msg = SimpleNamespace(role=Role.USER, contents=[])
         orch._backfill_tool_usage_from_conversation([msg])
         assert orch.agent_tool_usage == {}
 
     def test_records_calls_from_assistant(self):
+        from agent_framework import Role
         orch = _make_orch()
         item = SimpleNamespace(name="t", call_id="c", arguments={"x": 1})
         msg = SimpleNamespace(
-            role=ROLE_ASSISTANT, author_name="A", contents=[item]
+            role=Role.ASSISTANT, author_name="A", contents=[item]
         )
         orch._backfill_tool_usage_from_conversation([msg])
         assert orch.agent_tool_usage["A"][0]["tool_name"] == "t"
 
     def test_dedup_already_recorded(self):
+        from agent_framework import Role
         orch = _make_orch()
         # Pre-mark this call as already recorded
         orch._tool_call_recorded.add(("A", "c"))
         item = SimpleNamespace(name="t", call_id="c", arguments={})
         msg = SimpleNamespace(
-            role=ROLE_ASSISTANT, author_name="A", contents=[item]
+            role=Role.ASSISTANT, author_name="A", contents=[item]
         )
         orch._backfill_tool_usage_from_conversation([msg])
         assert "A" in orch.agent_tool_usage
@@ -800,11 +776,13 @@ class TestTruncateText:
 
 class TestBuildResultGeneratorConversation:
     def test_excludes_named_authors(self):
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         orch = _make_orch()
         msgs = [
-            Message(role=ROLE_ASSISTANT, text="from coord", author_name="Coordinator"),
-            Message(role=ROLE_ASSISTANT, text="from architect", author_name="Architect"),
+            ChatMessage(role=Role.ASSISTANT, text="from coord", author_name="Coordinator"),
+            ChatMessage(role=Role.ASSISTANT, text="from architect", author_name="Architect"),
         ]
         out = orch._build_result_generator_conversation(
             msgs,
@@ -819,12 +797,14 @@ class TestBuildResultGeneratorConversation:
         assert all("Coordinator" != m.author_name for m in out)
 
     def test_dedupes_identical_payloads(self):
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         orch = _make_orch()
         big = "X" * 1000
         msgs = [
-            Message(role=ROLE_ASSISTANT, text=big, author_name="A"),
-            Message(role=ROLE_ASSISTANT, text=big, author_name="A"),
+            ChatMessage(role=Role.ASSISTANT, text=big, author_name="A"),
+            ChatMessage(role=Role.ASSISTANT, text=big, author_name="A"),
         ]
         out = orch._build_result_generator_conversation(
             msgs,
@@ -838,10 +818,12 @@ class TestBuildResultGeneratorConversation:
         assert len(out) == 1
 
     def test_truncates_messages_to_per_message_budget(self):
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         orch = _make_orch()
         msgs = [
-            Message(role=ROLE_ASSISTANT, text="A" * 500, author_name="X"),
+            ChatMessage(role=Role.ASSISTANT, text="A" * 500, author_name="X"),
         ]
         out = orch._build_result_generator_conversation(
             msgs,
@@ -855,10 +837,12 @@ class TestBuildResultGeneratorConversation:
         assert len(out[-1].text) <= 100
 
     def test_total_budget_enforced(self):
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         orch = _make_orch()
         msgs = [
-            Message(role=ROLE_ASSISTANT, text="A" * 100, author_name=str(i))
+            ChatMessage(role=Role.ASSISTANT, text="A" * 100, author_name=str(i))
             for i in range(20)
         ]
         out = orch._build_result_generator_conversation(
@@ -874,10 +858,12 @@ class TestBuildResultGeneratorConversation:
         assert total <= 200
 
     def test_max_messages_caps_count(self):
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         orch = _make_orch()
         msgs = [
-            Message(role=ROLE_ASSISTANT, text=f"m{i}", author_name=str(i))
+            ChatMessage(role=Role.ASSISTANT, text=f"m{i}", author_name=str(i))
             for i in range(20)
         ]
         out = orch._build_result_generator_conversation(
@@ -929,6 +915,8 @@ class TestToolUsageSummary:
 class TestGenerateFinalResult:
     def test_parses_valid_json(self):
         from pydantic import BaseModel
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         class Model(BaseModel):
             x: int
@@ -939,7 +927,7 @@ class TestGenerateFinalResult:
         orch = _make_orch(participants={"Coordinator": object(), "ResultGenerator": rg}, result_format=Model)
         out = _run(
             orch._generate_final_result(
-                conversation=[Message(role=ROLE_ASSISTANT, text="x", author_name="A")],
+                conversation=[ChatMessage(role=Role.ASSISTANT, text="x", author_name="A")],
                 result_format=Model,
                 result_generator_name="ResultGenerator",
             )
@@ -948,6 +936,8 @@ class TestGenerateFinalResult:
 
     def test_retry_on_validation_error(self):
         from pydantic import BaseModel
+        from agent_framework import Role
+        from agent_framework import ChatMessage
 
         class Model(BaseModel):
             x: int
@@ -960,7 +950,7 @@ class TestGenerateFinalResult:
         orch = _make_orch(participants={"Coordinator": object(), "ResultGenerator": rg}, result_format=Model)
         out = _run(
             orch._generate_final_result(
-                conversation=[Message(role=ROLE_ASSISTANT, text="x", author_name="A")],
+                conversation=[ChatMessage(role=Role.ASSISTANT, text="x", author_name="A")],
                 result_format=Model,
                 result_generator_name="ResultGenerator",
             )

@@ -7,18 +7,15 @@ import time
 from collections.abc import Awaitable, Callable
 
 from agent_framework import (
-    AgentContext,
     AgentMiddleware,
+    AgentRunContext,
     ChatContext,
+    ChatMessage,
     ChatMiddleware,
     FunctionInvocationContext,
     FunctionMiddleware,
-    Message,
     Role,
 )
-
-
-ROLE_USER = getattr(Role, "USER", "user")
 
 
 class DebuggingMiddleware(AgentMiddleware):
@@ -26,8 +23,8 @@ class DebuggingMiddleware(AgentMiddleware):
 
     async def process(
         self,
-        context: AgentContext,
-        next: Callable[[AgentContext], Awaitable[None]],
+        context: AgentRunContext,
+        next: Callable[[AgentRunContext], Awaitable[None]],
     ) -> None:
         """Run-level debugging middleware for troubleshooting specific runs."""
         print("[Debug] Debug mode enabled for this run")
@@ -139,16 +136,16 @@ class InputObserverMiddleware(ChatMiddleware):
 
         for i, message in enumerate(context.messages):
             content = message.text if message.text else str(message.contents)
-            role_value = getattr(message.role, "value", message.role)
-            print(f"  Message {i + 1} ({role_value}): {content}")
+            print(f"  Message {i + 1} ({message.role.value}): {content}")
 
         print(f"[InputObserverMiddleware] Total messages: {len(context.messages)}")
 
         # Modify user messages by creating new messages with enhanced text
-        modified_messages: list[Message] = []
+        modified_messages: list[ChatMessage] = []
+        modified_count = 0
 
         for message in context.messages:
-            if message.role == ROLE_USER and message.text:
+            if message.role == Role.USER and message.text:
                 original_text = message.text
                 updated_text = original_text
 
@@ -158,8 +155,9 @@ class InputObserverMiddleware(ChatMiddleware):
                         f"[InputObserverMiddleware] Updated: '{original_text}' -> '{updated_text}'"
                     )
 
-                modified_message = Message(role=message.role, text=updated_text, contents=updated_text)
+                modified_message = ChatMessage(role=message.role, text=updated_text)
                 modified_messages.append(modified_message)
+                modified_count += 1
             else:
                 modified_messages.append(message)
 
