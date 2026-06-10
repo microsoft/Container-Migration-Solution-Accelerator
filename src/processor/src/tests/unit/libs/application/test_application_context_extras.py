@@ -118,7 +118,7 @@ def test_async_transient_creates_new_instances():
 
 def test_create_async_instance_with_callable_factory():
     async def _run():
-        ctx = AppContext().add_async_singleton(_AsyncSvc, lambda: _AsyncSvc())
+        ctx = AppContext().add_async_singleton(_AsyncSvc, _AsyncSvc)
         a = await ctx.get_service_async(_AsyncSvc)
         assert isinstance(a, _AsyncSvc)
         assert a.entered is True
@@ -151,7 +151,7 @@ def test_create_async_instance_with_pre_built_instance():
 
 
 def test_create_instance_with_factory_callable():
-    ctx = AppContext().add_singleton(_S, lambda: _S())
+    ctx = AppContext().add_singleton(_S, _S)
     a = ctx.get_service(_S)
     assert isinstance(a, _S)
 

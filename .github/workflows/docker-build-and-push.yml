@@ -86,7 +86,7 @@ jobs:
           echo "DATE_TAG=${DATE_TAG}" >> $GITHUB_ENV
           echo "Base tag: $BASE_TAG, Date tag: $DATE_TAG"
 
-      - name: Build and Push ContentProcessorAPI Docker image
+      - name: Build and Push Backend API Docker image
         uses: docker/build-push-action@v7
         with:
           context: ./src/backend-api
@@ -97,7 +97,7 @@ jobs:
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
 
-      - name: Build and Push ContentProcessor Docker image
+      - name: Build and Push Processor Docker image
         uses: docker/build-push-action@v7
         with:
           context: ./src/processor
@@ -108,7 +108,7 @@ jobs:
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.BASE_TAG }}
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
             
-      - name: Build and Push ContentProcessorWeb Docker image
+      - name: Build and Push Frontend Docker image
         uses: docker/build-push-action@v7
         with:
           context: ./src/frontend
