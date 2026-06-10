@@ -28,9 +28,9 @@ from agent_framework import (
     Role,
     SupportsAgentRun,
     Workflow,
-    WorkflowBuilder as GroupChatBuilder,
     WorkflowEvent,
 )
+from agent_framework_orchestrations import GroupChatBuilder
 from mem0 import AsyncMemory
 from pydantic import BaseModel, ValidationError
 
@@ -491,7 +491,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             # Execute with streaming
             conversation: list[Message] = []
 
-            async for event in group_chat_workflow.run_stream(task_prompt):
+            async for event in group_chat_workflow.run(task_prompt, stream=True):
                 # Enforce wall-clock timeout if configured.
                 if self.max_seconds is not None:
                     elapsed = (datetime.now() - start_time).total_seconds()
@@ -1114,9 +1114,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         ]
 
         return (
-            GroupChatBuilder()
-            .set_manager(coordinator)
-            .participants(participants)
+            GroupChatBuilder(
+                participants=participants,
+                orchestrator_agent=coordinator,
+            )
             .build()
         )
 
@@ -1141,7 +1142,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         result = await result_generator.run(
             final_conversation,
-            response_format=result_format,
+            options={"response_format": result_format},
         )
 
         text = result.messages[-1].text
@@ -1174,7 +1175,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             )
             retry_result = await result_generator.run(
                 retry_conversation,
-                response_format=result_format,
+                options={"response_format": result_format},
             )
             retry_text = retry_result.messages[-1].text
             retry_json_payload = self._extract_first_json_payload(retry_text)

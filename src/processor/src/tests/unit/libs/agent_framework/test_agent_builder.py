@@ -157,15 +157,17 @@ class TestBuild:
                 .build()
             )
         assert agent is mock_chat.return_value
+        args = mock_chat.call_args.args
         kwargs = mock_chat.call_args.kwargs
-        assert kwargs["chat_client"] is chat_client
+        assert args[0] is chat_client
         assert kwargs["instructions"] == "inst"
         assert kwargs["id"] == "id1"
         assert kwargs["name"] == "name1"
         assert kwargs["description"] == "desc1"
-        assert kwargs["temperature"] == 0.3
-        assert kwargs["max_tokens"] == 100
-        assert kwargs["tool_choice"] == "auto"
+        opts = kwargs["default_options"]
+        assert opts["temperature"] == 0.3
+        assert opts["max_tokens"] == 100
+        assert opts["tool_choice"] == "auto"
         assert kwargs["extra"] == 42
 
 
@@ -180,11 +182,13 @@ class TestStaticFactories:
                 temperature=0.4,
             )
         assert agent is mock_chat.return_value
+        args = mock_chat.call_args.args
         kwargs = mock_chat.call_args.kwargs
-        assert kwargs["chat_client"] is chat_client
+        assert args[0] is chat_client
         assert kwargs["instructions"] == "i"
         assert kwargs["name"] == "n"
-        assert kwargs["temperature"] == 0.4
+        opts = kwargs["default_options"]
+        assert opts["temperature"] == 0.4
 
     def test_create_agent_by_agentinfo_uses_helper_and_creates_client(self):
         # Build a fake AgentInfo with the minimum surface used by the method
@@ -215,12 +219,14 @@ class TestStaticFactories:
         assert agent is mock_chat.return_value
         helper.settings.get_service_config.assert_called_once_with("default")
         helper.create_client.assert_called_once()
+        args = mock_chat.call_args.args
         ck = mock_chat.call_args.kwargs
-        assert ck["chat_client"] == "client-instance"
+        assert args[0] == "client-instance"
         assert ck["instructions"] == "instr"
         assert ck["name"] == "A"
         assert ck["description"] == "D"
-        assert ck["temperature"] == 0.2
+        opts = ck["default_options"]
+        assert opts["temperature"] == 0.2
 
     def test_create_agent_by_agentinfo_falls_back_to_system_prompt(self):
         helper = MagicMock()

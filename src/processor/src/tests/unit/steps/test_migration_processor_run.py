@@ -54,12 +54,12 @@ def _make_processor(events: list, memory_store=None) -> MigrationProcessor:
 
     proc._telemetry = telemetry  # expose for assertions
 
-    async def _stream(_input):
+    async def _stream(_input, **kwargs):
         for ev in events:
             yield ev
 
     workflow = MagicMock()
-    workflow.run_stream = _stream
+    workflow.run = _stream
     proc.workflow = workflow
 
     # Patch _create_memory_store as an AsyncMock returning the provided value.
