@@ -743,14 +743,16 @@ class TestBuildGroupchat:
         })
         with patch("libs.agent_framework.groupchat_orchestrator.GroupChatBuilder") as MockBuilder:
             built = MagicMock()
+            built.set_manager.return_value = built
+            built.participants.return_value = built
             built.build.return_value = "wf"
             MockBuilder.return_value = built
             wf = _run(orch._build_groupchat())
         assert wf == "wf"
         # ResultGenerator excluded from participants
-        kwargs = MockBuilder.call_args.kwargs
-        assert "arch" in kwargs["participants"]
-        assert "rg" not in kwargs["participants"]
+        kwargs = built.participants.call_args.args[0]
+        assert "arch" in kwargs
+        assert "rg" not in kwargs
 
 
 # -----------------------------------------------------------------------------

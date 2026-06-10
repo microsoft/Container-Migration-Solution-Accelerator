@@ -325,117 +325,6 @@ class ContextTrimConfig:
         )
 
 
-def _get_content_items(message: Any) -> list[Any]:
-    """Return the list of content items from a message, or empty list."""
-    contents = None
-    if isinstance(message, dict):
-        contents = message.get("contents") or message.get("content")
-    else:
-        contents = getattr(message, "contents", None) or getattr(message, "content", None)
-    if isinstance(contents, list):
-        return contents
-    return []
-
-
-def _remove_orphan_tool_messages(messages: list[Any]) -> list[Any]:
-    """Remove messages with orphaned function_call or function_result items.
-
-    The Responses API requires every function_call in the input to have a
-    corresponding function_call_output (function_result). If context trimming
-    breaks these pairs, the API rejects the request.
-    """
-    # Collect call_ids for function_calls and function_results
-    call_ids_with_call: set[str] = set()
-    call_ids_with_result: set[str] = set()
-
-    for m in messages:
-        for item in _get_content_items(m):
-            item_type = None
-            call_id = None
-            if isinstance(item, dict):
-                item_type = item.get("type")
-                call_id = item.get("call_id")
-            else:
-                item_type = getattr(item, "type", None)
-                call_id = getattr(item, "call_id", None)
-            if not call_id:
-                continue
-            if item_type == "function_call":
-                call_ids_with_call.add(call_id)
-            elif item_type == "function_result":
-                call_ids_with_result.add(call_id)
-
-    # Identify orphaned call_ids
-    orphaned_calls = call_ids_with_call - call_ids_with_result
-    orphaned_results = call_ids_with_result - call_ids_with_call
-
-    if not orphaned_calls and not orphaned_results:
-        return messages
-
-    logger.warning(
-        "[AOAI_CTX_TRIM] removing orphaned tool messages: %d orphaned calls, %d orphaned results",
-        len(orphaned_calls),
-        len(orphaned_results),
-    )
-
-    # Remove messages that ONLY contain orphaned tool items
-    cleaned: list[Any] = []
-    for m in messages:
-        items = _get_content_items(m)
-        if not items:
-            cleaned.append(m)
-            continue
-
-        has_orphan = False
-        has_non_orphan = False
-        for item in items:
-            item_type = None
-            call_id = None
-            if isinstance(item, dict):
-                item_type = item.get("type")
-                call_id = item.get("call_id")
-            else:
-                item_type = getattr(item, "type", None)
-                call_id = getattr(item, "call_id", None)
-            if call_id and item_type == "function_call" and call_id in orphaned_calls:
-                has_orphan = True
-            elif call_id and item_type == "function_result" and call_id in orphaned_results:
-                has_orphan = True
-            else:
-                has_non_orphan = True
-
-        if has_orphan and not has_non_orphan:
-            # Message contains ONLY orphaned tool items — drop it entirely
-            continue
-        elif has_orphan and has_non_orphan:
-            # Message has both orphan and non-orphan content.
-            # Drop orphaned items if possible, keeping the rest.
-            if isinstance(items, list) and not isinstance(m, dict):
-                # Filter out orphaned content items from the message
-                filtered = []
-                for item in items:
-                    item_type = getattr(item, "type", None)
-                    call_id = getattr(item, "call_id", None)
-                    if call_id and item_type == "function_call" and call_id in orphaned_calls:
-                        continue
-                    if call_id and item_type == "function_result" and call_id in orphaned_results:
-                        continue
-                    filtered.append(item)
-                if filtered:
-                    try:
-                        m.contents = filtered
-                    except Exception:
-                        pass
-                    cleaned.append(m)
-                # else: drop message entirely if no content remains
-            else:
-                cleaned.append(m)
-        else:
-            cleaned.append(m)
-
-    return cleaned
-
-
 def _trim_messages(
     messages: MutableSequence[Any], *, cfg: ContextTrimConfig
 ) -> list[Any]:
@@ -524,11 +413,6 @@ def _trim_messages(
             combined[-1] = _set_message_text(last, text)
             break
         combined.pop(drop_index)
-
-    # Phase final: Remove orphaned tool call / tool result messages.
-    # The Responses API requires every function_call to have a matching
-    # function_call_output. Trimming may break these pairs.
-    combined = _remove_orphan_tool_messages(combined)
 
     return combined
 
@@ -655,27 +539,12 @@ class AzureOpenAIResponseClientWithRetry(AzureOpenAIResponsesClient):
         # Map legacy params to OpenAIChatClient params
         if deployment_name and "model" not in kwargs:
             kwargs["model"] = deployment_name
-        if endpoint and not kwargs.get("azure_endpoint"):
+        if endpoint and "azure_endpoint" not in kwargs:
             kwargs["azure_endpoint"] = endpoint
         if ad_token_provider and kwargs.get("credential") is None:
             kwargs["credential"] = ad_token_provider
 
-        # Remove None-valued keys that would conflict with env-based settings
-        for k in list(kwargs):
-            if kwargs[k] is None:
-                del kwargs[k]
-
         super().__init__(*args, **kwargs)
-
-        # OpenAIChatClient appends /v1/ to azure_endpoint but Azure AI Foundry
-        # endpoints expect /openai/responses (without /v1/). Fix the base URL.
-        if hasattr(self, "client") and self.client is not None:
-            base = str(self.client.base_url)
-            if "/openai/v1/" in base:
-                import httpx
-                corrected = base.replace("/openai/v1/", "/openai/")
-                self.client._base_url = httpx.URL(corrected)
-
         self._retry_config = retry_config or RateLimitRetryConfig.from_env()
         self._context_trim_config = ContextTrimConfig.from_env()
 
