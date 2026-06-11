@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store/store";
 import { togglePanel, closePanel } from "../slices/historyPanelSlice";
@@ -32,10 +32,8 @@ export const LandingPage = (): JSX.Element => {
     dispatch(resetState());
   }, [dispatch]);
 
-  const [uploadState, setUploadState] = useState<"IDLE" | "UPLOADING" | "COMPLETED">('IDLE');
-
-  const handleUploadStateChange = (state) => {
-    setUploadState(state);
+  const handleUploadStateChange = (_state) => {
+    // State change handler - currently unused but kept for future use
   };
 
   const handleStartTranslating = async () => {
