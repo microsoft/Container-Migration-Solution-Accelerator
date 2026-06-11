@@ -511,3 +511,24 @@ output AZURE_RESOURCE_GROUP string = resourceGroup().name
 
 @description('Azure AI Agent service endpoint URL')
 output AZURE_AI_AGENT_ENDPOINT string = projectEndpoint
+
+@description('The name of the frontend container app (alias).')
+output CONTAINER_FRONTEND_APP_NAME string = ca_frontend.outputs.name
+
+@description('The FQDN of the frontend container app (alias).')
+output CONTAINER_FRONTEND_APP_FQDN string = ca_frontend.outputs.fqdn
+
+@description('Backend service name for azd.')
+output SERVICE_BACKEND_NAME string = ca_backend_api.outputs.name
+
+@description('Backend service URI for azd.')
+output SERVICE_BACKEND_URI string = 'https://${ca_backend_api.outputs.fqdn}'
+
+@description('Processor service name for azd.')
+output SERVICE_PROCESSOR_NAME string = ca_processor.outputs.name
+
+@description('Frontend service name for azd.')
+output SERVICE_FRONTEND_NAME string = ca_frontend.outputs.name
+
+@description('Frontend service URI for azd.')
+output SERVICE_FRONTEND_URI string = 'https://${ca_frontend.outputs.fqdn}'

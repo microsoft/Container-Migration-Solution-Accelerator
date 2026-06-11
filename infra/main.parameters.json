@@ -2,6 +2,9 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+      "deploymentFlavor": {
+        "value": "${AZURE_ENV_DEPLOYMENT_FLAVOR}"
+      },
       "solutionName": {
         "value": "${AZURE_ENV_NAME}"
       },
@@ -42,7 +45,7 @@
         "value": "${AZURE_ENV_IMAGE_TAG}"
       },
       "tags": {
-       "value": "${AZURE_ENV_TAGS}"
+        "value": "${AZURE_ENV_TAGS}"
       }
     }
 }
