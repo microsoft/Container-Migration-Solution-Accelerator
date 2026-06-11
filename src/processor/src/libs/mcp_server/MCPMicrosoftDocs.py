@@ -12,14 +12,14 @@ Example:
 
         from libs.mcp_server.MCPMicrosoftDocs import get_microsoft_docs_mcp
         from libs.agent_framework.mcp_context import MCPContext
-        from agent_framework import ChatAgent
+        from agent_framework import Agent
 
         # Get the Microsoft Docs MCP tool
         docs_tool = get_microsoft_docs_mcp()
 
         # Use with MCPContext for TaskGroup-safe management
         async with MCPContext(tools=[docs_tool]) as mcp_ctx:
-            async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+            async with Agent(client, tools=mcp_ctx.tools) as agent:
                 response = await agent.run("Search Microsoft Learn for Azure Functions best practices")
                 print(response)
 """
@@ -47,7 +47,7 @@ def get_microsoft_docs_mcp() -> MCPStreamableHTTPTool:
             docs_tool = get_microsoft_docs_mcp()
 
             async with docs_tool:
-                async with ChatAgent(client, tools=[docs_tool]) as agent:
+                async with Agent(client, tools=[docs_tool]) as agent:
                     result = await agent.run("Find documentation about Azure App Service")
 
         Advanced usage with multiple tools:
@@ -60,7 +60,7 @@ def get_microsoft_docs_mcp() -> MCPStreamableHTTPTool:
             datetime_tool = MCPStdioTool(name="datetime", command="npx", args=["-y", "@modelcontextprotocol/server-datetime"])
 
             async with MCPContext(tools=[docs_tool, datetime_tool]) as mcp_ctx:
-                async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+                async with Agent(client, tools=mcp_ctx.tools) as agent:
                     response = await agent.run("What's the latest Azure Functions documentation?")
 
     Note:

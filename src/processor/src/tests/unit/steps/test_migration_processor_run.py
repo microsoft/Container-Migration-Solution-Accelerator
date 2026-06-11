@@ -12,12 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from agent_framework import (
-    ExecutorCompletedEvent,
-    ExecutorFailedEvent,
-    ExecutorInvokedEvent,
-    WorkflowFailedEvent,
-    WorkflowOutputEvent,
-    WorkflowStartedEvent,
+    WorkflowEvent,
 )
 from agent_framework._workflows._events import WorkflowErrorDetails
 
@@ -61,12 +56,12 @@ def _make_processor(events: list, memory_store=None) -> MigrationProcessor:
 
     proc._telemetry = telemetry  # expose for assertions
 
-    async def _stream(_input):
+    async def _stream(_input, **kwargs):
         for ev in events:
             yield ev
 
     workflow = MagicMock()
-    workflow.run_stream = _stream
+    workflow.run = _stream
     proc.workflow = workflow
 
     # Patch _create_memory_store as an AsyncMock returning the provided value.
@@ -79,11 +74,11 @@ class TestRunSuccessFlow:
     def test_workflow_started_then_normal_output_returns_data(self):
         data = SimpleNamespace(is_hard_terminated=False, value="ok")
         events = [
-            WorkflowStartedEvent(),
-            ExecutorInvokedEvent(executor_id="analysis", data=_make_input()),
-            ExecutorCompletedEvent(executor_id="analysis", data={"r": 1}),
-            ExecutorInvokedEvent(executor_id="design", data=_make_input()),
-            WorkflowOutputEvent(data=data, source_executor_id="design"),
+            WorkflowEvent.started(),
+            WorkflowEvent.executor_invoked("analysis", _make_input()),
+            WorkflowEvent.executor_completed("analysis", {"r": 1}),
+            WorkflowEvent.executor_invoked("design", _make_input()),
+            WorkflowEvent.output("design", data),
         ]
         proc = _make_processor(events)
         result = _run(proc.run(_make_input()))
@@ -96,10 +91,10 @@ class TestRunSuccessFlow:
     def test_invoked_event_for_non_analysis_triggers_transition_phase(self):
         data = SimpleNamespace(is_hard_terminated=False)
         events = [
-            WorkflowStartedEvent(),
+            WorkflowEvent.started(),
             # Documentation invocation should map to "Documentation" display
-            ExecutorInvokedEvent(executor_id="documentation", data=_make_input()),
-            WorkflowOutputEvent(data=data, source_executor_id="documentation"),
+            WorkflowEvent.executor_invoked("documentation", _make_input()),
+            WorkflowEvent.output("documentation", data),
         ]
         proc = _make_processor(events)
         _run(proc.run(_make_input()))
@@ -112,9 +107,9 @@ class TestRunSuccessFlow:
     def test_invoked_event_unknown_executor_uses_capitalize(self):
         data = SimpleNamespace(is_hard_terminated=False)
         events = [
-            WorkflowStartedEvent(),
-            ExecutorInvokedEvent(executor_id="custom", data=_make_input()),
-            WorkflowOutputEvent(data=data, source_executor_id="custom"),
+            WorkflowEvent.started(),
+            WorkflowEvent.executor_invoked("custom", _make_input()),
+            WorkflowEvent.output("custom", data),
         ]
         proc = _make_processor(events)
         _run(proc.run(_make_input()))
@@ -132,8 +127,8 @@ class TestRunHardTerminationFlow:
             blocking_issues=["NEED_HUMAN_REVIEW"],
         )
         events = [
-            WorkflowStartedEvent(),
-            WorkflowOutputEvent(data=data, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.output("analysis", data),
         ]
         proc = _make_processor(events)
         result = _run(proc.run(_make_input()))
@@ -150,8 +145,8 @@ class TestRunHardTerminationFlow:
             blocking_issues=["SECURITY_POLICY_VIOLATION"],
         )
         events = [
-            WorkflowStartedEvent(),
-            WorkflowOutputEvent(data=data, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.output("analysis", data),
         ]
         proc = _make_processor(events)
 
@@ -181,8 +176,8 @@ class TestRunHardTerminationFlow:
             blocking_issues=["SECURITY_POLICY_VIOLATION"],
         )
         events = [
-            WorkflowStartedEvent(),
-            WorkflowOutputEvent(data=data, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.output("analysis", data),
         ]
         proc = _make_processor(events)
         with patch(
@@ -198,8 +193,8 @@ class TestRunHardTerminationFlow:
 class TestRunOutputMissingFlow:
     def test_missing_output_raises_workflow_executor_failed_exception(self):
         events = [
-            WorkflowStartedEvent(),
-            WorkflowOutputEvent(data=None, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.output("analysis", None),
         ]
         proc = _make_processor(events)
         with pytest.raises(WorkflowExecutorFailedException) as excinfo:
@@ -209,8 +204,8 @@ class TestRunOutputMissingFlow:
 
     def test_missing_output_with_none_source_uses_unknown(self):
         events = [
-            WorkflowStartedEvent(),
-            WorkflowOutputEvent(data=None, source_executor_id=None),
+            WorkflowEvent.started(),
+            WorkflowEvent.output(None, None),
         ]
         proc = _make_processor(events)
         with pytest.raises(WorkflowExecutorFailedException):
@@ -226,9 +221,9 @@ class TestRunWorkflowFailedFlow:
             executor_id="yaml",
         )
         events = [
-            WorkflowStartedEvent(),
-            ExecutorInvokedEvent(executor_id="yaml", data=_make_input()),
-            WorkflowFailedEvent(details=details),
+            WorkflowEvent.started(),
+            WorkflowEvent.executor_invoked("yaml", _make_input()),
+            WorkflowEvent.failed(details),
         ]
         proc = _make_processor(events)
         with pytest.raises(WorkflowExecutorFailedException) as excinfo:
@@ -246,8 +241,8 @@ class TestRunWorkflowFailedFlow:
             executor_id="design",
         )
         events = [
-            WorkflowStartedEvent(),
-            WorkflowFailedEvent(details=details),
+            WorkflowEvent.started(),
+            WorkflowEvent.failed(details),
         ]
         proc = _make_processor(events)
         with pytest.raises(WorkflowExecutorFailedException):
@@ -261,23 +256,23 @@ class TestRunWorkflowFailedFlow:
             executor_id="analysis",
         )
         events = [
-            WorkflowStartedEvent(),
-            WorkflowFailedEvent(details=details),
+            WorkflowEvent.started(),
+            WorkflowEvent.failed(details),
         ]
         proc = _make_processor(events)
         with pytest.raises(WorkflowExecutorFailedException):
             _run(proc.run(_make_input()))
 
     def test_executor_failed_event_is_silently_ignored(self):
-        # ExecutorFailedEvent does not raise on its own; WorkflowFailedEvent does.
+        # executor_failed event does not raise on its own; workflow "failed" event does.
         details = WorkflowErrorDetails(
             error_type="X", message="m", traceback=None, executor_id="analysis"
         )
         data = SimpleNamespace(is_hard_terminated=False)
         events = [
-            WorkflowStartedEvent(),
-            ExecutorFailedEvent(executor_id="analysis", details=details),
-            WorkflowOutputEvent(data=data, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.executor_failed("analysis", details),
+            WorkflowEvent.output("analysis", data),
         ]
         proc = _make_processor(events)
         result = _run(proc.run(_make_input()))
@@ -288,9 +283,9 @@ class TestRunMemoryStoreLifecycle:
     def test_memory_store_is_registered_and_closed(self):
         data = SimpleNamespace(is_hard_terminated=False)
         events = [
-            WorkflowStartedEvent(),
-            ExecutorCompletedEvent(executor_id="analysis", data=None),
-            WorkflowOutputEvent(data=data, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.executor_completed("analysis", None),
+            WorkflowEvent.output("analysis", data),
         ]
         memory_store = MagicMock()
         memory_store.get_count = AsyncMock(return_value=3)
@@ -304,8 +299,8 @@ class TestRunMemoryStoreLifecycle:
     def test_memory_store_close_error_is_swallowed(self):
         data = SimpleNamespace(is_hard_terminated=False)
         events = [
-            WorkflowStartedEvent(),
-            WorkflowOutputEvent(data=data, source_executor_id="analysis"),
+            WorkflowEvent.started(),
+            WorkflowEvent.output("analysis", data),
         ]
         memory_store = MagicMock()
         memory_store.get_count = AsyncMock(side_effect=RuntimeError("x"))
@@ -318,18 +313,18 @@ class TestRunMemoryStoreLifecycle:
     def test_executor_completed_with_memory_store_logs_count(self):
         data = SimpleNamespace(is_hard_terminated=False)
         events = [
-            WorkflowStartedEvent(),
-            ExecutorCompletedEvent(
-                executor_id="analysis", data={"some": "result"}
+            WorkflowEvent.started(),
+            WorkflowEvent.executor_completed(
+                "analysis", {"some": "result"}
             ),
-            WorkflowOutputEvent(data=data, source_executor_id="design"),
+            WorkflowEvent.output("design", data),
         ]
         memory_store = MagicMock()
         memory_store.get_count = AsyncMock(return_value=7)
         memory_store.close = AsyncMock()
         proc = _make_processor(events, memory_store=memory_store)
         _run(proc.run(_make_input()))
-        # get_count called at least once during ExecutorCompletedEvent and at finally
+        # get_count called at least once during executor_completed event and at finally
         assert memory_store.get_count.await_count >= 2
         # record_step_result called for the executor completed event with data
         proc._telemetry.record_step_result.assert_any_await(

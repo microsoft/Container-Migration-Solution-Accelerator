@@ -144,7 +144,7 @@ class TestFluentSetters:
 class TestBuild:
     def test_build_passes_all_state_to_chat_agent(self):
         chat_client = MagicMock()
-        with patch("libs.agent_framework.agent_builder.ChatAgent") as mock_chat:
+        with patch("libs.agent_framework.agent_builder.Agent") as mock_chat:
             agent = (
                 AgentBuilder(chat_client)
                 .with_instructions("inst")
@@ -158,21 +158,22 @@ class TestBuild:
             )
         assert agent is mock_chat.return_value
         kwargs = mock_chat.call_args.kwargs
-        assert kwargs["chat_client"] is chat_client
+        assert kwargs["client"] is chat_client
         assert kwargs["instructions"] == "inst"
         assert kwargs["id"] == "id1"
         assert kwargs["name"] == "name1"
         assert kwargs["description"] == "desc1"
-        assert kwargs["temperature"] == 0.3
-        assert kwargs["max_tokens"] == 100
-        assert kwargs["tool_choice"] == "auto"
+        default_options = kwargs["default_options"]
+        assert default_options["temperature"] == 0.3
+        assert default_options["max_tokens"] == 100
+        assert default_options["tool_choice"] == "auto"
         assert kwargs["extra"] == 42
 
 
 class TestStaticFactories:
     def test_create_agent_invokes_chat_agent(self):
         chat_client = MagicMock()
-        with patch("libs.agent_framework.agent_builder.ChatAgent") as mock_chat:
+        with patch("libs.agent_framework.agent_builder.Agent") as mock_chat:
             agent = AgentBuilder.create_agent(
                 chat_client=chat_client,
                 instructions="i",
@@ -181,10 +182,10 @@ class TestStaticFactories:
             )
         assert agent is mock_chat.return_value
         kwargs = mock_chat.call_args.kwargs
-        assert kwargs["chat_client"] is chat_client
+        assert kwargs["client"] is chat_client
         assert kwargs["instructions"] == "i"
         assert kwargs["name"] == "n"
-        assert kwargs["temperature"] == 0.4
+        assert kwargs["default_options"]["temperature"] == 0.4
 
     def test_create_agent_by_agentinfo_uses_helper_and_creates_client(self):
         # Build a fake AgentInfo with the minimum surface used by the method
@@ -206,7 +207,7 @@ class TestStaticFactories:
         with patch(
             "libs.agent_framework.agent_builder.get_bearer_token_provider",
             return_value="token-provider",
-        ), patch("libs.agent_framework.agent_builder.ChatAgent") as mock_chat:
+        ), patch("libs.agent_framework.agent_builder.Agent") as mock_chat:
             agent = AgentBuilder.create_agent_by_agentinfo(
                 service_id="default",
                 agent_info=agent_info,
@@ -216,11 +217,11 @@ class TestStaticFactories:
         helper.settings.get_service_config.assert_called_once_with("default")
         helper.create_client.assert_called_once()
         ck = mock_chat.call_args.kwargs
-        assert ck["chat_client"] == "client-instance"
+        assert ck["client"] == "client-instance"
         assert ck["instructions"] == "instr"
         assert ck["name"] == "A"
         assert ck["description"] == "D"
-        assert ck["temperature"] == 0.2
+        assert ck["default_options"]["temperature"] == 0.2
 
     def test_create_agent_by_agentinfo_falls_back_to_system_prompt(self):
         helper = MagicMock()
@@ -241,7 +242,7 @@ class TestStaticFactories:
         with patch(
             "libs.agent_framework.agent_builder.get_bearer_token_provider",
             return_value="tp",
-        ), patch("libs.agent_framework.agent_builder.ChatAgent") as mock_chat:
+        ), patch("libs.agent_framework.agent_builder.Agent") as mock_chat:
             AgentBuilder.create_agent_by_agentinfo(
                 service_id="default", agent_info=agent_info
             )
