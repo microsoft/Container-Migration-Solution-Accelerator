@@ -118,23 +118,21 @@ Inside each step, the orchestrator can use multi-agent patterns (maker-checker l
 
 - Implementation: [src/processor/src/steps/migration_processor.py](../src/processor/src/steps/migration_processor.py)
 - The processor creates a workflow with `WorkflowBuilder`.
-- It registers four executors, sets the start executor, and defines edges.
+- It instantiates four executors, passes the start executor to `WorkflowBuilder`, and chains them with `add_chain`.
 
 Example from the repo (simplified):
 
 ```python
 from agent_framework import WorkflowBuilder
 
+analysis_exec = AnalysisExecutor(id="analysis", app_context=app_context)
+design_exec = DesignExecutor(id="design", app_context=app_context)
+yaml_exec = YamlConvertExecutor(id="yaml", app_context=app_context)
+docs_exec = DocumentationExecutor(id="documentation", app_context=app_context)
+
 workflow = (
-    WorkflowBuilder()
-    .register_executor(lambda: AnalysisExecutor(id="analysis", app_context=app_context), name="analysis")
-    .register_executor(lambda: DesignExecutor(id="design", app_context=app_context), name="design")
-    .register_executor(lambda: YamlConvertExecutor(id="yaml", app_context=app_context), name="yaml")
-    .register_executor(lambda: DocumentationExecutor(id="documentation", app_context=app_context), name="documentation")
-    .set_start_executor("analysis")
-    .add_edge("analysis", "design")
-    .add_edge("design", "yaml")
-    .add_edge("yaml", "documentation")
+    WorkflowBuilder(start_executor=analysis_exec)
+    .add_chain([analysis_exec, design_exec, yaml_exec, docs_exec])
     .build()
 )
 ```
@@ -355,7 +353,7 @@ To run processor unit tests locally (example):
 
 ```bash
 cd src/processor
-uv run --prerelease=allow python -m pytest src/processor/src/tests/unit -v
+uv run python -m pytest src/tests/unit -v
 ```
 
 ## Extending the pipeline

@@ -9,7 +9,7 @@ import re
 from abc import abstractmethod
 from typing import Any, Callable, Generic, MutableMapping, Sequence, TypeVar
 
-from agent_framework import ChatAgent, ManagerSelectionResponse, ToolProtocol
+from agent_framework import Agent
 
 from libs.agent_framework.agent_builder import AgentBuilder
 from libs.agent_framework.agent_framework_helper import ClientType
@@ -18,6 +18,7 @@ from libs.agent_framework.azure_openai_response_retry import RateLimitRetryConfi
 from libs.agent_framework.groupchat_orchestrator import (
     AgentResponse,
     AgentResponseStream,
+    ManagerSelectionResponse,
     OrchestrationResult,
 )
 from libs.agent_framework.qdrant_memory_store import QdrantMemoryStore
@@ -60,10 +61,10 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
     async def initialize(self, process_id: str):
         self.mcp_tools: (
-            ToolProtocol
+            Any
             | Callable[..., Any]
             | MutableMapping[str, Any]
-            | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+            | Sequence[Any | Callable[..., Any] | MutableMapping[str, Any]]
         ) = await self.prepare_mcp_tools()
         self.agentinfos = await self.prepare_agent_infos()
 
@@ -130,10 +131,10 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
     async def prepare_mcp_tools(
         self,
     ) -> (
-        ToolProtocol
+        Any
         | Callable[..., Any]
         | MutableMapping[str, Any]
-        | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
+        | Sequence[Any | Callable[..., Any] | MutableMapping[str, Any]]
     ):
         pass
 
@@ -144,8 +145,8 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
     async def create_agents(
         self, agent_infos: list[AgentInfo], process_id: str
-    ) -> list[ChatAgent]:
-        agents = dict[str, ChatAgent]()
+    ) -> list[Agent]:
+        agents = dict[str, Agent]()
         agent_client = await self.get_client(thread_id=process_id)
 
         # Workspace context — injected into every agent's system instructions

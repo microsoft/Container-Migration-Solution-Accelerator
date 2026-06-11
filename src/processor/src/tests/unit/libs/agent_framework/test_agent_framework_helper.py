@@ -91,9 +91,9 @@ class TestCreateClient:
             )
         assert client is mock_cls.return_value
         kwargs = mock_cls.call_args.kwargs
-        assert kwargs["endpoint"] == "https://x"
-        assert kwargs["deployment_name"] == "gpt-4"
-        assert kwargs["ad_token_provider"] == "token"
+        assert kwargs["azure_endpoint"] == "https://x"
+        assert kwargs["model"] == "gpt-4"
+        assert kwargs["credential"] == "token"
 
     def test_default_token_provider_when_no_credential(self):
         with patch(
@@ -107,53 +107,58 @@ class TestCreateClient:
                 endpoint="https://x",
                 deployment_name="gpt-4",
             )
-        assert mock_cls.call_args.kwargs["ad_token_provider"] == "default-token"
+        assert mock_cls.call_args.kwargs["credential"] == "default-token"
 
     def test_azure_openai_chat_completion(self):
-        # Patch the lazily imported module
-        fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureOpenAIChatClient = MagicMock(return_value="chat_client")
-        with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
-                ClientType.AzureOpenAIChatCompletion,
-                endpoint="https://x",
-                deployment_name="gpt-4",
-                ad_token_provider="t",
-            )
+        with patch(
+            "libs.agent_framework.agent_framework_helper.OpenAIChatCompletionClient",
+            create=True,
+        ) as mock_cls:
+            mock_cls.return_value = "chat_client"
+            with patch.dict(
+                "sys.modules",
+                {"agent_framework.openai": MagicMock(OpenAIChatCompletionClient=mock_cls)},
+            ):
+                client = AgentFrameworkHelper.create_client(
+                    ClientType.AzureOpenAIChatCompletion,
+                    endpoint="https://x",
+                    deployment_name="gpt-4",
+                    ad_token_provider="t",
+                )
         assert client == "chat_client"
 
-    def test_azure_openai_assistant(self):
-        fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureOpenAIAssistantsClient = MagicMock(return_value="asst_client")
-        with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
+    def test_azure_openai_assistant_raises_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            AgentFrameworkHelper.create_client(
                 ClientType.AzureOpenAIAssistant,
                 endpoint="https://x",
                 deployment_name="gpt-4",
                 ad_token_provider="t",
             )
-        assert client == "asst_client"
 
     def test_azure_openai_response(self):
-        fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureOpenAIResponsesClient = MagicMock(return_value="resp_client")
-        with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
-                ClientType.AzureOpenAIResponse,
-                endpoint="https://x",
-                deployment_name="gpt-4",
-                ad_token_provider="t",
-            )
+        with patch(
+            "libs.agent_framework.agent_framework_helper.OpenAIChatClient",
+            create=True,
+        ) as mock_cls:
+            mock_cls.return_value = "resp_client"
+            with patch.dict(
+                "sys.modules",
+                {"agent_framework.openai": MagicMock(OpenAIChatClient=mock_cls)},
+            ):
+                client = AgentFrameworkHelper.create_client(
+                    ClientType.AzureOpenAIResponse,
+                    endpoint="https://x",
+                    deployment_name="gpt-4",
+                    ad_token_provider="t",
+                )
         assert client == "resp_client"
 
-    def test_azure_openai_agent(self):
-        fake_module = types.ModuleType("agent_framework.azure")
-        fake_module.AzureAIAgentClient = MagicMock(return_value="agent_client")
-        with patch.dict(sys.modules, {"agent_framework.azure": fake_module}):
-            client = AgentFrameworkHelper.create_client(
+    def test_azure_openai_agent_raises_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            AgentFrameworkHelper.create_client(
                 ClientType.AzureOpenAIAgent,
                 project_endpoint="https://proj",
                 model_deployment_name="gpt-4",
                 ad_token_provider="t",
             )
-        assert client == "agent_client"

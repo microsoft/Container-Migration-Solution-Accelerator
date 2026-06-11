@@ -22,17 +22,16 @@ from datetime import datetime
 from typing import Any, Awaitable, Callable, Generic, Mapping, Sequence, TypeVar
 
 from agent_framework import (
-    AgentProtocol,
-    AgentRunUpdateEvent,
-    ChatAgent,
-    ChatMessage,
+    Agent,
+    AgentResponseUpdate,
+    ChatOptions,
     Executor,
-    GroupChatBuilder,
-    ManagerSelectionResponse,
-    Role,
+    Message,
+    SupportsAgentRun,
     Workflow,
-    WorkflowOutputEvent,
+    WorkflowEvent,
 )
+from agent_framework.orchestrations import GroupChatBuilder
 from mem0 import AsyncMemory
 from pydantic import BaseModel, ValidationError
 
@@ -42,6 +41,17 @@ logger = logging.getLogger(__name__)
 # Generic type variables
 TInput = TypeVar("TInput")  # Input type (str, dict, BaseModel, etc.)
 TOutput = TypeVar("TOutput", bound=BaseModel)  # Output must be Pydantic model
+
+
+class ManagerSelectionResponse(BaseModel):
+    """Coordinator selection payload parsed from JSON output."""
+
+    selected_participant: str | None = None
+    instruction: str | None = None
+    finish: bool | None = None
+    final_message: str | None = None
+
+    model_config = {"extra": "allow"}
 
 
 @dataclass
@@ -87,7 +97,7 @@ class OrchestrationResult(Generic[TOutput]):
     """Final workflow execution result with generic output type"""
 
     success: bool
-    conversation: list[ChatMessage]
+    conversation: list[Message]
     agent_responses: list[AgentResponse]
     tool_usage: dict[str, list[dict[str, Any]]]
     result: TOutput | None = None
@@ -188,8 +198,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self,
         name: str,
         process_id: str,
-        participants: Mapping[str, AgentProtocol | Executor]
-        | Sequence[AgentProtocol | Executor],
+        participants: Mapping[str, SupportsAgentRun | Executor]
+        | Sequence[SupportsAgentRun | Executor],
         memory_client: AsyncMemory,
         coordinator_name: str = "Coordinator",
         max_rounds: int = 100,
@@ -225,7 +235,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self.result_format = result_output_format
 
         # Runtime state
-        self.agents: dict[str, ChatAgent] = participants
+        self.agents: dict[str, Agent] = participants
         self.agent_tool_usage: dict[str, list[dict[str, Any]]] = {}
         self.agent_responses: list[AgentResponse] = []
         self._initialized: bool = False
@@ -338,7 +348,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         """
         return "ResultGenerator"
 
-    def _validate_sign_offs(self, conversation: list[ChatMessage]) -> tuple[bool, str]:
+    def _validate_sign_offs(self, conversation: list[Message]) -> tuple[bool, str]:
         """
         Validate that all required reviewers have SIGN-OFF: PASS.
 
@@ -475,7 +485,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._tool_call_emitted.clear()
         self._tool_call_recorded.clear()
         self._tool_call_index.clear()
-        self._conversation: list[ChatMessage] = []  # Track conversation during workflow
+        self._conversation: list[Message] = []  # Track conversation during workflow
 
         try:
             # Ensure initialized
@@ -489,9 +499,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             group_chat_workflow = await self._build_groupchat()
 
             # Execute with streaming
-            conversation: list[ChatMessage] = []
+            conversation: list[Message] = []
 
-            async for event in group_chat_workflow.run_stream(task_prompt):
+            async for event in group_chat_workflow.run(task_prompt, stream=True):
                 # Enforce wall-clock timeout if configured.
                 if self.max_seconds is not None:
                     elapsed = (datetime.now() - start_time).total_seconds()
@@ -503,7 +513,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                             termination_type="hard_timeout",
                         )
 
-                if isinstance(event, AgentRunUpdateEvent):
+                if isinstance(event, AgentResponseUpdate):
                     await self._handle_agent_update(
                         event,
                         stream_callback=on_agent_response_stream,
@@ -525,7 +535,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     # If the Coordinator requested finish=true, stop immediately.
                     if self._termination_requested:
                         break
-                elif isinstance(event, WorkflowOutputEvent):
+                elif event.type == "output":
+                    event: WorkflowEvent
                     # Complete last agent's response before finishing
                     if self._last_executor_id and self._current_agent_response:
                         await self._complete_agent_response(
@@ -542,8 +553,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                         self._conversation = conversation  # Update instance variable
 
             # Backfill tool usage from the final conversation (more reliable than streaming updates)
-            # AgentRunUpdateEvent may stream text only; tool calls are represented as FunctionCallContent
-            # items inside ChatMessage.contents.
+            # AgentResponseUpdate may stream text only; tool calls are represented as FunctionCallContent
+            # items inside Message.contents.
             self._backfill_tool_usage_from_conversation(conversation)
 
             # Post-workflow analysis (optional)
@@ -642,7 +653,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
     async def _handle_agent_update(
         self,
-        event: AgentRunUpdateEvent,
+        event: AgentResponseUpdate,
         stream_callback: AgentResponseStreamCallback | None = None,
         callback: AgentResponseCallback | None = None,
     ) -> None:
@@ -655,7 +666,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         3. Trigger callback with complete response
         4. Handle tool calls separately from text streaming
         """
-        agent_name = self._normalize_executor_id(event.executor_id)
+        agent_name = self._normalize_executor_id(event.agent_id or "")
         await self._start_agent_if_needed(agent_name, stream_callback, callback)
         self._append_text_chunk(event)
         await self._process_tool_calls(event, agent_name, stream_callback)
@@ -705,24 +716,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         logger.info(f"\n[AGENT] {agent_name}:", extra={"agent_name": agent_name})
 
-    def _append_text_chunk(self, event: AgentRunUpdateEvent) -> None:
+    def _append_text_chunk(self, event: AgentResponseUpdate) -> None:
         """Append streamed text chunks to the current agent buffer."""
-        if not hasattr(event.data, "text") or not event.data.text:
+        text_chunk = getattr(event, "text", None)
+        if not text_chunk:
             return
 
-        text_obj = event.data.text
-        text_chunk = getattr(text_obj, "text", text_obj)
         if isinstance(text_chunk, str) and text_chunk:
             self._current_agent_response.append(text_chunk)
 
     async def _process_tool_calls(
         self,
-        event: AgentRunUpdateEvent,
+        event: AgentResponseUpdate,
         agent_name: str,
         stream_callback: AgentResponseStreamCallback | None,
     ) -> None:
         """Process tool-call contents: buffer/parse args, record once, emit once."""
-        tool_calls = self._extract_function_calls(getattr(event.data, "contents", None))
+        tool_calls = self._extract_function_calls(event.contents)
         if not tool_calls:
             return
 
@@ -884,7 +894,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         return calls
 
     def _backfill_tool_usage_from_conversation(
-        self, conversation: list[ChatMessage]
+        self, conversation: list[Message]
     ) -> None:
         """Populate `agent_tool_usage` from final conversation messages.
 
@@ -894,7 +904,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         for msg in conversation:
             try:
                 role = getattr(msg, "role", None)
-                if role != Role.ASSISTANT:
+                if role != "assistant":
                     continue
 
                 agent_name = getattr(msg, "author_name", None) or "assistant"
@@ -1114,15 +1124,16 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         ]
 
         return (
-            GroupChatBuilder()
-            .set_manager(coordinator)
-            .participants(participants)
+            GroupChatBuilder(
+                orchestrator_agent=coordinator,
+                participants=participants,
+            )
             .build()
         )
 
     async def _generate_final_result(
         self,
-        conversation: list[ChatMessage],
+        conversation: list[Message],
         result_format: type[TOutput],
         result_generator_name: str,
     ) -> TOutput:
@@ -1141,7 +1152,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         result = await result_generator.run(
             final_conversation,
-            response_format=result_format,
+            options=ChatOptions(response_format=result_format),
         )
 
         text = result.messages[-1].text
@@ -1174,7 +1185,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             )
             retry_result = await result_generator.run(
                 retry_conversation,
-                response_format=result_format,
+                options=ChatOptions(response_format=result_format),
             )
             retry_text = retry_result.messages[-1].text
             retry_json_payload = self._extract_first_json_payload(retry_text)
@@ -1220,7 +1231,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
     def _build_result_generator_conversation(
         self,
-        conversation: Iterable[ChatMessage],
+        conversation: Iterable[Message],
         *,
         exclude_authors: set[str] | None,
         max_messages: int,
@@ -1228,7 +1239,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         max_chars_per_message: int,
         keep_head_chars: int,
         keep_tail_chars: int,
-    ) -> list[ChatMessage]:
+    ) -> list[Message]:
         """Build a size-bounded conversation slice for the ResultGenerator.
 
         The raw conversation can contain extremely large tool outputs or repeated
@@ -1241,7 +1252,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         """
         exclude = {a.lower() for a in (exclude_authors or set())}
 
-        selected: list[ChatMessage] = []
+        selected: list[Message] = []
         seen_fingerprints: set[tuple[str | None, str, str]] = set()
         total_chars = 0
 
@@ -1296,9 +1307,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
             # Preserve role + author_name so downstream can attribute sign-offs.
             selected.append(
-                ChatMessage(
+                Message(
                     role=role,
-                    text=truncated,
+                    contents=[truncated],
                     author_name=author,
                 )
             )
