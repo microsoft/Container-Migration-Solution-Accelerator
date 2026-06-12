@@ -295,9 +295,16 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._forced_termination_reason: str | None = None
         self._forced_termination_type: str | None = None
 
-        # Loop detection for Coordinator selections (participant + instruction)
-        self._last_coordinator_selection: tuple[str, str] | None = None
+        # Loop detection for Coordinator selections.
+        # We track the *agent the Coordinator most recently picked* (lower-cased name)
+        # rather than (agent, instruction) tuples, because in practice the LLM-driven
+        # Coordinator varies the instruction text while looping on the same agent.
+        # A streak counts how many consecutive Coordinator picks landed on the same
+        # agent without any *other* agent running in between (see _progress_counter
+        # bookkeeping in _handle_agent_update).
+        self._last_coordinator_selection: str | None = None
         self._coordinator_selection_streak: int = 0
+        # Diagnostic history of recent (agent, instruction) selections.
         self._recent_coordinator_selections: deque[tuple[str, str]] = deque(maxlen=10)
 
         # Progress counter used to avoid false-positive loop detection.
@@ -1029,14 +1036,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # selection. So we only increment when the completing agent is not the one the
         # Coordinator is currently latching onto.
         if agent_name != self.coordinator_name:
-            last_selected = (
-                self._last_coordinator_selection[0]
-                if self._last_coordinator_selection
-                else None
-            )
+            last_selected = self._last_coordinator_selection
             if (
                 last_selected is None
-                or agent_name.lower() != last_selected.lower()
+                or agent_name.lower() != last_selected
             ):
                 self._progress_counter += 1
 
@@ -1058,17 +1061,27 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 # measures from Coordinator selection -> response completion.
                 selected = getattr(manager_response, "selected_participant", None)
 
-                # Loop detection: same selection+instruction repeated.
+                # Loop detection: same agent picked repeatedly with no other agent
+                # making progress in between. We deliberately key on the agent name
+                # alone (not on the instruction text) because the LLM-driven
+                # Coordinator often varies its instruction text while still looping
+                # on the same agent ("re-list", "read xyz.yaml", "save analysis_result.md"
+                # all sent to the same Chief Architect over and over). The
+                # _progress_counter (incremented in _handle_agent_update only when
+                # a DIFFERENT agent runs) is what tells us whether anything else
+                # actually happened in between.
                 if (
                     isinstance(selected, str)
                     and selected
                     and selected.lower() != "none"
                 ):
-                    selection_key = (selected, str(manager_instruction or ""))
-                    self._recent_coordinator_selections.append(selection_key)
-                    if selection_key == self._last_coordinator_selection:
-                        # If any other agent responded since the last identical selection,
-                        # treat that as progress and reset the streak.
+                    selected_key = selected.lower()
+                    self._recent_coordinator_selections.append(
+                        (selected, str(manager_instruction or ""))
+                    )
+                    if selected_key == self._last_coordinator_selection:
+                        # Same agent again. If any other agent ran since the last
+                        # identical pick, treat that as progress and reset the streak.
                         if (
                             self._progress_counter
                             != self._last_coordinator_selection_progress
@@ -1080,17 +1093,20 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                         else:
                             self._coordinator_selection_streak += 1
                     else:
-                        self._last_coordinator_selection = selection_key
+                        self._last_coordinator_selection = selected_key
                         self._coordinator_selection_streak = 1
                         self._last_coordinator_selection_progress = (
                             self._progress_counter
                         )
 
-                    # If the Coordinator repeats the exact same ask 3 times, break.
+                    # If the Coordinator picks the same agent 3 times in a row
+                    # without any other agent running in between, break out.
                     if self._coordinator_selection_streak >= 3:
                         self._request_forced_termination(
                             reason=(
-                                f"Loop detected: Coordinator repeated the same selection to '{selected}' {self._coordinator_selection_streak} times with no progress"
+                                f"Loop detected: Coordinator selected '{selected}' "
+                                f"{self._coordinator_selection_streak} consecutive "
+                                f"times with no other agent making progress in between"
                             ),
                             termination_type="hard_timeout",
                         )

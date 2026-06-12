@@ -786,6 +786,53 @@ class TestCompleteAgentResponse:
         # before B reset it, one streak of 2 after). Loop NOT detected.
         assert orch._forced_termination_requested is False
 
+    def test_loop_breaker_triggered_when_same_agent_picked_with_varying_instructions(
+        self,
+    ):
+        """Regression for production: the LLM-driven Coordinator was looping on
+        Chief Architect but varying its instruction text on every pick
+        ('re-list', 'read xyz', 'save analysis_result.md'). The loop detector
+        must key on the AGENT NAME only — not on (agent, instruction) — or the
+        streak resets on every pick and the loop is never caught.
+        """
+        orch = _make_orch()
+        orch._conversation = []
+
+        def _select(participant: str, instruction: str = "do"):
+            orch._current_agent_response = [
+                json.dumps(
+                    {
+                        "selected_participant": participant,
+                        "instruction": instruction,
+                        "finish": False,
+                        "final_message": "",
+                    }
+                )
+            ]
+            orch._current_agent_start_time = datetime.now()
+
+        def _agent_runs(name: str, text: str = "ok"):
+            orch._current_agent_response = [text]
+            orch._current_agent_start_time = datetime.now()
+
+        # Each Coordinator pick targets the same agent but with a DIFFERENT
+        # instruction. With the old (agent, instruction) tuple key this never
+        # tripped the breaker.
+        _select("Chief Architect", instruction="list source blobs")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("Chief Architect")
+        _run(orch._complete_agent_response("Chief Architect", None))
+
+        _select("Chief Architect", instruction="read source files")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("Chief Architect")
+        _run(orch._complete_agent_response("Chief Architect", None))
+
+        _select("Chief Architect", instruction="save analysis_result.md")
+        _run(orch._complete_agent_response("Coordinator", None))
+
+        assert orch._forced_termination_requested is True
+
 
 # -----------------------------------------------------------------------------
 # _build_groupchat
