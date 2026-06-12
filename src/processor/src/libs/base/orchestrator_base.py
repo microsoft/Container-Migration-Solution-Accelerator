@@ -225,7 +225,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
             return self._client_cache[thread_id]
         else:
             client = self.agent_framework_helper.create_client(
-                client_type=ClientType.AzureOpenAIResponseWithRetry,
+                client_type=ClientType.AzureOpenAIChatCompletionWithRetry,
                 endpoint=self.agent_framework_helper.settings.get_service_config(
                     "default"
                 ).endpoint,

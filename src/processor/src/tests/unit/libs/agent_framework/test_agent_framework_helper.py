@@ -95,6 +95,22 @@ class TestCreateClient:
         assert kwargs["model"] == "gpt-4"
         assert kwargs["credential"] == "token"
 
+    def test_azure_openai_chat_completion_with_retry(self):
+        with patch(
+            "libs.agent_framework.agent_framework_helper.AzureOpenAIChatClientWithRetry"
+        ) as mock_cls:
+            client = AgentFrameworkHelper.create_client(
+                ClientType.AzureOpenAIChatCompletionWithRetry,
+                endpoint="https://x",
+                deployment_name="gpt-4",
+                ad_token_provider="token",
+            )
+        assert client is mock_cls.return_value
+        kwargs = mock_cls.call_args.kwargs
+        assert kwargs["azure_endpoint"] == "https://x"
+        assert kwargs["model"] == "gpt-4"
+        assert kwargs["credential"] == "token"
+
     def test_default_token_provider_when_no_credential(self):
         with patch(
             "libs.agent_framework.agent_framework_helper.AzureOpenAIResponseClientWithRetry"

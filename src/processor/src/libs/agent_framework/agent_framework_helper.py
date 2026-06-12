@@ -22,6 +22,7 @@ from utils.credential_util import get_bearer_token_provider
 
 from .agent_framework_settings import AgentFrameworkSettings
 from .azure_openai_response_retry import (
+    AzureOpenAIChatClientWithRetry,
     AzureOpenAIResponseClientWithRetry,
     RateLimitRetryConfig,
 )
@@ -40,6 +41,7 @@ class ClientType(Enum):
     OpenAIAssistant = "OpenAIAssistant"
     OpenAIResponse = "OpenAIResponse"
     AzureOpenAIChatCompletion = "AzureOpenAIChatCompletion"
+    AzureOpenAIChatCompletionWithRetry = "AzureOpenAIChatCompletionWithRetry"
     AzureOpenAIAssistant = "AzureOpenAIAssistant"
     AzureOpenAIResponse = "AzureOpenAIResponse"
     AzureOpenAIResponseWithRetry = "AzureOpenAIResponseWithRetry"
@@ -92,7 +94,7 @@ class AgentFrameworkHelper:
                 continue
 
             self.ai_clients[service_id] = AgentFrameworkHelper.create_client(
-                client_type=ClientType.AzureOpenAIResponseWithRetry,
+                client_type=ClientType.AzureOpenAIChatCompletionWithRetry,
                 endpoint=service_config.endpoint,
                 deployment_name=service_config.chat_deployment_name,
                 api_version=service_config.api_version,
@@ -146,6 +148,29 @@ class AgentFrameworkHelper:
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
     ) -> "OpenAIChatCompletionClient":
+        pass
+
+    @overload
+    @staticmethod
+    def create_client(
+        client_type: type[ClientType.AzureOpenAIChatCompletionWithRetry],
+        *,
+        api_key: str | None = None,
+        deployment_name: str | None = None,
+        endpoint: str | None = None,
+        base_url: str | None = None,
+        api_version: str | None = None,
+        ad_token: str | None = None,
+        ad_token_provider: object | None = None,
+        token_endpoint: str | None = None,
+        credential: object | None = None,
+        default_headers: dict[str, str] | None = None,
+        async_client: object | None = None,
+        env_file_path: str | None = None,
+        env_file_encoding: str | None = None,
+        instruction_role: str | None = None,
+        retry_config: RateLimitRetryConfig | None = None,
+    ) -> AzureOpenAIChatClientWithRetry:
         pass
 
     @overload
@@ -378,6 +403,21 @@ class AgentFrameworkHelper:
                 env_file_path=env_file_path,
                 env_file_encoding=env_file_encoding,
                 instruction_role=instruction_role,
+            )
+        elif client_type == ClientType.AzureOpenAIChatCompletionWithRetry:
+            return AzureOpenAIChatClientWithRetry(
+                model=deployment_name,
+                api_key=api_key,
+                azure_endpoint=endpoint,
+                base_url=base_url,
+                api_version=api_version,
+                credential=credential or ad_token_provider,
+                default_headers=default_headers,
+                async_client=async_client,
+                env_file_path=env_file_path,
+                env_file_encoding=env_file_encoding,
+                instruction_role=instruction_role,
+                retry_config=retry_config,
             )
         elif client_type == ClientType.AzureOpenAIAssistant:
             raise NotImplementedError(

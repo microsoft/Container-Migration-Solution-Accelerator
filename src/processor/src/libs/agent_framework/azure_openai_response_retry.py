@@ -12,7 +12,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, MutableSequence
 
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.openai import OpenAIChatClient, OpenAIChatCompletionClient
 from tenacity import (
     AsyncRetrying,
     retry_if_exception,
@@ -664,6 +664,98 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
             return await _retry_call(
                 lambda: parent_inner(
                     messages=trimmed, options=options, stream=False, **kwargs
+                ),
+                config=self._retry_config,
+            )
+
+
+class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
+    """Azure OpenAI Chat (Chat Completions) client with 429 retry at the request boundary.
+
+    Wraps the ``/chat/completions`` endpoint used by Agent Framework by overriding
+    the internal ``_inner_get_response`` method. This client works with all Azure
+    OpenAI API versions including ``2025-03-01-preview``.
+
+    Use this in preference to ``AzureOpenAIResponseClientWithRetry`` when the
+    ``/responses`` endpoint (and the ``v1`` API version it requires) is not
+    available in the target Azure OpenAI resource.
+    """
+
+    def __init__(
+        self,
+        *args: Any,
+        retry_config: RateLimitRetryConfig | None = None,
+        **kwargs: Any,
+    ):
+        super().__init__(*args, **kwargs)
+        self._retry_config = retry_config or RateLimitRetryConfig.from_env()
+        self._context_trim_config = ContextTrimConfig.from_env()
+
+    async def _inner_get_response(
+        self,
+        *,
+        messages: MutableSequence[Any],
+        options: Any | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Override that adds retry + context-trimming around the parent call."""
+        parent_inner_get_response = super(
+            AzureOpenAIChatClientWithRetry, self
+        )._inner_get_response
+
+        effective_messages: MutableSequence[Any] | list[Any] = messages
+        if self._context_trim_config.enabled:
+            approx_chars = sum(len(_estimate_message_text(m)) for m in messages)
+            if (
+                self._context_trim_config.max_total_chars > 0
+                and approx_chars > self._context_trim_config.max_total_chars
+            ):
+                effective_messages = _trim_messages(
+                    messages, cfg=self._context_trim_config
+                )
+                logger.warning(
+                    "[AOAI_CTX_TRIM] pre-trimmed chat request messages: approx_chars=%s -> %s; count=%s -> %s",
+                    approx_chars,
+                    sum(len(_estimate_message_text(m)) for m in effective_messages),
+                    len(messages),
+                    len(effective_messages),
+                )
+
+        if not effective_messages:
+            logger.warning(
+                "[AOAI_RETRY] empty messages list received; using original messages"
+            )
+            effective_messages = messages
+
+        try:
+            return await _retry_call(
+                lambda: parent_inner_get_response(
+                    messages=effective_messages, options=options, **kwargs
+                ),
+                config=self._retry_config,
+            )
+        except Exception as e:
+            if not (
+                self._context_trim_config.enabled
+                and self._context_trim_config.retry_on_context_error
+                and _looks_like_context_length(e)
+            ):
+                raise
+
+            trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+            if not trimmed:
+                logger.warning(
+                    "[AOAI_CTX_TRIM] trim would remove all messages; re-raising original error"
+                )
+                raise
+            logger.warning(
+                "[AOAI_CTX_TRIM] retrying chat after context-length error; count=%s -> %s",
+                len(messages),
+                len(trimmed),
+            )
+            return await _retry_call(
+                lambda: parent_inner_get_response(
+                    messages=trimmed, options=options, **kwargs
                 ),
                 config=self._retry_config,
             )
