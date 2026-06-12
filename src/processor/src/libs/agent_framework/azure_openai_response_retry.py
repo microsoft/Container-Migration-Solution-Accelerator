@@ -610,4 +610,3 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
                 ),
                 config=self._retry_config,
             )
-
