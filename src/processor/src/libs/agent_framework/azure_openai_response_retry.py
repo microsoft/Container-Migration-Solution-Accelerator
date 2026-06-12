@@ -691,35 +691,17 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
         self._retry_config = retry_config or RateLimitRetryConfig.from_env()
         self._context_trim_config = ContextTrimConfig.from_env()
 
-    async def _inner_get_response(
-        self,
-        *,
-        messages: MutableSequence[Any],
-        options: Any | None = None,
-        **kwargs: Any,
+    def _inner_get_response(
+        self, *, messages: MutableSequence[Any], options: Any = None, stream: bool = False, **kwargs: Any
     ) -> Any:
-        """Override that adds retry + context-trimming around the parent call."""
-        parent_inner_get_response = super(
-            AzureOpenAIChatClientWithRetry, self
-        )._inner_get_response
+        """Override that adds retry + context-trimming around the parent call.
 
-        effective_messages: MutableSequence[Any] | list[Any] = messages
-        if self._context_trim_config.enabled:
-            approx_chars = sum(len(_estimate_message_text(m)) for m in messages)
-            if (
-                self._context_trim_config.max_total_chars > 0
-                and approx_chars > self._context_trim_config.max_total_chars
-            ):
-                effective_messages = _trim_messages(
-                    messages, cfg=self._context_trim_config
-                )
-                logger.warning(
-                    "[AOAI_CTX_TRIM] pre-trimmed chat request messages: approx_chars=%s -> %s; count=%s -> %s",
-                    approx_chars,
-                    sum(len(_estimate_message_text(m)) for m in effective_messages),
-                    len(messages),
-                    len(effective_messages),
-                )
+        Must remain a regular ``def`` (not ``async def``) because the parent
+        returns different types depending on *stream*:
+        - stream=False → Awaitable[ChatResponse]
+        - stream=True  → ResponseStream  (AsyncIterable)
+        """
+        effective_messages = self._maybe_trim_messages(messages)
 
         if not effective_messages:
             logger.warning(
@@ -727,10 +709,68 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
             )
             effective_messages = messages
 
+        if stream:
+            # For streaming, delegate to the parent which returns a proper
+            # ResponseStream. The framework checks isinstance(result, ResponseStream)
+            # and async generators fail that check.
+            parent_inner = super(
+                AzureOpenAIChatClientWithRetry, self
+            )._inner_get_response
+            return parent_inner(
+                messages=effective_messages, options=options, stream=True, **kwargs
+            )
+        else:
+            return self._non_streaming_with_retry(
+                effective_messages=effective_messages,
+                original_messages=messages,
+                options=options,
+                **kwargs,
+            )
+
+    def _maybe_trim_messages(
+        self, messages: MutableSequence[Any]
+    ) -> MutableSequence[Any] | list[Any]:
+        """Apply pre-call context trimming if enabled and over budget."""
+        if not self._context_trim_config.enabled:
+            return messages
+        approx_chars = sum(len(_estimate_message_text(m)) for m in messages)
+        if (
+            self._context_trim_config.max_total_chars > 0
+            and approx_chars > self._context_trim_config.max_total_chars
+        ):
+            trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+            if not trimmed:
+                logger.warning(
+                    "[AOAI_CTX_TRIM] trimming would remove all messages; keeping originals"
+                )
+                return messages
+            logger.warning(
+                "[AOAI_CTX_TRIM] pre-trimmed chat request messages: approx_chars=%s -> %s; count=%s -> %s",
+                approx_chars,
+                sum(len(_estimate_message_text(m)) for m in trimmed),
+                len(messages),
+                len(trimmed),
+            )
+            return trimmed
+        return messages
+
+    async def _non_streaming_with_retry(
+        self,
+        *,
+        effective_messages: MutableSequence[Any] | list[Any],
+        original_messages: MutableSequence[Any],
+        options: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Non-streaming path: full retry + context-trim fallback."""
+        parent_inner = super(
+            AzureOpenAIChatClientWithRetry, self
+        )._inner_get_response
+
         try:
             return await _retry_call(
-                lambda: parent_inner_get_response(
-                    messages=effective_messages, options=options, **kwargs
+                lambda: parent_inner(
+                    messages=effective_messages, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
@@ -742,20 +782,48 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
             ):
                 raise
 
-            trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+            trimmed = _trim_messages(
+                original_messages,
+                cfg=ContextTrimConfig(
+                    enabled=True,
+                    max_total_chars=max(
+                        50_000, self._context_trim_config.max_total_chars - 80_000
+                    ),
+                    max_message_chars=max(
+                        3_000, self._context_trim_config.max_message_chars - 6_000
+                    ),
+                    keep_last_messages=max(
+                        6, self._context_trim_config.keep_last_messages - 12
+                    ),
+                    keep_head_chars=max(
+                        1_000, self._context_trim_config.keep_head_chars - 4_000
+                    ),
+                    keep_tail_chars=self._context_trim_config.keep_tail_chars,
+                    keep_system_messages=True,
+                    retry_on_context_error=True,
+                ),
+            )
             if not trimmed:
                 logger.warning(
-                    "[AOAI_CTX_TRIM] trim would remove all messages; re-raising original error"
+                    "[AOAI_CTX_TRIM] aggressive trim would remove all messages; re-raising original error"
                 )
                 raise
             logger.warning(
                 "[AOAI_CTX_TRIM] retrying chat after context-length error; count=%s -> %s",
-                len(messages),
+                len(original_messages),
                 len(trimmed),
             )
+            trim_delay = min(
+                self._retry_config.base_delay_seconds,
+                self._retry_config.max_delay_seconds,
+            )
+            logger.info(
+                "[AOAI_CTX_TRIM] sleeping %ss before retry", round(trim_delay, 1)
+            )
+            await asyncio.sleep(trim_delay)
             return await _retry_call(
-                lambda: parent_inner_get_response(
-                    messages=trimmed, options=options, **kwargs
+                lambda: parent_inner(
+                    messages=trimmed, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
