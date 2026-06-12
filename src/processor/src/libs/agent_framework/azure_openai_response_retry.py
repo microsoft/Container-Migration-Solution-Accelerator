@@ -801,6 +801,12 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
         # OpenAI Chat Completions validates message `name` against ^[^\s<|\\/>]+$.
         # Sanitize before sending so agent display names like "Chief Architect"
         # don't trip a 400 BadRequest. Originals are shallow-copied, not mutated.
+        # NOTE: this is a defense-in-depth pass on ``Message.author_name``.
+        # The authoritative sanitization happens in ``_prepare_messages_for_openai``
+        # below, which sanitizes the FINAL dict ``name`` field right before the
+        # request is sent — catching any name that slips in via framework-internal
+        # message construction (e.g. compaction, memory context providers,
+        # orchestrator-injected messages) that bypasses this early pass.
         effective_messages = _sanitize_author_names(effective_messages)
 
         if stream:
@@ -820,6 +826,47 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
                 options=options,
                 **kwargs,
             )
+
+    def _prepare_messages_for_openai(self, chat_messages, *args: Any, **kwargs: Any):  # type: ignore[override]
+        """Sanitize message ``name`` fields after framework conversion to wire format.
+
+        The parent ``_prepare_messages_for_openai`` walks ``Message`` objects and
+        builds the OpenAI dict payload (``{"role": ..., "name": ..., "content": ...}``).
+        The ``name`` field is copied from ``Message.author_name`` and is validated
+        by the OpenAI Chat Completions API against ``^[^\\s<|\\\\/>]+$``.
+
+        We override here as a final, authoritative sanitization point. Even though
+        ``_inner_get_response`` already sanitizes ``Message.author_name``, names
+        can still reach this layer unsanitized from:
+
+        * ``OpenAIChatCompletionClient._prepare_options`` calling
+          ``prepend_instructions_to_messages`` (which does not author_name, but
+          downstream callers may add named messages).
+        * ``ChatAgent`` / memory context providers materializing messages with
+          ``author_name`` set inside the agent run loop, after the client receives
+          the original sequence.
+        * Any framework-internal compaction or message-rewriting path that
+          constructs new ``Message`` objects.
+
+        Sanitizing the dict output is the single chokepoint guaranteed to be
+        on every Chat Completions request, regardless of how the messages were
+        assembled upstream.
+        """
+        result = super()._prepare_messages_for_openai(chat_messages, *args, **kwargs)
+        for msg in result:
+            if not isinstance(msg, dict):
+                continue
+            name = msg.get("name")
+            if not isinstance(name, str):
+                continue
+            sanitized = _sanitize_author_name(name)
+            if sanitized == name:
+                continue
+            if sanitized:
+                msg["name"] = sanitized
+            else:
+                msg.pop("name", None)
+        return result
 
     def _maybe_trim_messages(
         self, messages: MutableSequence[Any]
