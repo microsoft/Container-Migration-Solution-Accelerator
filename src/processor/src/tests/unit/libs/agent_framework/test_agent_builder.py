@@ -57,12 +57,22 @@ class TestFluentSetters:
     def test_with_middleware(self):
         m = [MagicMock()]
         b = _builder().with_middleware(m)
-        assert b._middleware is m
+        assert b._middleware == m
+
+    def test_with_middleware_single(self):
+        m = MagicMock()
+        b = _builder().with_middleware(m)
+        assert b._middleware == [m]
 
     def test_with_context_providers(self):
         cp = MagicMock()
         b = _builder().with_context_providers(cp)
-        assert b._context_providers is cp
+        assert b._context_providers == [cp]
+
+    def test_with_context_providers_list(self):
+        cp1, cp2 = MagicMock(), MagicMock()
+        b = _builder().with_context_providers([cp1, cp2])
+        assert b._context_providers == [cp1, cp2]
 
     def test_with_conversation_id(self):
         b = _builder().with_conversation_id("conv-1")

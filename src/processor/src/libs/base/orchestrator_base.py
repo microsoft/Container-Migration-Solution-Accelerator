@@ -209,7 +209,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     agent_name=agent_info.agent_name,
                     step=self.step_name,
                 )
-                builder = builder.with_context_providers(memory_provider)
+                builder = builder.with_context_providers([memory_provider])
 
             agent = builder.build()
             agents[agent_info.agent_name] = agent

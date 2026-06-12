@@ -266,7 +266,10 @@ class AgentBuilder:
         Returns:
             Self for method chaining
         """
-        self._middleware = middleware
+        if isinstance(middleware, list):
+            self._middleware = middleware
+        else:
+            self._middleware = [middleware]
         return self
 
     def with_context_providers(
@@ -281,7 +284,10 @@ class AgentBuilder:
         Returns:
             Self for method chaining
         """
-        self._context_providers = context_providers
+        if isinstance(context_providers, list):
+            self._context_providers = context_providers
+        else:
+            self._context_providers = [context_providers]
         return self
 
     def with_conversation_id(self, conversation_id: str) -> "AgentBuilder":
