@@ -184,7 +184,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
                     builder
                     .with_temperature(0.0)
                     .with_response_format(ManagerSelectionResponse)
-                    .with_max_tokens(4_000)
+                    .with_max_tokens(8_000)
                     .with_tools(agent_info.tools)  # for checking file existence
                 )
             elif agent_info.agent_name == "ResultGenerator":
