@@ -23021,7 +23021,7 @@
                           },
                           {
                             "name": "AZURE_OPENAI_API_VERSION",
-                            "value": "2025-03-01-preview"
+                            "value": "v1"
                           },
                           {
                             "name": "COSMOS_DB_ACCOUNT_URL",
@@ -26792,7 +26792,7 @@
                           },
                           {
                             "name": "AZURE_OPENAI_API_VERSION",
-                            "value": "2025-03-01-preview"
+                            "value": "v1"
                           },
                           {
                             "name": "COSMOS_DB_ACCOUNT_URL",
@@ -40223,7 +40223,7 @@
                           },
                           {
                             "name": "AZURE_OPENAI_API_VERSION",
-                            "value": "2025-03-01-preview"
+                            "value": "v1"
                           },
                           {
                             "name": "COSMOS_DB_ACCOUNT_URL",
@@ -40858,7 +40858,7 @@
                           },
                           {
                             "name": "AZURE_OPENAI_API_VERSION",
-                            "value": "2025-03-01-preview"
+                            "value": "v1"
                           },
                           {
                             "name": "COSMOS_DB_ACCOUNT_URL",
