@@ -700,6 +700,92 @@ class TestCompleteAgentResponse:
 
         assert orch._forced_termination_requested is True
 
+    def test_loop_breaker_triggered_when_looped_agent_runs_between_selections(
+        self,
+    ):
+        """Regression: when Coordinator keeps picking the same agent, that agent's
+        own runs MUST NOT count as progress, or the streak resets and the loop
+        never breaks.
+        """
+        orch = _make_orch()
+        orch._conversation = []
+
+        def _select(participant: str, instruction: str = "do"):
+            orch._current_agent_response = [
+                json.dumps(
+                    {
+                        "selected_participant": participant,
+                        "instruction": instruction,
+                        "finish": False,
+                        "final_message": "",
+                    }
+                )
+            ]
+            orch._current_agent_start_time = datetime.now()
+
+        def _agent_runs(name: str, text: str = "ok"):
+            orch._current_agent_response = [text]
+            orch._current_agent_start_time = datetime.now()
+
+        # Simulate production sequence: Coordinator picks A, then A runs,
+        # then Coordinator picks A again, then A runs, etc.
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("A")
+        _run(orch._complete_agent_response("A", None))
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("A")
+        _run(orch._complete_agent_response("A", None))
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+
+        assert orch._forced_termination_requested is True
+
+    def test_loop_breaker_resets_when_different_agent_responds(self):
+        """If a different agent responds between identical Coordinator selections,
+        treat that as real progress and reset the streak.
+        """
+        orch = _make_orch()
+        orch._conversation = []
+
+        def _select(participant: str, instruction: str = "do"):
+            orch._current_agent_response = [
+                json.dumps(
+                    {
+                        "selected_participant": participant,
+                        "instruction": instruction,
+                        "finish": False,
+                        "final_message": "",
+                    }
+                )
+            ]
+            orch._current_agent_start_time = datetime.now()
+
+        def _agent_runs(name: str, text: str = "ok"):
+            orch._current_agent_response = [text]
+            orch._current_agent_start_time = datetime.now()
+
+        # Sequence: A, A, B, A, A (a different agent B interrupts -> streak resets)
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("A")
+        _run(orch._complete_agent_response("A", None))
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("B")
+        _run(orch._complete_agent_response("B", None))
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+        _agent_runs("A")
+        _run(orch._complete_agent_response("A", None))
+        _select("A")
+        _run(orch._complete_agent_response("Coordinator", None))
+
+        # Only 2 consecutive A selections without progress (one streak of 2
+        # before B reset it, one streak of 2 after). Loop NOT detected.
+        assert orch._forced_termination_requested is False
+
 
 # -----------------------------------------------------------------------------
 # _build_groupchat

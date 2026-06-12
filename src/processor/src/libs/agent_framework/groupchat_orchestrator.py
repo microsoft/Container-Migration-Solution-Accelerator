@@ -1018,8 +1018,27 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # Mark progress on any non-Coordinator completion. This is used to ensure loop
         # detection only triggers when the Coordinator is repeating itself *and* the
         # rest of the conversation is not advancing.
+        #
+        # IMPORTANT: we must NOT count the looped-on agent's own runs as "progress".
+        # If we did, then the pattern "Coordinator picks A -> A runs -> Coordinator
+        # picks A -> A runs -> ..." would keep bumping the progress counter, which
+        # would reset the loop-detection streak on every check, and the streak would
+        # never grow past 1. The loop would then never be detected.
+        #
+        # Real progress means a DIFFERENT agent ran since the last identical Coordinator
+        # selection. So we only increment when the completing agent is not the one the
+        # Coordinator is currently latching onto.
         if agent_name != self.coordinator_name:
-            self._progress_counter += 1
+            last_selected = (
+                self._last_coordinator_selection[0]
+                if self._last_coordinator_selection
+                else None
+            )
+            if (
+                last_selected is None
+                or agent_name.lower() != last_selected.lower()
+            ):
+                self._progress_counter += 1
 
         # Detect manager termination signal (finish=true) from Coordinator.
         # NOTE: The underlying GroupChatBuilder does not automatically stop on finish,

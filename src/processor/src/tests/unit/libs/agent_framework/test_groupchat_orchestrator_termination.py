@@ -113,9 +113,9 @@ def test_loop_detection_resets_when_other_agent_makes_progress_between_repeated_
         _coordinator_select("Chief Architect")
         await orch._complete_agent_response("Coordinator", callback=None)
 
-        # 2) The participant responds (progress).
+        # 2) A DIFFERENT participant responds (real progress, not the looped-on one).
         _agent_reply("progress")
-        await orch._complete_agent_response("Chief Architect", callback=None)
+        await orch._complete_agent_response("AKS Expert", callback=None)
 
         # 3) Coordinator repeats the same selection twice.
         _coordinator_select("Chief Architect")
