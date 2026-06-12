@@ -157,8 +157,13 @@ class AnalysisOrchestrator(
             prompt_path = agent_dir / "agents" / prompt_file
             instruction = self.read_prompt_file(str(prompt_path))
 
+            expert_description = expert.get("description")
+            if not isinstance(expert_description, str) or not expert_description.strip():
+                expert_description = None
+
             expert_info = AgentInfo(
                 agent_name=agent_name,
+                agent_description=expert_description,
                 agent_instruction=instruction,
                 tools=self.mcp_tools,
             )
@@ -172,6 +177,12 @@ class AnalysisOrchestrator(
         aks_instruction = self.read_prompt_file(agent_dir / "agents/prompt_aks.txt")
         aks_agent_info = AgentInfo(
             agent_name="AKS Expert",
+            agent_description=(
+                "Tool-free reviewer for Azure AKS migration readiness. Reviews the "
+                "latest Evidence Pack and produces SIGN-OFF: PASS/FAIL on AKS-side "
+                "concerns. Select only after the Chief Architect has posted an Evidence "
+                "Pack; required reviewer when present."
+            ),
             agent_instruction=aks_instruction,
             tools=self.mcp_tools,
         )
@@ -188,6 +199,13 @@ class AnalysisOrchestrator(
 
         chief_architect_agent_info = AgentInfo(
             agent_name="Chief Architect",
+            agent_description=(
+                "Lead orchestrator of the analysis and the ONLY participant with blob "
+                "tools. Performs all file I/O (listing, reading, writing "
+                "analysis_result.md) and authors / refreshes the Evidence Pack. Select "
+                "to run hard-termination triage, to do or redo any file work, or to "
+                "post a fresh Evidence Pack after reviewers ask for one."
+            ),
             agent_instruction=architect_instruction,
             tools=self.mcp_tools,
         )
@@ -208,10 +226,18 @@ class AnalysisOrchestrator(
             tools=self.mcp_tools[2],  # Blob IO tool only
         )
 
-        # Render coordinator prompt with the current participant list.
+        # Render coordinator prompt with the current participant list. Include each
+        # participant's description so the Coordinator can route by capability rather
+        # than only by name (a name-only list biases the LLM toward whichever name
+        # appears most often elsewhere in the prompt, e.g. "Chief Architect").
         participant_names = [ai.agent_name for ai in agent_infos]
         valid_participants_block = "\n".join([
-            f'- "{name}"' for name in participant_names
+            (
+                f'- "{ai.agent_name}": {ai.agent_description}'
+                if ai.agent_description
+                else f'- "{ai.agent_name}"'
+            )
+            for ai in agent_infos
         ])
         coordinator_agent_info.render(
             **self.task_param.model_dump(),
