@@ -625,8 +625,12 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
         effective_messages = self._maybe_trim_messages(messages)
 
         if not effective_messages:
-            logger.warning(
-                "[AOAI_RETRY] empty messages list received; using original messages"
+            # Empty inputs occur legitimately in group-chat orchestration when the
+            # same speaker is selected twice in a row (the orchestrator's broadcast
+            # excludes the source). The parent client's `_prepare_options` still
+            # prepends the agent's system instructions, so the API call has content.
+            logger.debug(
+                "[AOAI_RETRY] empty messages list received; relying on options.instructions"
             )
             effective_messages = messages
 
@@ -785,8 +789,12 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
         effective_messages = self._maybe_trim_messages(messages)
 
         if not effective_messages:
-            logger.warning(
-                "[AOAI_RETRY] empty messages list received; using original messages"
+            # Empty inputs occur legitimately in group-chat orchestration when the
+            # same speaker is selected twice in a row (the orchestrator's broadcast
+            # excludes the source). The parent client's `_prepare_options` still
+            # prepends the agent's system instructions, so the API call has content.
+            logger.debug(
+                "[AOAI_RETRY] empty messages list received; relying on options.instructions"
             )
             effective_messages = messages
 
