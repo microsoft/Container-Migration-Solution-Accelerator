@@ -1558,7 +1558,7 @@
                   },
                   {
                     "name": "AZURE_OPENAI_API_VERSION",
-                    "value": "v1"
+                    "value": "2025-03-01-preview"
                   },
                   {
                     "name": "COSMOS_DB_ACCOUNT_URL",
@@ -2193,7 +2193,7 @@
                   },
                   {
                     "name": "AZURE_OPENAI_API_VERSION",
-                    "value": "v1"
+                    "value": "2025-03-01-preview"
                   },
                   {
                     "name": "COSMOS_DB_ACCOUNT_URL",

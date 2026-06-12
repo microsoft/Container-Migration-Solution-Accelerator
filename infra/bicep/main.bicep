@@ -326,7 +326,7 @@ module ca_backend_api './modules/compute/container-app.bicep' = {
           { name: 'AZURE_OPENAI_ENDPOINT', value: aiFoundryEndpoint }
           { name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME', value: gptModelName }
           { name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME', value: embeddingModel }
-          { name: 'AZURE_OPENAI_API_VERSION', value: 'v1' }
+          { name: 'AZURE_OPENAI_API_VERSION', value: '2025-03-01-preview' }
           { name: 'COSMOS_DB_ACCOUNT_URL', value: cosmosDBModule.outputs.endpoint }
           { name: 'COSMOS_DB_DATABASE_NAME', value: cosmosDatabaseName }
           { name: 'COSMOS_DB_CONTAINER_NAME', value: 'agent_telemetry' }
@@ -413,7 +413,7 @@ module ca_processor './modules/compute/container-app.bicep' = {
           { name: 'AZURE_OPENAI_ENDPOINT', value: aiFoundryEndpoint }
           { name: 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME', value: gptModelName }
           { name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME', value: embeddingModel }
-          { name: 'AZURE_OPENAI_API_VERSION', value: 'v1' }
+          { name: 'AZURE_OPENAI_API_VERSION', value: '2025-03-01-preview' }
           { name: 'COSMOS_DB_ACCOUNT_URL', value: cosmosDBModule.outputs.endpoint }
           { name: 'COSMOS_DB_DATABASE_NAME', value: cosmosDatabaseName }
           { name: 'COSMOS_DB_CONTAINER_NAME', value: 'agent_telemetry' }
