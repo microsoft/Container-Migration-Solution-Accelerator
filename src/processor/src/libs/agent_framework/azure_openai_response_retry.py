@@ -391,13 +391,14 @@ def _trim_messages(
     def _total_chars(msgs: list[Any]) -> int:
         return sum(len(_estimate_message_text(x)) for x in msgs)
 
-    while combined and _total_chars(combined) > cfg.max_total_chars:
+    while len(combined) > 1 and _total_chars(combined) > cfg.max_total_chars:
         # Prefer dropping earliest non-system message.
+        # Never drop the last message — the model needs at least one.
         drop_index = 0
         if cfg.keep_system_messages and system_messages:
             drop_index = len(system_messages)
-        if drop_index >= len(combined):
-            # If only system messages remain, truncate the last one.
+        if drop_index >= len(combined) - 1:
+            # Only system messages (+ maybe 1 non-system) remain — truncate the last one.
             last = combined[-1]
             text = _estimate_message_text(last)
             text = _truncate_text(
@@ -542,6 +543,12 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
         """
         effective_messages = self._maybe_trim_messages(messages)
 
+        if not effective_messages:
+            logger.warning(
+                "[AOAI_RETRY] empty messages list received; using original messages"
+            )
+            effective_messages = messages
+
         if stream:
             # For streaming, delegate to the parent which returns a proper
             # ResponseStream. The framework checks isinstance(result, ResponseStream)
@@ -572,6 +579,11 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
             and approx_chars > self._context_trim_config.max_total_chars
         ):
             trimmed = _trim_messages(messages, cfg=self._context_trim_config)
+            if not trimmed:
+                logger.warning(
+                    "[AOAI_CTX_TRIM] trimming would remove all messages; keeping originals"
+                )
+                return messages
             logger.warning(
                 "[AOAI_CTX_TRIM] pre-trimmed request messages: approx_chars=%s -> %s; count=%s -> %s",
                 approx_chars,
@@ -631,6 +643,11 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
                     retry_on_context_error=True,
                 ),
             )
+            if not trimmed:
+                logger.warning(
+                    "[AOAI_CTX_TRIM] aggressive trim would remove all messages; re-raising original error"
+                )
+                raise
             logger.warning(
                 "[AOAI_CTX_TRIM] retrying after context-length error; count=%s -> %s",
                 len(original_messages),
