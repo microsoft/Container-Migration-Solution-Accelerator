@@ -6,9 +6,11 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import os
 import random
+import re
 from dataclasses import dataclass
 from typing import Any, MutableSequence
 
@@ -263,6 +265,85 @@ def _set_message_text(message: Any, new_text: str) -> Any:
             except Exception:
                 pass
     return message
+
+
+# OpenAI Chat Completions requires message `name` to match this pattern:
+#   ^[^\s<|\\/>]+$
+# Agent display names like "Chief Architect" contain spaces and are rejected.
+# We replace any run of disallowed characters with a single underscore so the
+# wire-format passes validation while preserving readability.
+_OPENAI_NAME_INVALID_CHARS = re.compile(r"[\s<|\\/>]+")
+
+
+def _sanitize_author_name(name: Any) -> Any:
+    """Sanitize a single author_name for OpenAI Chat Completions.
+
+    Returns the original value when it is not a string, is empty, or is already
+    valid. Otherwise returns a string with disallowed characters collapsed to
+    underscores and surrounding underscores stripped. If the result would be
+    empty (e.g. name was all whitespace), returns ``None`` so the field can be
+    dropped entirely.
+    """
+    if not isinstance(name, str) or not name:
+        return name
+    if not _OPENAI_NAME_INVALID_CHARS.search(name):
+        return name
+    sanitized = _OPENAI_NAME_INVALID_CHARS.sub("_", name).strip("_")
+    return sanitized or None
+
+
+def _sanitize_author_names(
+    messages: MutableSequence[Any],
+) -> MutableSequence[Any] | list[Any]:
+    """Return ``messages`` with each entry's author_name sanitized.
+
+    - For dict-shaped messages, the ``name`` key is rewritten on a shallow copy
+      (and removed if the sanitized value would be empty).
+    - For ``agent_framework.Message``-like objects, ``author_name`` is rewritten
+      on a shallow copy so the originals (which may live in long-lived agent
+      state) are not mutated.
+    - Messages that don't need sanitization are returned unchanged. If nothing
+      needed sanitization the original sequence is returned as-is.
+    """
+    out: list[Any] = []
+    any_changed = False
+    for m in messages:
+        # Dict form: {"role": ..., "name": ..., "content": ...}
+        if isinstance(m, dict):
+            name = m.get("name")
+            if isinstance(name, str):
+                sanitized = _sanitize_author_name(name)
+                if sanitized != name:
+                    new_m = dict(m)
+                    if sanitized:
+                        new_m["name"] = sanitized
+                    else:
+                        new_m.pop("name", None)
+                    out.append(new_m)
+                    any_changed = True
+                    continue
+            out.append(m)
+            continue
+
+        # Object form (agent_framework Message): has .author_name attribute.
+        name = getattr(m, "author_name", None)
+        if isinstance(name, str):
+            sanitized = _sanitize_author_name(name)
+            if sanitized != name:
+                try:
+                    new_m = copy.copy(m)
+                    new_m.author_name = sanitized
+                    out.append(new_m)
+                    any_changed = True
+                    continue
+                except Exception:
+                    # Last-resort in-place fallback if copy/setattr is blocked.
+                    try:
+                        m.author_name = sanitized
+                    except Exception:
+                        pass
+        out.append(m)
+    return out if any_changed else messages
 
 
 @dataclass(frozen=True)
@@ -709,6 +790,11 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
             )
             effective_messages = messages
 
+        # OpenAI Chat Completions validates message `name` against ^[^\s<|\\/>]+$.
+        # Sanitize before sending so agent display names like "Chief Architect"
+        # don't trip a 400 BadRequest. Originals are shallow-copied, not mutated.
+        effective_messages = _sanitize_author_names(effective_messages)
+
         if stream:
             # For streaming, delegate to the parent which returns a proper
             # ResponseStream. The framework checks isinstance(result, ResponseStream)
@@ -813,6 +899,8 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
                 len(original_messages),
                 len(trimmed),
             )
+            # Re-sanitize names on the freshly-trimmed messages before retry.
+            trimmed = _sanitize_author_names(trimmed)
             trim_delay = min(
                 self._retry_config.base_delay_seconds,
                 self._retry_config.max_delay_seconds,
