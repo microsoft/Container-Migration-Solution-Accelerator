@@ -65,6 +65,13 @@ class AnalysisExecutor(Executor):
             error_msg = result.error or "Analysis orchestration failed with no output"
             raise Exception(f"AnalysisExecutor failed: {error_msg}")
 
+        if not result.result.is_hard_terminated and result.result.output is None:
+            reason = result.result.reason or "<no reason given>"
+            raise Exception(
+                "AnalysisExecutor failed: orchestration reported success but produced "
+                f"no AnalysisOutput. Reason: {reason}"
+            )
+
         if result.result:
             if not result.result.is_hard_terminated:
                 await ctx.send_message(result.result)

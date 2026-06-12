@@ -6,9 +6,61 @@ from __future__ import annotations
 import asyncio
 
 from libs.agent_framework.groupchat_orchestrator import OrchestrationResult
-from steps.convert.models.step_output import Yaml_ExtendedBooleanResult
+from steps.convert.models.step_output import (
+    ConvertedFile,
+    ConversionMetrics,
+    ConversionQuality,
+    DimensionalAnalysis,
+    MultiDimensionalAnalysis,
+    YamlOutput,
+    Yaml_ExtendedBooleanResult,
+)
 from steps.convert.workflow.yaml_convert_executor import YamlConvertExecutor
 from steps.design.models.step_output import Design_ExtendedBooleanResult
+
+
+def _make_yaml_output() -> YamlOutput:
+    dim = DimensionalAnalysis(
+        complexity="Low",
+        converted_components=["pod"],
+        azure_optimizations="none",
+        concerns=[],
+        success_rate="100%",
+    )
+    return YamlOutput(
+        converted_files=[
+            ConvertedFile(
+                source_file="a.yaml",
+                converted_file="a-azure.yaml",
+                conversion_status="Success",
+                accuracy_rating="100%",
+                concerns=[],
+                azure_enhancements=[],
+            )
+        ],
+        multi_dimensional_analysis=MultiDimensionalAnalysis(
+            network_analysis=dim,
+            security_analysis=dim,
+            storage_analysis=dim,
+            compute_analysis=dim,
+        ),
+        overall_conversion_metrics=ConversionMetrics(
+            total_files=1,
+            successful_conversions=1,
+            failed_conversions=0,
+            overall_accuracy="100%",
+            azure_compatibility="100%",
+        ),
+        conversion_quality=ConversionQuality(
+            azure_best_practices="ok",
+            security_hardening="ok",
+            performance_optimization="ok",
+            production_readiness="ok",
+        ),
+        summary="ok",
+        expert_insights=[],
+        conversion_report_file="report.md",
+    )
 
 
 class _FakeTelemetry:
@@ -59,6 +111,7 @@ def test_yaml_convert_executor_sends_message_on_soft_completion(monkeypatch):
                         result=True,
                         is_hard_terminated=False,
                         process_id=task_param.process_id,
+                        termination_output=_make_yaml_output(),
                     ),
                 )
 
@@ -116,5 +169,49 @@ def test_yaml_convert_executor_yields_output_on_hard_termination(monkeypatch):
         assert len(ctx.sent) == 0
         assert len(ctx.yielded) == 1
         assert isinstance(ctx.yielded[0], Yaml_ExtendedBooleanResult)
+
+    asyncio.run(_run())
+
+
+def test_yaml_convert_executor_raises_when_soft_completion_has_no_output(monkeypatch):
+    """Soft completion with termination_output=None is incoherent: must raise."""
+    async def _run():
+        import pytest
+
+        telemetry = _FakeTelemetry()
+        app_context = _FakeAppContext(telemetry)
+        ctx = _FakeCtx()
+
+        class _FakeOrchestrator:
+            def __init__(self, _app_context):
+                pass
+
+            async def execute(self, task_param=None):
+                return OrchestrationResult(
+                    success=True,
+                    conversation=[],
+                    agent_responses=[],
+                    tool_usage={},
+                    result=Yaml_ExtendedBooleanResult(
+                        result=True,
+                        is_hard_terminated=False,
+                        process_id=task_param.process_id,
+                        reason="agents never produced output",
+                    ),
+                )
+
+        monkeypatch.setattr(
+            "steps.convert.workflow.yaml_convert_executor.YamlConvertOrchestrator",
+            _FakeOrchestrator,
+        )
+
+        executor = YamlConvertExecutor(id="yaml", app_context=app_context)
+        message = Design_ExtendedBooleanResult(process_id="p1")
+
+        with pytest.raises(Exception, match="produced no YAML conversion output"):
+            await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
+
+        assert len(ctx.sent) == 0
+        assert len(ctx.yielded) == 0
 
     asyncio.run(_run())

@@ -643,17 +643,48 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     f"[RESULT] Skipping result generation - result_format: {result_format}, agent exists: {result_generator_name in self.agents}"
                 )
 
+            # Validate that ResultGenerator produced a coherent output. The LLM can
+            # sometimes return is_hard_terminated=False with output=None ("success
+            # but no actual output"), which causes downstream steps to crash with
+            # NoneType errors. Treat such self-contradictory results as failures so
+            # the workflow surfaces a clear error rather than propagating an empty
+            # shell to the next step.
+            generated_error: str | None = None
+            if final_analysis is not None and not bool(
+                getattr(final_analysis, "is_hard_terminated", False)
+            ):
+                # Step result models use either ``output`` (Analysis) or
+                # ``termination_output`` (Design, Convert, Documentation). Treat
+                # both equivalently: if neither holds a non-None payload, the
+                # ResultGenerator returned an incoherent shell.
+                has_output_attr = hasattr(final_analysis, "output") or hasattr(
+                    final_analysis, "termination_output"
+                )
+                payload = getattr(final_analysis, "output", None) or getattr(
+                    final_analysis, "termination_output", None
+                )
+                if has_output_attr and payload is None:
+                    reason = (
+                        getattr(final_analysis, "reason", "") or "<no reason given>"
+                    )
+                    generated_error = (
+                        "ResultGenerator produced incoherent output: "
+                        "is_hard_terminated=False but output=None. "
+                        f"Reason from result: {reason}"
+                    )
+                    logger.error("[RESULT] %s", generated_error)
+
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()
 
             # Build result
             result = OrchestrationResult[TOutput](
-                success=True,
+                success=generated_error is None,
                 conversation=conversation,
                 agent_responses=self.agent_responses,
                 tool_usage=self.agent_tool_usage,
                 result=final_analysis,
-                error=None,
+                error=generated_error,
                 execution_time_seconds=execution_time,
             )
 
@@ -1154,9 +1185,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 ):
                     # Record invocation time for non-termination coordinator selections
                     self._agent_invoked_at[selected] = completed_at
-            except Exception:
-                # If the Coordinator didn't emit valid JSON, ignore.
-                pass
+            except Exception as exc:
+                # If the Coordinator didn't emit valid JSON we silently drop
+                # loop-detection and termination handling for this turn. Log at
+                # debug so the silence is visible if loop detection ever appears
+                # to misfire (previously this was a bare ``pass`` which made the
+                # failure invisible).
+                preview = (
+                    complete_message[:200]
+                    if isinstance(complete_message, str)
+                    else str(type(complete_message))
+                )
+                logger.debug(
+                    "Coordinator JSON parse failed; skipping loop detection for "
+                    "this turn. Raw message preview: %r",
+                    preview,
+                    exc_info=exc,
+                )
 
         # Invoke callback with complete response
         if callback:
