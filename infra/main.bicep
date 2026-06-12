@@ -162,8 +162,8 @@ module avmDeployment './avm/main.bicep' = if (isAvm) {
     location: location
     tags: tags
     enableTelemetry: enableTelemetry
-    enableMonitoring: deploymentFlavor == 'avm-waf' ? true : enableMonitoring
-    enablePrivateNetworking: deploymentFlavor == 'avm-waf' ? true : enablePrivateNetworking
+    enableMonitoring: enableMonitoring
+    enablePrivateNetworking: enablePrivateNetworking
     vmAdminUsername: vmAdminUsername
     vmAdminPassword: vmAdminPassword
     vmSize: vmSize

@@ -263,10 +263,10 @@ module model_deployments './modules/ai/ai-foundry-model-deployment.bicep' = [for
   }
 }]
 
-var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.aiFoundryEndpoint : ai_foundry_project!.outputs.endpoint
+var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.endpoint : ai_foundry_project!.outputs.endpoint
 var projectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
 var aiFoundryResourceId = !useExistingAIProject ? ai_foundry_project!.outputs.resourceId : ''
-var aiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.aiProjectPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
+var aiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.projectIdentityPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
 
 // ========== Storage Account module ========== //
 module storage_account './modules/data/storage-account.bicep' = {
@@ -283,7 +283,7 @@ module storage_account './modules/data/storage-account.bicep' = {
 }
 
 // ========== Cosmos DB module ========== //
-module cosmosDBModule './modules/data/cosmos-db.bicep' = {
+module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
   name: take('module.cosmos-db.${solutionName}', 64)
   params: {
     solutionName: solutionSuffix
@@ -461,7 +461,6 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     deployerPrincipalType: deployingUserPrincipalType
     backendAppServicePrincipalId: ca_backend_api.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
-    existingAiProjectPrincipalId: !empty(existingFoundryProjectResourceId) ? existing_project_setup!.outputs.aiProjectPrincipalId : ''
   }
   scope: resourceGroup(resourceGroup().name)
 }
