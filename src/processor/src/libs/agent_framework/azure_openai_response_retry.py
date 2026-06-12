@@ -10,7 +10,7 @@ import logging
 import os
 import random
 from dataclasses import dataclass
-from typing import Any, AsyncIterable, MutableSequence
+from typing import Any, MutableSequence
 
 from agent_framework.openai import OpenAIChatClient
 from tenacity import (
@@ -543,11 +543,14 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
         effective_messages = self._maybe_trim_messages(messages)
 
         if stream:
-            return self._streaming_with_retry(
-                effective_messages=effective_messages,
-                original_messages=messages,
-                options=options,
-                **kwargs,
+            # For streaming, delegate to the parent which returns a proper
+            # ResponseStream. The framework checks isinstance(result, ResponseStream)
+            # and async generators fail that check.
+            parent_inner = super(
+                AzureOpenAIResponseClientWithRetry, self
+            )._inner_get_response
+            return parent_inner(
+                messages=effective_messages, options=options, stream=True, **kwargs
             )
         else:
             return self._non_streaming_with_retry(
@@ -647,81 +650,3 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
                 ),
                 config=self._retry_config,
             )
-
-    async def _streaming_with_retry(
-        self,
-        *,
-        effective_messages: MutableSequence[Any] | list[Any],
-        original_messages: MutableSequence[Any],
-        options: Any = None,
-        **kwargs: Any,
-    ) -> AsyncIterable[Any]:
-        """Streaming path: retry only before the first chunk is yielded."""
-        parent_inner = super(
-            AzureOpenAIResponseClientWithRetry, self
-        )._inner_get_response
-
-        attempts = self._retry_config.max_retries + 1
-
-        for attempt_index in range(attempts):
-            response_stream = parent_inner(
-                messages=effective_messages, options=options, stream=True, **kwargs
-            )
-
-            iterator = response_stream.__aiter__()
-            try:
-                first = await iterator.__anext__()
-
-                async def _tail():
-                    yield first
-                    async for item in iterator:
-                        yield item
-
-                async for item in _tail():
-                    yield item
-                return
-            except StopAsyncIteration:
-                return
-            except Exception as e:
-                close = getattr(response_stream, "aclose", None)
-                if callable(close):
-                    try:
-                        await close()
-                    except Exception:
-                        logger.debug(
-                            "Best-effort close of response stream failed",
-                            exc_info=True,
-                        )
-
-                if not _looks_like_rate_limit(e) or attempt_index >= attempts - 1:
-                    if _looks_like_rate_limit(e):
-                        logger.warning(
-                            "[AOAI_RETRY_STREAM] giving up after %s/%s attempts; error=%s",
-                            attempt_index + 1,
-                            attempts,
-                            _format_exc_brief(e),
-                        )
-                    raise
-
-                retry_after = _try_get_retry_after_seconds(e)
-                if retry_after is not None and retry_after >= 0:
-                    delay = retry_after
-                else:
-                    delay = self._retry_config.base_delay_seconds * (
-                        2**attempt_index
-                    )
-                    delay = min(delay, self._retry_config.max_delay_seconds)
-                    delay = delay + random.uniform(0.0, 0.25 * max(delay, 0.1))
-
-                status = getattr(e, "status_code", None) or getattr(
-                    e, "status", None
-                )
-                logger.warning(
-                    "[AOAI_RETRY_STREAM] attempt %s/%s; sleeping=%ss; retry_after=%s; status=%s; error=%s",
-                    attempt_index + 1,
-                    attempts,
-                    round(float(delay), 3),
-                    None if retry_after is None else round(float(retry_after), 3),
-                    status,
-                    _format_exc_brief(e),
-                )
