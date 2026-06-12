@@ -33,7 +33,7 @@ from agent_framework import (
 )
 from agent_framework.orchestrations import GroupChatBuilder
 from mem0 import AsyncMemory
-from pydantic import BaseModel, ValidationError
+from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +44,37 @@ TOutput = TypeVar("TOutput", bound=BaseModel)  # Output must be Pydantic model
 
 
 class ManagerSelectionResponse(BaseModel):
-    """Coordinator selection payload parsed from JSON output."""
+    """Coordinator selection payload parsed from JSON output.
 
-    selected_participant: str | None = None
-    instruction: str | None = None
-    finish: bool | None = None
+    The Coordinator prompt instructs the model to emit fields named
+    ``selected_participant`` / ``instruction`` / ``finish``. However, the
+    underlying ``agent_framework_orchestrations.GroupChatBuilder`` forces the
+    Coordinator's response_format to ``AgentOrchestrationOutput`` (strict
+    schema with fields ``next_speaker`` / ``reason`` / ``terminate``). With
+    strict structured output, the model always emits the framework's field
+    names regardless of the prompt.
+
+    We use Pydantic ``AliasChoices`` so this model accepts BOTH naming
+    conventions transparently. Without these aliases, parsing silently
+    succeeds (``extra=allow``) but every field ends up ``None``, disabling
+    loop detection and Coordinator-driven termination.
+    """
+
+    selected_participant: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("selected_participant", "next_speaker"),
+    )
+    instruction: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("instruction", "reason"),
+    )
+    finish: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("finish", "terminate"),
+    )
     final_message: str | None = None
 
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "allow", "populate_by_name": True}
 
 
 @dataclass
