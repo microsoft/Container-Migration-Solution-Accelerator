@@ -1250,10 +1250,6 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     "on_agent_response callback failed (agent=%s)", agent_name
                 )
 
-        # # Invoke callback
-        # if callback:
-        #     await callback(response)
-
     async def _build_groupchat(self) -> Workflow:
         """Build the GroupChat Orchestrator workflow"""
         coordinator = self.agents[self.coordinator_name]
