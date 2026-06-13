@@ -293,3 +293,113 @@ def test_handle_agent_update_strips_executor_id_prefix():
         )
 
     asyncio.run(_run())
+
+
+def test_participant_completion_streak_triggers_forced_termination():
+    """In agent-framework 1.3.0 the GroupChat orchestrator agent (Coordinator)
+    is invoked directly inside the framework's ``_invoke_agent_helper`` and
+    is NOT wrapped in an ``AgentExecutor``, so it never surfaces as a
+    workflow event. The Coordinator-JSON loop detector in
+    ``_complete_agent_response`` is therefore permanently dead in 1.3.0.
+
+    The only observable loop signal we have is consecutive
+    ``executor_completed`` events for the same participant. After
+    ``_participant_consecutive_loop_threshold`` (default 3) same-participant
+    completions, the orchestrator must force-terminate with ``hard_loop``
+    so the workflow halts cleanly instead of running until the framework's
+    own max_rounds ceiling (which at default 100 is ~17 min).
+    """
+
+    async def _run():
+        orch = _make_orchestrator()
+        # Register a participant so the tracker recognizes it.
+        orch.agents = {"Coordinator": object(), "Chief Architect": object()}
+
+        for _ in range(3):
+            orch._track_participant_completion("Chief Architect")
+
+        assert orch._forced_termination_requested is True, (
+            "Three consecutive completions of the same participant must "
+            "trigger the participant-streak loop breaker; otherwise the "
+            "Chief-Architect-only loop observed in production (with the "
+            "Coordinator invisible to our streaming loop in 1.3.0) can "
+            "never be detected and the workflow runs until the framework's "
+            "own max_rounds ceiling fires."
+        )
+        assert orch._forced_termination_type == "hard_loop"
+        assert "Chief Architect" in (orch._forced_termination_reason or "")
+        assert "3 consecutive" in (orch._forced_termination_reason or "")
+
+    asyncio.run(_run())
+
+
+def test_participant_completion_streak_resets_on_different_participant():
+    """If a different participant runs in between, the same-participant
+    streak counter resets. This prevents false-positive loop detection
+    when participants alternate normally.
+    """
+
+    async def _run():
+        orch = _make_orchestrator()
+        orch.agents = {
+            "Coordinator": object(),
+            "Chief Architect": object(),
+            "AKS Expert": object(),
+        }
+
+        orch._track_participant_completion("Chief Architect")
+        orch._track_participant_completion("Chief Architect")
+        # A different participant runs -> streak resets.
+        orch._track_participant_completion("AKS Expert")
+        orch._track_participant_completion("Chief Architect")
+        orch._track_participant_completion("Chief Architect")  # streak=2 only
+
+        assert orch._forced_termination_requested is False, (
+            "Alternating participants must not trigger the loop breaker; "
+            "the streak should reset whenever a different participant runs."
+        )
+        assert orch._participant_completion_streak == 2
+        assert orch._last_completed_participant == "Chief Architect"
+
+    asyncio.run(_run())
+
+
+def test_participant_completions_total_enforces_max_rounds_under_alternation():
+    """``max_rounds`` must be enforced from the per-participant total count
+    (which grows on EVERY completion) - not from ``len(agent_responses)``
+    (which only grows on agent switch in ``_start_agent_if_needed`` and
+    therefore can never reach ``max_rounds`` during a same-agent loop).
+
+    This test exercises the alternation case where the streak detector
+    never fires, ensuring the round-budget guard still halts the workflow.
+    """
+
+    async def _run():
+        orch = GroupChatOrchestrator(
+            name="t",
+            process_id="p1",
+            participants={
+                "Coordinator": object(),
+                "A": object(),
+                "B": object(),
+            },
+            memory_client=None,
+            coordinator_name="Coordinator",
+            max_rounds=4,
+            result_output_format=None,
+        )
+
+        # Alternate A and B to keep the streak below threshold.
+        orch._track_participant_completion("A")
+        orch._track_participant_completion("B")
+        orch._track_participant_completion("A")
+        # Streak detector hasn't fired yet (max streak = 1 because of perfect
+        # alternation). The 4th turn must trip the max_rounds budget.
+        assert orch._forced_termination_requested is False
+        orch._track_participant_completion("B")
+
+        assert orch._forced_termination_requested is True
+        assert orch._forced_termination_type == "hard_timeout"
+        assert "max_rounds=4" in (orch._forced_termination_reason or "")
+
+    asyncio.run(_run())

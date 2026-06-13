@@ -313,6 +313,33 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # Snapshot of progress_counter at the time we last saw _last_coordinator_selection.
         self._last_coordinator_selection_progress: int = 0
 
+        # Per-participant turn tracking driven by ``WorkflowEvent.executor_completed``.
+        #
+        # In agent-framework 1.3.0 the GroupChat orchestrator agent (the
+        # Coordinator) is invoked directly inside the framework's internal
+        # ``_invoke_agent_helper`` (see
+        # ``agent_framework_orchestrations/_group_chat.py:484``). It is NOT
+        # wrapped in an ``AgentExecutor`` and therefore never surfaces as a
+        # workflow event - which makes the Coordinator-JSON-based loop
+        # detection in ``_complete_agent_response`` permanently dead in 1.3.0.
+        #
+        # The only observable "the conversation is moving" pulse we have is
+        # ``executor_completed`` events for the *participants* (which DO go
+        # through ``AgentExecutor``). We track:
+        #   - the most recently completed participant,
+        #   - the streak of consecutive completions of that participant,
+        #   - the total number of participant turns,
+        # and use these for two safety nets in the streaming loop:
+        #   * 3+ consecutive same-participant turns => hard_loop termination
+        #   * total turns >= ``max_rounds`` => hard_timeout termination
+        # (independent of ``len(self.agent_responses)`` which only grows on
+        # agent switch and so cannot reach ``max_rounds`` during a same-
+        # participant loop).
+        self._participant_completions_total: int = 0
+        self._last_completed_participant: str | None = None
+        self._participant_completion_streak: int = 0
+        self._participant_consecutive_loop_threshold: int = 3
+
     def _request_forced_termination(
         self, *, reason: str, termination_type: str
     ) -> None:
@@ -543,6 +570,15 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                             termination_type="hard_timeout",
                         )
 
+                # Honor any pending termination request at the *top* of each
+                # iteration so that branches which set the flags (timeout,
+                # participant loop detection, Coordinator finish=true) take
+                # effect immediately on the next event - rather than being
+                # gated on the next ``output`` event arriving (which during a
+                # slow loop can be many seconds away).
+                if self._forced_termination_requested or self._termination_requested:
+                    break
+
                 # In agent-framework 1.3.0, ``workflow.run(stream=True)`` yields
                 # only ``WorkflowEvent`` instances; ``AgentResponseUpdate`` is
                 # wrapped inside ``WorkflowEvent.data`` for ``type=="output"``
@@ -552,7 +588,46 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 # ``WorkflowEvent.type`` and inspect ``event.data`` /
                 # ``event.executor_id`` to route per-participant streaming
                 # chunks vs the orchestrator's final output.
-                if not isinstance(event, WorkflowEvent) or event.type != "output":
+                if not isinstance(event, WorkflowEvent):
+                    continue
+
+                # Participant turn completion. Used for loop / max_rounds
+                # safety nets that work even when the Coordinator is
+                # invisible to the streaming loop (which it is in 1.3.0 -
+                # the Coordinator runs inside the framework's internal
+                # ``_invoke_agent_helper`` and never surfaces as an executor
+                # event). See ``_track_participant_completion`` for details.
+                if event.type == "executor_completed":
+                    src_executor = self._normalize_executor_id(
+                        event.executor_id or ""
+                    )
+                    if (
+                        src_executor in self.agents
+                        and src_executor != self.coordinator_name
+                        and src_executor != self.get_result_generator_name()
+                    ):
+                        # Flush this participant's streaming buffer into a
+                        # discrete per-turn ``AgentResponse`` before we track
+                        # the completion. Without this, when the framework's
+                        # Coordinator picks the same participant back-to-back
+                        # (the loop pattern we're trying to detect),
+                        # ``_start_agent_if_needed`` sees no agent switch on
+                        # the NEXT turn's chunks and the buffer would grow
+                        # across turns - producing one merged response rather
+                        # than one response per turn.
+                        if (
+                            self._last_executor_id == src_executor
+                            and self._current_agent_response
+                        ):
+                            await self._complete_agent_response(
+                                src_executor, on_agent_response
+                            )
+                            self._current_agent_response = []
+                            self._last_executor_id = None
+                        self._track_participant_completion(src_executor)
+                    continue
+
+                if event.type != "output":
                     continue
 
                 data = event.data
@@ -573,7 +648,12 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                         callback=on_agent_response,
                     )
 
-                    # Enforce max rounds as a safety guard.
+                    # Secondary max_rounds safety net based on agent switches.
+                    # The primary check lives in ``_track_participant_completion``
+                    # (driven by ``executor_completed`` events) and works even
+                    # when the same agent runs back-to-back. This switch-based
+                    # check is kept as defense-in-depth for sessions with
+                    # normal alternation.
                     if self.max_rounds and len(self.agent_responses) >= self.max_rounds:
                         self._request_forced_termination(
                             reason=(
@@ -582,13 +662,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                             termination_type="hard_timeout",
                         )
 
-                    if self._forced_termination_requested:
-                        break
-
-                    # If the Coordinator requested finish=true, stop immediately.
-                    if self._termination_requested:
-                        break
-
+                    # Termination flags are honored at the top of the next
+                    # iteration so any branch can request termination
+                    # uniformly without duplicating break logic here.
                     continue
 
                 # Final orchestrator output: complete any buffered agent
@@ -776,6 +852,75 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         Example: groupchat_agent:Coordinator -> Coordinator
         """
         return executor_id.split(":")[-1]
+
+    def _track_participant_completion(self, src_executor: str) -> None:
+        """Track a participant turn completion for loop / max_rounds detection.
+
+        Called from the streaming loop on every ``WorkflowEvent.type ==
+        "executor_completed"`` event whose ``executor_id`` matches one of our
+        registered non-Coordinator, non-ResultGenerator participants.
+
+        Why this exists (agent-framework 1.3.0 design constraint):
+            The framework's ``GroupChatBuilder.orchestrator_agent`` (our
+            Coordinator) is invoked directly via ``self._agent.run(...)``
+            inside ``agent_framework_orchestrations/_group_chat.py:484``. It
+            is NOT wrapped in an ``AgentExecutor`` and therefore never
+            surfaces as a workflow event. Our existing Coordinator-JSON-based
+            loop detector in ``_complete_agent_response`` (lines ~1118-1181)
+            is consequently permanently dead in 1.3.0. We need an independent
+            loop signal that does NOT rely on Coordinator visibility.
+
+        Two safety nets enforced here:
+
+        1. Same-participant streak (``_participant_consecutive_loop_threshold``,
+           default 3): if the Coordinator keeps selecting the same participant
+           (e.g., the Chief Architect latched on producing an Evidence Pack
+           that never satisfies the next reviewer), 3+ consecutive completions
+           of the same participant force-terminate with ``hard_loop``.
+
+        2. Total round budget: each participant turn counts as one round.
+           Once total completions reach ``self.max_rounds`` the workflow
+           force-terminates with ``hard_timeout``. This is independent of
+           ``len(self.agent_responses)`` (which only grows on agent switch
+           via ``_start_agent_if_needed`` and therefore cannot reach
+           ``max_rounds`` during a same-participant loop).
+        """
+        if src_executor == self._last_completed_participant:
+            self._participant_completion_streak += 1
+        else:
+            self._last_completed_participant = src_executor
+            self._participant_completion_streak = 1
+        self._participant_completions_total += 1
+
+        if (
+            self._participant_completion_streak
+            >= self._participant_consecutive_loop_threshold
+        ):
+            self._request_forced_termination(
+                reason=(
+                    f"Loop detected: participant '{src_executor}' completed "
+                    f"{self._participant_completion_streak} consecutive turns "
+                    "with no other participant in between (Coordinator is "
+                    "stuck on the same selection; in agent-framework 1.3.0 "
+                    "the Coordinator runs inside the framework and is "
+                    "invisible to the streaming loop, so we infer this from "
+                    "executor_completed events)"
+                ),
+                termination_type="hard_loop",
+            )
+            return
+
+        if (
+            self.max_rounds
+            and self._participant_completions_total >= self.max_rounds
+        ):
+            self._request_forced_termination(
+                reason=(
+                    f"Workflow exceeded max_rounds={self.max_rounds} "
+                    "participant turns; terminating to avoid infinite loop"
+                ),
+                termination_type="hard_timeout",
+            )
 
     async def _start_agent_if_needed(
         self,
