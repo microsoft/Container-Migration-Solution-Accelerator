@@ -233,3 +233,63 @@ def test_loop_detection_fires_on_3_consecutive_coordinator_selections_via_handle
         )
 
     asyncio.run(_run())
+
+
+def test_handle_agent_update_prefers_executor_id_over_author_name():
+    """In agent-framework 1.3.0, the workflow runner always wraps payloads in
+    a ``WorkflowEvent`` whose ``executor_id`` is the ``AgentExecutor.id``
+    (= the agent's name). This is the most reliable identity source - more
+    reliable than ``author_name`` which may differ if the agent runtime
+    rewrites the chat author. The handler must prefer ``executor_id`` when
+    provided.
+    """
+
+    async def _run():
+        orch = _make_orchestrator()
+
+        # author_name disagrees with the framework executor_id on purpose.
+        event = _AgentResponseUpdateStub(
+            author_name="SomethingElse",
+            agent_id=None,
+        )
+
+        await orch._handle_agent_update(
+            event,
+            executor_id="Coordinator",
+            stream_callback=None,
+            callback=None,
+        )  # type: ignore[arg-type]
+
+        assert orch._last_executor_id == "Coordinator", (
+            "executor_id from the WorkflowEvent wrapper must take precedence "
+            "over event.author_name; otherwise downstream coordinator checks "
+            "may resolve to the wrong agent."
+        )
+
+    asyncio.run(_run())
+
+
+def test_handle_agent_update_strips_executor_id_prefix():
+    """``GroupChatBuilder`` may wrap executor ids with a
+    ``groupchat_agent:Coordinator`` prefix. ``_normalize_executor_id`` must
+    strip it so the agent name compares cleanly against ``coordinator_name``.
+    """
+
+    async def _run():
+        orch = _make_orchestrator()
+
+        event = _AgentResponseUpdateStub(author_name=None, agent_id=None)
+
+        await orch._handle_agent_update(
+            event,
+            executor_id="groupchat_agent:Coordinator",
+            stream_callback=None,
+            callback=None,
+        )  # type: ignore[arg-type]
+
+        assert orch._last_executor_id == "Coordinator", (
+            "_normalize_executor_id must strip the framework prefix so "
+            "agent identity matches the configured coordinator_name."
+        )
+
+    asyncio.run(_run())

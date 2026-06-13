@@ -543,9 +543,32 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                             termination_type="hard_timeout",
                         )
 
-                if isinstance(event, AgentResponseUpdate):
+                # In agent-framework 1.3.0, ``workflow.run(stream=True)`` yields
+                # only ``WorkflowEvent`` instances; ``AgentResponseUpdate`` is
+                # wrapped inside ``WorkflowEvent.data`` for ``type=="output"``
+                # events. The previous ``isinstance(event, AgentResponseUpdate)``
+                # check from the b260107 era is permanently dead in 1.3.0
+                # because the two types are unrelated. We now dispatch on
+                # ``WorkflowEvent.type`` and inspect ``event.data`` /
+                # ``event.executor_id`` to route per-participant streaming
+                # chunks vs the orchestrator's final output.
+                if not isinstance(event, WorkflowEvent) or event.type != "output":
+                    continue
+
+                data = event.data
+                src_executor = self._normalize_executor_id(event.executor_id or "")
+
+                # Per-participant streaming chunk. Requires
+                # ``intermediate_outputs=True`` on the GroupChatBuilder so the
+                # underlying executors' ``yield_output(AgentResponseUpdate)``
+                # calls surface as workflow events rather than being swallowed.
+                if (
+                    isinstance(data, AgentResponseUpdate)
+                    and src_executor in self.agents
+                ):
                     await self._handle_agent_update(
-                        event,
+                        data,
+                        executor_id=event.executor_id,
                         stream_callback=on_agent_response_stream,
                         callback=on_agent_response,
                     )
@@ -565,22 +588,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     # If the Coordinator requested finish=true, stop immediately.
                     if self._termination_requested:
                         break
-                elif event.type == "output":
-                    event: WorkflowEvent
-                    # Complete last agent's response before finishing
-                    if self._last_executor_id and self._current_agent_response:
-                        await self._complete_agent_response(
-                            self._last_executor_id, on_agent_response
-                        )
 
-                    # Extract final conversation from output
-                    if isinstance(event.data, list):
-                        conversation = event.data
-                        self._conversation = conversation  # Update instance variable
-                    else:
-                        # Handle custom result objects with conversation attribute
-                        conversation = getattr(event.data, "conversation", [])
-                        self._conversation = conversation  # Update instance variable
+                    continue
+
+                # Final orchestrator output: complete any buffered agent
+                # response and capture the conversation.
+                if self._last_executor_id and self._current_agent_response:
+                    await self._complete_agent_response(
+                        self._last_executor_id, on_agent_response
+                    )
+
+                if isinstance(data, list):
+                    conversation = data
+                    self._conversation = conversation  # Update instance variable
+                else:
+                    # Handle custom result objects with conversation attribute
+                    conversation = getattr(data, "conversation", [])
+                    self._conversation = conversation  # Update instance variable
 
             # Backfill tool usage from the final conversation (more reliable than streaming updates)
             # AgentResponseUpdate may stream text only; tool calls are represented as FunctionCallContent
@@ -715,6 +739,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
     async def _handle_agent_update(
         self,
         event: AgentResponseUpdate,
+        executor_id: str | None = None,
         stream_callback: AgentResponseStreamCallback | None = None,
         callback: AgentResponseCallback | None = None,
     ) -> None:
@@ -726,19 +751,21 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         2. On agent switch, complete previous agent's response
         3. Trigger callback with complete response
         4. Handle tool calls separately from text streaming
+
+        Agent identity resolution priority:
+          1. ``executor_id`` from the wrapping ``WorkflowEvent`` (always
+             populated by the workflow runner from ``AgentExecutor.id`` which
+             is the agent's name). This is the primary source in 1.3.0.
+          2. ``event.author_name`` (set by 1.3.0's ``map_chat_to_agent_update``).
+          3. ``event.agent_id`` (legacy; not populated in 1.3.0).
         """
-        # NOTE: In agent-framework 1.3.0, ``AgentResponseUpdate.agent_id`` is no
-        # longer populated by ``map_chat_to_agent_update`` (only ``author_name``
-        # is set, from the agent's name). Reading ``event.agent_id`` alone
-        # silently yielded an empty string, which made every downstream identity
-        # check (loop detection, coordinator termination signal extraction,
-        # manager-instruction parsing) silently no-op. Prefer ``author_name``
-        # and fall back to ``agent_id`` only for older shapes. Use ``getattr``
-        # so older event types without ``author_name`` still work.
-        author_name = getattr(event, "author_name", None)
-        agent_name = author_name or self._normalize_executor_id(
-            getattr(event, "agent_id", None) or ""
-        )
+        if executor_id:
+            agent_name = self._normalize_executor_id(executor_id)
+        else:
+            author_name = getattr(event, "author_name", None)
+            agent_name = author_name or self._normalize_executor_id(
+                getattr(event, "agent_id", None) or ""
+            )
         await self._start_agent_if_needed(agent_name, stream_callback, callback)
         self._append_text_chunk(event)
         await self._process_tool_calls(event, agent_name, stream_callback)
@@ -1237,10 +1264,24 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             and name != self.get_result_generator_name()
         ]
 
+        # ``max_rounds`` is enforced at the framework level so the workflow
+        # halts cleanly even if our orchestrator-side guards miss an event
+        # shape. Without this, the framework's default behavior is "continue
+        # indefinitely" (see GroupChatBuilder docstring) until the workflow
+        # runner hits its own 100-iteration cap and raises
+        # ``RuntimeError("Runner did not converge after 100 iterations")``.
+        #
+        # ``intermediate_outputs=True`` surfaces each participant's
+        # ``yield_output(AgentResponseUpdate)`` call as a workflow ``output``
+        # event. Without this, only the orchestrator's final yield reaches
+        # our streaming loop, which means per-agent loop detection, finish
+        # signal extraction, and streaming callbacks all silently no-op.
         return (
             GroupChatBuilder(
                 orchestrator_agent=coordinator,
                 participants=participants,
+                max_rounds=self.max_rounds,
+                intermediate_outputs=True,
             )
             .build()
         )
