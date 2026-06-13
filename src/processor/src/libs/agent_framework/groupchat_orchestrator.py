@@ -727,7 +727,18 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         3. Trigger callback with complete response
         4. Handle tool calls separately from text streaming
         """
-        agent_name = self._normalize_executor_id(event.agent_id or "")
+        # NOTE: In agent-framework 1.3.0, ``AgentResponseUpdate.agent_id`` is no
+        # longer populated by ``map_chat_to_agent_update`` (only ``author_name``
+        # is set, from the agent's name). Reading ``event.agent_id`` alone
+        # silently yielded an empty string, which made every downstream identity
+        # check (loop detection, coordinator termination signal extraction,
+        # manager-instruction parsing) silently no-op. Prefer ``author_name``
+        # and fall back to ``agent_id`` only for older shapes. Use ``getattr``
+        # so older event types without ``author_name`` still work.
+        author_name = getattr(event, "author_name", None)
+        agent_name = author_name or self._normalize_executor_id(
+            getattr(event, "agent_id", None) or ""
+        )
         await self._start_agent_if_needed(agent_name, stream_callback, callback)
         self._append_text_chunk(event)
         await self._process_tool_calls(event, agent_name, stream_callback)

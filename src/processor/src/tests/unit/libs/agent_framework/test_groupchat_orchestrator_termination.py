@@ -127,3 +127,109 @@ def test_loop_detection_resets_when_other_agent_makes_progress_between_repeated_
         assert orch._forced_termination_requested is False
 
     asyncio.run(_run())
+
+
+@dataclass
+class _AgentResponseUpdateStub:
+    """Mimics the agent-framework 1.3.0 AgentResponseUpdate shape.
+
+    Only the fields actually read by ``_handle_agent_update`` /
+    ``_normalize_executor_id`` matter. In 1.3.0 ``agent_id`` is no longer
+    populated by ``map_chat_to_agent_update`` - only ``author_name`` is set.
+    This stub reproduces that shape.
+    """
+
+    author_name: str | None = None
+    agent_id: str | None = None
+    contents: list = None  # type: ignore[assignment]
+
+    def __post_init__(self):
+        if self.contents is None:
+            self.contents = []
+
+
+def test_handle_agent_update_resolves_coordinator_via_author_name_when_agent_id_is_none():
+    """Regression guard for agent-framework 1.3.0.
+
+    In 1.3.0 ``AgentResponseUpdate.agent_id`` is ``None`` because
+    ``map_chat_to_agent_update`` only sets ``author_name``. Reading
+    ``event.agent_id`` alone silently produced an empty string, so
+    ``agent_name == self.coordinator_name`` never matched and loop
+    detection / coordinator termination signal extraction silently
+    no-opped. The orchestrator must treat ``author_name`` as the
+    authoritative source.
+    """
+
+    async def _run():
+        orch = _make_orchestrator()
+
+        event = _AgentResponseUpdateStub(
+            author_name="Coordinator",
+            agent_id=None,
+        )
+
+        # No-op tool/text processing: we only care about agent identity.
+        await orch._handle_agent_update(event, stream_callback=None, callback=None)  # type: ignore[arg-type]
+
+        assert orch._last_executor_id == "Coordinator", (
+            "author_name must be used to identify the agent; otherwise "
+            "_last_executor_id stays empty and downstream coordinator "
+            "checks silently fail."
+        )
+
+    asyncio.run(_run())
+
+
+def test_loop_detection_fires_on_3_consecutive_coordinator_selections_via_handle_agent_update():
+    """End-to-end check: feeding 3 identical Coordinator selections through
+    ``_handle_agent_update`` (the path used in production) must trigger the
+    loop-detection forced termination. This is the path that was silently
+    broken in the 1.3.0 regression.
+    """
+
+    async def _run():
+        orch = _make_orchestrator()
+        orch._conversation = []
+
+        coordinator_json = json.dumps(
+            {
+                "selected_participant": "Chief Architect",
+                "instruction": "re-list",
+                "finish": False,
+                "final_message": "",
+            }
+        )
+
+        # Simulate three consecutive Coordinator turns, each emitting the
+        # same selection. Between each Coordinator turn we drive an update
+        # from a non-Coordinator agent so the orchestrator's "agent switch"
+        # logic completes the previous Coordinator response (which is what
+        # actually runs loop-detection at line 1080).
+        for _ in range(3):
+            # Coordinator emits its selection as a streaming chunk.
+            await orch._handle_agent_update(
+                _AgentResponseUpdateStub(author_name="Coordinator"),
+                stream_callback=None,
+                callback=None,
+            )  # type: ignore[arg-type]
+            orch._current_agent_response = [coordinator_json]
+
+            # Then Chief Architect emits a chunk: the agent switch closes
+            # out the Coordinator response and runs loop detection.
+            await orch._handle_agent_update(
+                _AgentResponseUpdateStub(author_name="Chief Architect"),
+                stream_callback=None,
+                callback=None,
+            )  # type: ignore[arg-type]
+            orch._current_agent_response = ["ack"]
+
+        # Closing the final Chief Architect response keeps state consistent.
+        await orch._complete_agent_response("Chief Architect", callback=None)
+
+        assert orch._forced_termination_requested is True, (
+            "Loop detection failed to fire after 3 identical Coordinator "
+            "selections via _handle_agent_update; agent identity resolution "
+            "is broken."
+        )
+
+    asyncio.run(_run())
