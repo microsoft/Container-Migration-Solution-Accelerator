@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "10575389643822107064"
+      "templateHash": "2620189491489939431"
     }
   },
   "parameters": {
@@ -316,7 +316,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "1299675852282484186"
+              "templateHash": "12751579259960962504"
             }
           },
           "parameters": {
@@ -23035,6 +23035,11 @@
                   "environmentResourceId": {
                     "value": "[reference('containerAppEnv').outputs.resourceId.value]"
                   },
+                  "managedIdentities": {
+                    "value": {
+                      "systemAssigned": true
+                    }
+                  },
                   "ingressExternal": {
                     "value": true
                   },
@@ -24956,6 +24961,11 @@
                   "environmentResourceId": {
                     "value": "[reference('containerAppEnv').outputs.resourceId.value]"
                   },
+                  "managedIdentities": {
+                    "value": {
+                      "systemAssigned": true
+                    }
+                  },
                   "ingressExternal": {
                     "value": true
                   },
@@ -26802,6 +26812,11 @@
                   },
                   "environmentResourceId": {
                     "value": "[reference('containerAppEnv').outputs.resourceId.value]"
+                  },
+                  "managedIdentities": {
+                    "value": {
+                      "systemAssigned": true
+                    }
                   },
                   "ingressExternal": {
                     "value": false
@@ -38657,7 +38672,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "14013806415613759552"
+              "templateHash": "6189751586948713756"
             }
           },
           "parameters": {
@@ -40221,6 +40236,11 @@
                   "environmentResourceId": {
                     "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-app-env.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.resourceId.value]"
                   },
+                  "managedIdentities": {
+                    "value": {
+                      "systemAssigned": true
+                    }
+                  },
                   "ingressExternal": {
                     "value": true
                   },
@@ -40574,6 +40594,11 @@
                   "environmentResourceId": {
                     "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-app-env.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.resourceId.value]"
                   },
+                  "managedIdentities": {
+                    "value": {
+                      "systemAssigned": true
+                    }
+                  },
                   "ingressExternal": {
                     "value": true
                   },
@@ -40852,6 +40877,11 @@
                   },
                   "environmentResourceId": {
                     "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-app-env.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.resourceId.value]"
+                  },
+                  "managedIdentities": {
+                    "value": {
+                      "systemAssigned": true
+                    }
                   },
                   "ingressExternal": {
                     "value": false

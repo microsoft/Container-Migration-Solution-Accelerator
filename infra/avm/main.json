@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "1299675852282484186"
+      "templateHash": "12751579259960962504"
     }
   },
   "parameters": {
@@ -22725,6 +22725,11 @@
           "environmentResourceId": {
             "value": "[reference('containerAppEnv').outputs.resourceId.value]"
           },
+          "managedIdentities": {
+            "value": {
+              "systemAssigned": true
+            }
+          },
           "ingressExternal": {
             "value": true
           },
@@ -24646,6 +24651,11 @@
           "environmentResourceId": {
             "value": "[reference('containerAppEnv').outputs.resourceId.value]"
           },
+          "managedIdentities": {
+            "value": {
+              "systemAssigned": true
+            }
+          },
           "ingressExternal": {
             "value": true
           },
@@ -26492,6 +26502,11 @@
           },
           "environmentResourceId": {
             "value": "[reference('containerAppEnv').outputs.resourceId.value]"
+          },
+          "managedIdentities": {
+            "value": {
+              "systemAssigned": true
+            }
           },
           "ingressExternal": {
             "value": false
