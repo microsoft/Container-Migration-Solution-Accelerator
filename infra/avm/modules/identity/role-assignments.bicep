@@ -65,6 +65,7 @@ var roleDefinitions = {
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
+  storageQueueDataContributor: '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 }
 
 // ============================================================================
@@ -237,6 +238,28 @@ resource processorAppStorageContributor 'Microsoft.Authorization/roleAssignments
   properties: {
     principalId: processorAppServicePrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Backend App → Storage Queue Data Contributor
+resource backendAppQueueContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(solutionName, storageAccount.id, backendAppServicePrincipalId, roleDefinitions.storageQueueDataContributor)
+  scope: storageAccount
+  properties: {
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageQueueDataContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Processor App → Storage Queue Data Contributor
+resource processorAppQueueContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(processorAppServicePrincipalId)) {
+  name: guid(solutionName, storageAccount.id, processorAppServicePrincipalId, roleDefinitions.storageQueueDataContributor)
+  scope: storageAccount
+  properties: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageQueueDataContributor)
     principalType: 'ServicePrincipal'
   }
 }
