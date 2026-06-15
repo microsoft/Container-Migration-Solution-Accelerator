@@ -144,6 +144,29 @@ module backendAppAiUserExisting './cross-scope-role-assignment.bicep' = if (useE
   }
 }
 
+// Processor App Service → Cognitive Services OpenAI User on AI Foundry (new project, same RG)
+resource processorAppOpenAIUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(processorAppServicePrincipalId)) {
+  name: guid(solutionName, aiFoundryAccount.id, processorAppServicePrincipalId, roleDefinitions.cognitiveServicesOpenAIUser)
+  scope: aiFoundryAccount
+  properties: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIUser)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Processor App Service → Cognitive Services OpenAI User on existing AI Foundry (cross-scope)
+module processorAppOpenAIUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(processorAppServicePrincipalId)) {
+  name: 'assignOpenAIUserRoleToProcessorExisting'
+  scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
+  params: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIUser)
+    roleAssignmentName: guid(solutionName, existingAIFoundryName, processorAppServicePrincipalId, roleDefinitions.cognitiveServicesOpenAIUser)
+    aiFoundryName: existingAIFoundryName
+  }
+}
+
 // ============================================================================
 // 2. SEARCH SERVICE ROLE ASSIGNMENTS
 //    AI Project and Backend identities → AI Search
