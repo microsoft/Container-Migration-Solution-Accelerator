@@ -505,6 +505,7 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     aiProjectPrincipalId: aiProjectPrincipalId
     aiSearchPrincipalId: ''
     backendAppServicePrincipalId: ca_backend_api.outputs.principalId
+    processorAppServicePrincipalId: ca_processor.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
   }
   scope: resourceGroup(resourceGroup().name)

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "15764079419575495208"
+      "templateHash": "12508925618781201963"
     }
   },
   "parameters": {
@@ -37788,6 +37788,9 @@
           "backendAppServicePrincipalId": {
             "value": "[reference('ca_backend_api').outputs.principalId.value]"
           },
+          "processorAppServicePrincipalId": {
+            "value": "[reference('ca_processor').outputs.principalId.value]"
+          },
           "cosmosDbAccountName": {
             "value": "[reference('cosmosDBModule').outputs.name.value]"
           }
@@ -37799,7 +37802,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16220137308567374453"
+              "templateHash": "2474904975964647902"
             }
           },
           "parameters": {
@@ -37843,6 +37846,13 @@
               "defaultValue": "",
               "metadata": {
                 "description": "Principal ID of the backend App Service system-assigned identity (empty if not deployed)."
+              }
+            },
+            "processorAppServicePrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Principal ID of the processor App Service system-assigned identity (empty if not deployed)."
               }
             },
             "aiFoundryResourceId": {
@@ -37998,12 +38008,35 @@
               }
             },
             {
+              "condition": "[and(not(empty(parameters('storageAccountResourceId'))), not(empty(parameters('processorAppServicePrincipalId'))))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', last(split(parameters('storageAccountResourceId'), '/')))]",
+              "name": "[guid(parameters('solutionName'), resourceId('Microsoft.Storage/storageAccounts', last(split(parameters('storageAccountResourceId'), '/'))), parameters('processorAppServicePrincipalId'), variables('roleDefinitions').storageBlobDataContributor)]",
+              "properties": {
+                "principalId": "[parameters('processorAppServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').storageBlobDataContributor)]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
               "condition": "[and(not(empty(parameters('cosmosDbAccountName'))), not(empty(parameters('backendAppServicePrincipalId'))))]",
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
               "apiVersion": "2025-10-15",
               "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), guid(parameters('solutionName'), resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), parameters('backendAppServicePrincipalId')))]",
               "properties": {
                 "principalId": "[parameters('backendAppServicePrincipalId')]",
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002')]",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
+              }
+            },
+            {
+              "condition": "[and(not(empty(parameters('cosmosDbAccountName'))), not(empty(parameters('processorAppServicePrincipalId'))))]",
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), guid(parameters('solutionName'), resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), parameters('processorAppServicePrincipalId')))]",
+              "properties": {
+                "principalId": "[parameters('processorAppServicePrincipalId')]",
                 "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002')]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
               }
@@ -38192,6 +38225,7 @@
       "dependsOn": [
         "ai_foundry_project",
         "ca_backend_api",
+        "ca_processor",
         "cosmosDBModule",
         "existing_project_setup",
         "storage_account"

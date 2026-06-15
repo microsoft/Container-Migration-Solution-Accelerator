@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "2315337546245675369"
+      "templateHash": "8972167897125395354"
     }
   },
   "parameters": {
@@ -2571,6 +2571,9 @@
           "backendAppServicePrincipalId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.ca-backend-api.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.principalId.value]"
           },
+          "processorAppServicePrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.ca-processor.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.principalId.value]"
+          },
           "cosmosDbAccountName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, resourceGroup().name), 'Microsoft.Resources/deployments', take(format('module.cosmos-db.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.name.value]"
           }
@@ -2582,7 +2585,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "17859174180959627964"
+              "templateHash": "14585030683408144049"
             }
           },
           "parameters": {
@@ -2626,6 +2629,13 @@
               "defaultValue": "",
               "metadata": {
                 "description": "Principal ID of the backend App Service system-assigned identity (empty if not deployed)."
+              }
+            },
+            "processorAppServicePrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Principal ID of the processor App Service system-assigned identity (empty if not deployed)."
               }
             },
             "deployerPrincipalId": {
@@ -2800,12 +2810,35 @@
               }
             },
             {
+              "condition": "[and(not(empty(parameters('storageAccountResourceId'))), not(empty(parameters('processorAppServicePrincipalId'))))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', last(split(parameters('storageAccountResourceId'), '/')))]",
+              "name": "[guid(parameters('solutionName'), resourceId('Microsoft.Storage/storageAccounts', last(split(parameters('storageAccountResourceId'), '/'))), parameters('processorAppServicePrincipalId'), variables('roleDefinitions').storageBlobDataContributor)]",
+              "properties": {
+                "principalId": "[parameters('processorAppServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').storageBlobDataContributor)]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
               "condition": "[and(not(empty(parameters('cosmosDbAccountName'))), not(empty(parameters('backendAppServicePrincipalId'))))]",
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
               "apiVersion": "2025-10-15",
               "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), guid(parameters('solutionName'), resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), parameters('backendAppServicePrincipalId')))]",
               "properties": {
                 "principalId": "[parameters('backendAppServicePrincipalId')]",
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002')]",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
+              }
+            },
+            {
+              "condition": "[and(not(empty(parameters('cosmosDbAccountName'))), not(empty(parameters('processorAppServicePrincipalId'))))]",
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), guid(parameters('solutionName'), resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), parameters('processorAppServicePrincipalId')))]",
+              "properties": {
+                "principalId": "[parameters('processorAppServicePrincipalId')]",
                 "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002')]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
               }
@@ -3054,6 +3087,7 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, resourceGroup().name), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', parameters('solutionName')), 64))]",
         "[resourceId('Microsoft.Resources/deployments', take(format('module.ca-backend-api.{0}', parameters('solutionName')), 64))]",
+        "[resourceId('Microsoft.Resources/deployments', take(format('module.ca-processor.{0}', parameters('solutionName')), 64))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, resourceGroup().name), 'Microsoft.Resources/deployments', take(format('module.cosmos-db.{0}', parameters('solutionName')), 64))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiServiceSubscription'), variables('aiServiceResourceGroup')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', parameters('solutionName')), 64))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, resourceGroup().name), 'Microsoft.Resources/deployments', take(format('module.storage-account.{0}', parameters('solutionName')), 64))]"

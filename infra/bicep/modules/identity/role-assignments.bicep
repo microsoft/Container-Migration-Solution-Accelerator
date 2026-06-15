@@ -28,6 +28,9 @@ param aiSearchPrincipalId string = ''
 @description('Principal ID of the backend App Service system-assigned identity (empty if not deployed).')
 param backendAppServicePrincipalId string = ''
 
+@description('Principal ID of the processor App Service system-assigned identity (empty if not deployed).')
+param processorAppServicePrincipalId string = ''
+
 @description('Principal ID of the deploying user (for user access roles).')
 param deployerPrincipalId string = ''
 
@@ -235,9 +238,20 @@ resource backendAppStorageContributor 'Microsoft.Authorization/roleAssignments@2
   }
 }
 
+// Processor App → Storage Blob Data Contributor
+resource processorAppStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(processorAppServicePrincipalId)) {
+  name: guid(solutionName, storageAccount.id, processorAppServicePrincipalId, roleDefinitions.storageBlobDataContributor)
+  scope: storageAccount
+  properties: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ============================================================================
 // 4. COSMOS DB ROLE ASSIGNMENTS
-//    Backend App Service → Cosmos DB (data-plane, uses sqlRoleAssignments)
+//    Backend and Processor App Service → Cosmos DB (data-plane, uses sqlRoleAssignments)
 // ============================================================================
 
 resource backendAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(backendAppServicePrincipalId)) {
@@ -245,6 +259,16 @@ resource backendAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/s
   name: guid(solutionName, cosmosContributorRoleDefinition.id, cosmosAccount.id, backendAppServicePrincipalId)
   properties: {
     principalId: backendAppServicePrincipalId
+    roleDefinitionId: cosmosContributorRoleDefinition.id
+    scope: cosmosAccount.id
+  }
+}
+
+resource processorAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(processorAppServicePrincipalId)) {
+  parent: cosmosAccount
+  name: guid(solutionName, cosmosContributorRoleDefinition.id, cosmosAccount.id, processorAppServicePrincipalId)
+  properties: {
+    principalId: processorAppServicePrincipalId
     roleDefinitionId: cosmosContributorRoleDefinition.id
     scope: cosmosAccount.id
   }
