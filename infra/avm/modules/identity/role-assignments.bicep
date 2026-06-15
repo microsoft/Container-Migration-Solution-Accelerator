@@ -216,6 +216,17 @@ resource searchStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01
   }
 }
 
+// Backend App → Storage Blob Data Contributor
+resource backendAppStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(solutionName, storageAccount.id, backendAppServicePrincipalId, roleDefinitions.storageBlobDataContributor)
+  scope: storageAccount
+  properties: {
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ============================================================================
 // 4. COSMOS DB ROLE ASSIGNMENTS
 //    Backend App Service → Cosmos DB (data-plane, uses sqlRoleAssignments)
