@@ -446,6 +446,7 @@ module ca_processor './modules/compute/container-app.bicep' = {
           { name: 'COSMOS_DB_PROCESS_LOG_CONTAINER', value: 'agent_telemetry' }
           { name: 'STORAGE_ACCOUNT_BLOB_URL', value: storage_account.outputs.blobEndpoint }
           { name: 'STORAGE_ACCOUNT_NAME', value: storage_account.outputs.name }
+          { name: 'STORAGE_QUEUE_ACCOUNT', value: storage_account.outputs.name }
           { name: 'STORAGE_ACCOUNT_PROCESS_CONTAINER', value: processBlobContainerName }
           { name: 'STORAGE_ACCOUNT_PROCESS_QUEUE', value: processQueueName }
           { name: 'STORAGE_ACCOUNT_QUEUE_URL', value: '${storage_account.outputs.serviceEndpoints.queue}' }

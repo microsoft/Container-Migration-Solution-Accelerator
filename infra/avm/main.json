@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "7007616429319982719"
+      "templateHash": "8048225901792134665"
     }
   },
   "parameters": {
@@ -26572,6 +26572,10 @@
                   },
                   {
                     "name": "STORAGE_ACCOUNT_NAME",
+                    "value": "[reference('storage_account').outputs.name.value]"
+                  },
+                  {
+                    "name": "STORAGE_QUEUE_ACCOUNT",
                     "value": "[reference('storage_account').outputs.name.value]"
                   },
                   {

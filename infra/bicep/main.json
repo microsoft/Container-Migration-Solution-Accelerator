@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "14953942141545849982"
+      "templateHash": "3814539587045672304"
     }
   },
   "parameters": {
@@ -2277,6 +2277,10 @@
                   },
                   {
                     "name": "STORAGE_ACCOUNT_NAME",
+                    "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, resourceGroup().name), 'Microsoft.Resources/deployments', take(format('module.storage-account.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.name.value]"
+                  },
+                  {
+                    "name": "STORAGE_QUEUE_ACCOUNT",
                     "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, resourceGroup().name), 'Microsoft.Resources/deployments', take(format('module.storage-account.{0}', parameters('solutionName')), 64)), '2025-04-01').outputs.name.value]"
                   },
                   {

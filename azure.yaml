@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 
 name: container-migration-solution-accelerator
-metadata:
-    template: container-migration-solution-accelerator@1.0
+#metadata:
+#    template: container-migration-solution-accelerator@1.0
 
 requiredVersions:
   azd: '>=1.18.2 != 1.23.9'
