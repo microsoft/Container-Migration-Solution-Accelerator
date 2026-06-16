@@ -275,7 +275,7 @@ module model_deployments './modules/ai/ai-foundry-model-deployment.bicep' = [for
   }
 }]
 
-var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.endpoint : ai_foundry_project!.outputs.endpoint
+var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.cognitiveServicesEndpoint : ai_foundry_project!.outputs.cognitiveServicesEndpoint
 var projectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
 var aiFoundryResourceId = !useExistingAIProject ? ai_foundry_project!.outputs.resourceId : ''
 var aiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.projectIdentityPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
@@ -467,6 +467,33 @@ module ca_processor './modules/compute/container-app.bicep' = {
   }
 }
 
+// ========== Virtual Network (WAF — private networking) ========== //
+module virtualNetwork './modules/networking/virtual-network.bicep' = if (enablePrivateNetworking) {
+  name: take('module.virtual-network.${solutionName}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    addressPrefixes: ['10.0.0.0/20']
+    tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
+    logAnalyticsWorkspaceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
+    resourceSuffix: solutionSuffix
+    enableTelemetry: enableTelemetry
+  }
+}
+
+// ========== Bastion Host (WAF — private networking) ========== //
+module bastionHost './modules/networking/bastion-host.bicep' = if (enablePrivateNetworking) {
+  name: take('module.bastion-host.${solutionName}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
+    enableTelemetry: enableTelemetry
+    virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
+  }
+}
+
 // ========== Jumpbox VM (WAF — private networking) ========== //
 // Login is via Microsoft Entra ID through Azure Bastion (not local credentials)
 module virtualMachine './modules/compute/virtual-machine.bicep' = if (enablePrivateNetworking) {
@@ -479,7 +506,7 @@ module virtualMachine './modules/compute/virtual-machine.bicep' = if (enablePriv
     vmSize: vmSize
     adminUsername: vmAdminUsername ?? 'testvmuser'
     adminPassword: vmAdminPassword ?? 'Vm!${uniqueString(subscription().subscriptionId, solutionName)}${guid(subscription().subscriptionId, solutionName, 'vm-admin-password')}'
-    subnetResourceId: '' // TODO: wire to virtualNetwork!.outputs.administrationSubnetResourceId when VNet module is added
+    subnetResourceId: virtualNetwork!.outputs.administrationSubnetResourceId
     deployingUserPrincipalId: deployingUserPrincipalId
     deployingUserPrincipalType: deployingUserPrincipalType
     roleAssignments: [

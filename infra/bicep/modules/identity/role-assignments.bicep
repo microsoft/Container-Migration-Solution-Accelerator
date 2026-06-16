@@ -175,6 +175,52 @@ module processorAppOpenAIUserExisting './cross-scope-role-assignment.bicep' = if
   }
 }
 
+// Processor App Service → Foundry User on AI Foundry (new project, same RG)
+resource processorAppAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(processorAppServicePrincipalId)) {
+  name: guid(solutionName, aiFoundryAccount.id, processorAppServicePrincipalId, roleDefinitions.azureAiUser)
+  scope: aiFoundryAccount
+  properties: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Processor App Service → Foundry User on existing AI Foundry (cross-scope)
+module processorAppAiUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(processorAppServicePrincipalId)) {
+  name: 'assignAiUserRoleToProcessorExisting'
+  scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
+  params: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
+    roleAssignmentName: guid(solutionName, existingAIFoundryName, processorAppServicePrincipalId, roleDefinitions.azureAiUser)
+    aiFoundryName: existingAIFoundryName
+  }
+}
+
+// Processor App Service → Cognitive Services User on AI Foundry (new project, same RG)
+resource processorAppCognitiveServicesUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(processorAppServicePrincipalId)) {
+  name: guid(solutionName, aiFoundryAccount.id, processorAppServicePrincipalId, roleDefinitions.cognitiveServicesUser)
+  scope: aiFoundryAccount
+  properties: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Processor App Service → Cognitive Services User on existing AI Foundry (cross-scope)
+module processorAppCognitiveServicesUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(processorAppServicePrincipalId)) {
+  name: 'assignCognitiveServicesUserRoleToProcessorExisting'
+  scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
+  params: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
+    roleAssignmentName: guid(solutionName, existingAIFoundryName, processorAppServicePrincipalId, roleDefinitions.cognitiveServicesUser)
+    aiFoundryName: existingAIFoundryName
+  }
+}
+
 // ============================================================================
 // 2. SEARCH SERVICE ROLE ASSIGNMENTS
 //    AI Project and Backend identities → AI Search

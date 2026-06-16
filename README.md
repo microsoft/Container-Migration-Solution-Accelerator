@@ -4,7 +4,11 @@ Extract, analyze, and migrate Kubernetes configurations from other cloud provide
 
 Transform your Kubernetes workloads with confidence through AI-driven analysis covering security, networking, storage, and Azure Well-Architected Framework principles. Expert agents collaborate to ensure your migrated configurations are production-ready and optimized for Azure.
 
-**[SOLUTION OVERVIEW](#solution-overview)** | **[QUICK DEPLOY](#quick-deploy)** | **[MIGRATION SCENARIO](#migration-scenario)** | **[TECHNICAL DOCUMENTATION](#technical-documentation)**
+ [Solution Overview](#solution-overview) · [Migration Scenario](#migration-scenario) · [Get Started](#get-started) · [Technical Documentation](#technical-documentation) 
+
+> **Note:** With any AI solutions you create using these templates, you are responsible for assessing all associated risks and for complying with all applicable laws and safety standards. Learn more in the transparency documents for [Agent Service](https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/agents/transparency-note) and [Agent Framework](https://github.com/microsoft/agent-framework/blob/main/TRANSPARENCY_FAQ.md).
+
+> 💡 **Tip:** Open this repo in VS Code with Copilot and ask "Help me deploy this accelerator" for guided, step-by-step assistance.
 
 ## <img src="docs/images/readme/solution-overview.png" width="48" alt="Solution Overview" />[Solution overview](#solution-overview)
 
@@ -14,7 +18,7 @@ The architecture follows enterprise-grade batch processing patterns with loosely
 
 ### Solution architecture
 
-## <img src="docs/images/readme/architecture.png" width="800" alt="Architecture" />
+![Architecture](docs/images/readme/architecture.png)
 
 The solution uses a sophisticated multi-agent orchestration pattern where specialized expert agents collaborate to:
 
@@ -107,44 +111,43 @@ If you want to get know more detail about Agentic Architecture, please take a lo
 - **External MCP Servers**: Microsoft Learn Docs (HTTP) and Fetch (`uvx mcp-server-fetch`)
 - **Intelligent Tool Selection**: Agents choose tools based on context
 
-## Resources
+---
+<a id="get-started"></a>
 
-### How to customize
+## <img src="docs/images/readme/quick-deploy.png" width="48" alt="Quick deploy" /> Get Started
 
-If you'd like to customize the solution accelerator, here are some common areas to start:
+Deploy the full solution in minutes with Azure Developer CLI:
 
-[Adding Custom Expert Agents](docs/CustomizeExpertAgents.md)
+```bash
+# Clone repository
+git clone https://github.com/microsoft/Container-Migration-Solution-Accelerator.git
+cd Container-Migration-Solution-Accelerator
 
-[Modifying Migration Analysis Prompts](docs/CustomizeMigrationPrompts.md)
+# Login and authentication
+azd auth login # or: azd auth login --tenant-id <tenant-id>
 
-[Extending Platform Support](docs/ExtendPlatformSupport.md)
+# Variable configuration
+azd config set provision.preflight off
 
-[Configuring MCP Servers](docs/ConfigureMCPServers.md)
+# Provision and deploy
+azd up
+```
 
-### Additional resources
+> ⚠️ **Before you deploy:** Check [Prerequisites & Costs](#prerequisites-and-costs) and [Azure OpenAI quota](https://learn.microsoft.com/azure/ai-services/openai/concepts/models).
 
-[Technical Architecture](docs/TechnicalArchitecture.md)
+[→ Full Deployment Guide](docs/DeploymentGuide.md)
 
-[Multi-Agent Orchestration Approach](docs/MultiAgentOrchestration.md)
+---
 
-[Workflow Implementation Guide](docs/ProcessFrameworkGuide.md)
+### Choose the Path That Fits Your Needs
 
-[MCP Server Integration Guide](docs/MCPServerGuide.md)
+| Deploy | Configure | Customize |
+|--------|-----------|-----------|
+| Start with a working baseline using infrastructure, code, and agents. | Adapt the solution with your Kubernetes configurations and migration settings. | Extend the solution with custom expert agents, platform support, and integrations. |
+| [Deployment Guide →](docs/DeploymentGuide.md) | [Configuration Guide →](docs/DeploymentGuide.md) | [Customization Guide →](docs/DeploymentGuide.md) |
 
-## Getting Started
-
-## <img src="docs/images/readme/quick-deploy.png" width="48" alt="Quick deploy" />[Quick deploy](#quick-deploy)
-
-### How to install or deploy
-
-The Container Migration Solution Accelerator supports development and deployment across multiple platforms and environments.
-
-**For Azure Deployment:**
-[Click here to launch the deployment guide](docs/DeploymentGuide.md)
-
-**For Local Development:**
-- [Local Development Setup Guide](docs/LocalDevelopmentSetup.md) - Comprehensive setup instructions for Windows, Linux, and macOS
-- Includes native Windows setup, WSL2 configuration, and cross-platform development tools
+**Additional setup options:**
+- [Local Development Setup](docs/LocalDevelopmentSetup.md) — Windows, Linux, and macOS configuration
 
 ```mermaid
 flowchart TB
@@ -183,7 +186,7 @@ flowchart TB
    subgraph BUILD["Images & Identity"]
       direction TB
       ACR[("Azure Container Registry")]
-      ID["User Assigned Managed Identity"]
+      ID["System Assigned Managed Identity"]
    end
 
    %% User flow
@@ -259,9 +262,9 @@ Use the [Azure pricing calculator](https://azure.microsoft.com/pricing/calculato
 - **Registration requirements**: Registration is required for access to `gpt-5.1`, `gpt-5.1-codex`, and `gpt-5.1-codex-max`. Request access here: [https://aka.ms/oai/gpt5access](https://aka.ms/oai/gpt5access). For region availability details, see [Model summary table and region availability](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure?view=foundry-classic&tabs=global-standard-aoai%2Cstandard-chat-completions%2Cglobal-standard&pivots=azure-openai#model-summary-table-and-region-availability).
 - **Quota management**: Ensure sufficient quota for batch processing.
 
-## Guidance
+---
 
-## <img src="docs/images/readme/business_scenario.png" width="48">[Migration Scenario](#migration-scenario)
+## <img src="docs/images/readme/business_scenario.png" width="48"> Migration Scenario
 
 A DevOps engineer at a multi-platform enterprise manages Kubernetes workloads across managed cloud and self-managed/on-prem clusters (for example: GKE, EKS, and on-prem Kubernetes) and needs to migrate critical applications to Azure Kubernetes Service (AKS) following company cloud consolidation strategy.
 
@@ -315,98 +318,47 @@ This solution provides significant value through intelligent automation:
 - **Cost Optimization**: Azure Well-Architected Framework principles optimize cloud spend
 - **Scalable Process**: Handle multiple migration projects with consistent quality
 
-## <img src="docs/images/readme/supporting_documentation.png" width="48">[Technical documentation](#technical-documentation)
+---
 
-### Multi-agent orchestration architecture
+## <img src="docs/images/readme/supporting_documentation.png" width="48"> Supporting Documentation
 
-This solution implements advanced multi-agent patterns using Microsoft Agent Framework group chat orchestration:
+| Documentation | Description |
+|---|---|
+| [Technical Architecture](docs/TechnicalArchitecture.md) | System design, components, and solution flow |
+| [Multi-Agent Orchestration](docs/MultiAgentOrchestration.md) | Multi-agent patterns and orchestration approach |
+| [Agentic Architecture](docs/AgenticArchitecture.md) | Detailed agentic workflow and agent specializations |
+| [Workflow Implementation Guide](docs/ProcessFrameworkGuide.md) | Step-based workflow execution with Agent Framework |
+| [MCP Server Integration Guide](docs/MCPServerGuide.md) | Model Context Protocol server setup and usage |
+| [Adding Custom Expert Agents](docs/CustomizeExpertAgents.md) | How to add new expert agents for additional platforms |
+| [Modifying Migration Prompts](docs/CustomizeMigrationPrompts.md) | Customize migration analysis prompts |
+| [Extending Platform Support](docs/ExtendPlatformSupport.md) | Add support for new Kubernetes platforms |
+| [Configuring MCP Servers](docs/ConfigureMCPServers.md) | Configure and extend MCP server integrations |
+| [Deployment Guide](docs/DeploymentGuide.md) | Step-by-step deployment instructions |
+| [Local Development Setup](docs/LocalDevelopmentSetup.md) | Windows, Linux, and macOS development setup |
+| [Troubleshooting](docs/TroubleShootingSteps.md) | Common issues and solutions |
 
-**Expert Agent Specializations:**
-
-- **Technical Architect**: Overall architecture analysis and design decisions
-- **Azure Expert**: Azure-specific optimizations and Well-Architected Framework compliance
-- **GKE Expert**: Google Kubernetes Engine (GKE/Anthos) specific knowledge and migration patterns
-- **EKS Expert**: Amazon Elastic Kubernetes Service expertise and AWS-to-Azure translations
-- **OpenShift Expert**: Red Hat OpenShift specific patterns and transformations
-- **Rancher Expert**: Rancher/RKE/RKE2/K3s patterns and migration considerations
-- **Tanzu Expert**: VMware Tanzu/TKG patterns and migration considerations
-- **OnPremK8s Expert**: Upstream/self-managed/on-prem Kubernetes patterns and common on-prem dependencies
-- **QA Engineer**: Validation, testing strategies, and quality assurance
-- **YAML Expert**: Configuration transformation and syntax optimization
-
-**Workflow Integration:**
-Each migration step is implemented as an Agent Framework workflow with explicit executor chaining:
-
-```mermaid
-flowchart TB
-   %% Migration flow (step-oriented)
-
-   subgraph WF[" "]
-      direction TB
-
-      subgraph ROW[" "]
-         direction LR
-
-         subgraph A["Analysis Process"]
-            direction TB
-            A1["• Platform Detection<br/>• Technical Architecture Review<br/>• Source Configuration Analysis<br/>• Migration Complexity Assessment"]
-            A2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
-            A1 --> A2
-         end
-
-         subgraph D["Design Process"]
-            direction TB
-            D1["• Azure Well-Architected Framework<br/>• Target Architecture Design<br/>• Service Mapping Strategy<br/>• Security & Compliance Review"]
-            D2["Agents:<br/>• Chief Architect<br/>• AKS Expert<br/>• Platform Expert(s)"]
-            D1 --> D2
-         end
-
-         subgraph C["Conversion Process"]
-            direction TB
-            C1["• YAML Transformation<br/>• Azure Service Configuration<br/>• Resource Optimization<br/>• Validation & Testing"]
-            C2["Agents:<br/>• Chief Architect<br/>• Azure Expert<br/>• AKS Expert<br/>• YAML Expert<br/>• QA Engineer"]
-            C1 --> C2
-         end
-
-         subgraph DOC["Documentation Process"]
-            direction TB
-            DOC1["• Migration Report Generation<br/>• Expert Recommendations<br/>• Implementation Guide<br/>• Post-migration Checklist"]
-            DOC2["Agents:<br/>• Technical Writer<br/>• All Experts"]
-            DOC1 --> DOC2
-         end
-
-         A -->|Architecture Insights| D
-         D -->|Design Specifications| C
-         C -->|Converted Configurations| DOC
-      end
-
-   end
-```
-
-**MCP Server Integration:**
-Agents access tools through Model Context Protocol servers for intelligent capability extension:
-
-- **Blob Operations MCP**: File reading/writing and artifact management (Azure Blob Storage)
-- **Microsoft Learn Docs MCP (HTTP)**: Documentation search/retrieval and best-practices lookup
-- **DateTime MCP**: Timestamp generation and time-based operations
-- **Fetch MCP**: URL fetching for validation (for example: verifying references)
-- **Mermaid Validation MCP**: Validate Mermaid diagrams generated during design/docs steps
-- **YAML Inventory MCP**: Enumerate converted YAML objects for runbooks and reports
+---
 
 ### Cross references
 
 Check out related Microsoft solution accelerators:
 
-| Solution                                                                                                        | Description                                                   |
-| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Solution | Description |
+|---|---|
 | [Content Processing Solution Accelerator](https://github.com/microsoft/content-processing-solution-accelerator) | Process and extract data from unstructured documents using AI |
-| [Document Knowledge Mining](https://github.com/microsoft/Document-Knowledge-Mining-Solution-Accelerator)        | Extract insights from documents with AI-powered search        |
+| [Document Knowledge Mining](https://github.com/microsoft/Document-Knowledge-Mining-Solution-Accelerator) | Extract insights from documents with AI-powered search |
 
-## Provide feedback
-Have questions, find a bug, or want to request a feature? [Submit a new issue](https://github.com/microsoft/container-migration-solution-accelerator/issues) on this repo and we'll connect.
+---
 
-## Responsible AI Transparency FAQ
-Please refer to [Transparency FAQ](./TRANSPARENCY_FAQ.md) for responsible AI transparency details of this solution accelerator.
+## Feedback & Contributing
+
+- [Submit an Issue](https://github.com/microsoft/container-migration-solution-accelerator/issues)
+
+---
+
+## Responsible AI
+
+See [Transparency FAQ](./TRANSPARENCY_FAQ.md) for responsible AI transparency details.
 
 ## Data Collection
 

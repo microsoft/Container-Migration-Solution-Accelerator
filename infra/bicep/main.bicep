@@ -260,7 +260,7 @@ module model_deployments './modules/ai/ai-foundry-model-deployment.bicep' = [for
 }]
 
 // ========== AI outputs (ternary: existing vs new) ========== //
-var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.endpoint : ai_foundry_project!.outputs.endpoint
+var aiFoundryEndpoint = useExistingAIProject ? existing_project_setup!.outputs.cognitiveServicesEndpoint : ai_foundry_project!.outputs.cognitiveServicesEndpoint
 var projectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
 var aiFoundryResourceId = !useExistingAIProject ? ai_foundry_project!.outputs.resourceId : ''
 var aiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.projectIdentityPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
