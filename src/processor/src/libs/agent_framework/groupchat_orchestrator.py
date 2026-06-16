@@ -606,6 +606,21 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     conversation = getattr(data, "conversation", [])
                     self._conversation = conversation  # Update instance variable
 
+            # Fallback: when the streaming loop breaks early (e.g. Coordinator
+            # finish=true termination), the framework's final output event
+            # carrying the conversation is never received and ``conversation``
+            # stays empty.  Reconstruct a best-effort conversation from the
+            # agent_responses we collected during streaming so the
+            # ResultGenerator still has context to work with.
+            if not conversation and self.agent_responses:
+                logger.warning(
+                    "[CONVERSATION] Final output event missed (early termination); "
+                    "reconstructing conversation from %d agent_responses.",
+                    len(self.agent_responses),
+                )
+                conversation = self._reconstruct_conversation_from_responses()
+                self._conversation = conversation
+
             # Backfill tool usage from the final conversation (more reliable than streaming updates)
             # AgentResponseUpdate may stream text only; tool calls are represented as FunctionCallContent
             # items inside Message.contents.
@@ -1200,7 +1215,16 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 if coordinator_signaled_stop:
                     # Only enforce PASS sign-offs when Coordinator claims success completion.
                     if instruction == "complete":
-                        is_valid, reason = self._validate_sign_offs(self._conversation)
+                        # Use the reconstructed conversation from agent_responses
+                        # because self._conversation (populated only by the final
+                        # output event) is still empty at this point in the
+                        # streaming loop.
+                        sign_off_conversation = (
+                            self._conversation
+                            if self._conversation
+                            else self._reconstruct_conversation_from_responses()
+                        )
+                        is_valid, reason = self._validate_sign_offs(sign_off_conversation)
                         if not is_valid:
                             logger.warning(
                                 "Termination rejected for success completion: %s. Workflow continues.",
@@ -1472,6 +1496,32 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # Selected is newest->oldest; reverse back to chronological.
         selected.reverse()
         return selected
+
+    def _reconstruct_conversation_from_responses(self) -> list[Message]:
+        """Reconstruct a conversation from agent responses collected during streaming.
+
+        When the streaming loop breaks early (e.g., Coordinator termination),
+        the framework's final output event may not arrive, leaving the
+        conversation empty.  This method builds a best-effort conversation
+        from ``self.agent_responses`` so the ResultGenerator still has the
+        full agent discussion to summarize.
+        """
+        messages: list[Message] = []
+        for resp in self.agent_responses:
+            if not resp.message:
+                continue
+            messages.append(
+                Message(
+                    role="assistant",
+                    contents=[resp.message],
+                    author_name=resp.agent_name,
+                )
+            )
+        logger.info(
+            "[CONVERSATION] Reconstructed %d messages from agent_responses.",
+            len(messages),
+        )
+        return messages
 
     def get_tool_usage_summary(self) -> dict[str, Any]:
         """Get summary of tool usage across all agents"""
