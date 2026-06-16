@@ -193,7 +193,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
         TemplateName: 'Container Migration'
         CreatedBy: createdBy
         DeploymentName: deployment().name
-        Type: 'Non-WAF'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
       }
     )
   }
