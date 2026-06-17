@@ -1177,6 +1177,12 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # NOTE: The underlying GroupChatBuilder does not automatically stop on finish,
         # so we enforce it here.
         if agent_name == self.coordinator_name:
+            logger.info(
+                "[COORDINATOR] Processing Coordinator response (len=%d, streak=%d): %s",
+                len(complete_message),
+                self._coordinator_selection_streak,
+                complete_message[:150].replace("\n", " "),
+            )
             try:
                 json_payload = self._extract_first_json_payload(complete_message)
                 response_dict = json.loads(json_payload)
@@ -1304,11 +1310,11 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     if isinstance(complete_message, str)
                     else str(type(complete_message))
                 )
-                logger.debug(
-                    "Coordinator JSON parse failed; skipping loop detection for "
-                    "this turn. Raw message preview: %r",
+                logger.warning(
+                    "[COORDINATOR] JSON parse failed; skipping loop detection. "
+                    "Raw message preview: %r; error: %s",
                     preview,
-                    exc_info=exc,
+                    str(exc),
                 )
 
         # Invoke callback with complete response
