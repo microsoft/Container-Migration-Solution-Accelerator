@@ -61,13 +61,44 @@ def test_coordinator_complete_terminates_when_selected_participant_none_even_wit
     asyncio.run(_run())
 
 
-def test_coordinator_complete_rejected_when_signoffs_missing():
+def test_coordinator_complete_accepted_when_no_explicit_signoffs():
+    """Agents that never mention SIGN-OFF: are treated as non-reviewers."""
     async def _run():
         orch = _make_orchestrator()
 
-        # Agent participated but never produced a SIGN-OFF.
+        # Agent participated but never produced a SIGN-OFF — should NOT block.
         orch._conversation = [
             _Msg(author_name="AKS Expert", text="Reviewed; looks good."),
+        ]
+
+        orch._current_agent_start_time = datetime.now()
+        orch._current_agent_response = [
+            json.dumps(
+                {
+                    "selected_participant": None,
+                    "instruction": "complete",
+                    "finish": False,
+                    "final_message": "done",
+                }
+            )
+        ]
+
+        await orch._complete_agent_response("Coordinator", callback=None)
+
+        # No explicit SIGN-OFF: in any message → termination allowed.
+        assert orch._termination_requested is True
+
+    asyncio.run(_run())
+
+
+def test_coordinator_complete_rejected_when_signoffs_pending():
+    """Agents with explicit SIGN-OFF: PENDING should block termination."""
+    async def _run():
+        orch = _make_orchestrator()
+
+        # Agent participated and said SIGN-OFF: PENDING → should block.
+        orch._conversation = [
+            _Msg(author_name="AKS Expert", text="SIGN-OFF: PENDING - need more info"),
         ]
 
         orch._current_agent_start_time = datetime.now()

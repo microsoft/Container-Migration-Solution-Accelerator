@@ -427,17 +427,19 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             and name != self.get_result_generator_name()
         ]
 
-        # Validate sign-offs
+        # Validate sign-offs — only for agents that explicitly attempted one.
+        # Agents like Chief Architect may participate without issuing a
+        # sign-off (they do analysis work, not reviews). We only block
+        # termination when an agent explicitly said SIGN-OFF: PENDING/FAIL.
         missing_or_invalid = []
         for agent_name in reviewer_agents:
             status = sign_offs.get(agent_name)
-            if status != "PASS":
-                if status == "PENDING":
-                    missing_or_invalid.append(f"{agent_name}: PENDING")
-                elif status == "FAIL":
-                    missing_or_invalid.append(f"{agent_name}: FAIL")
-                else:
-                    missing_or_invalid.append(f"{agent_name}: missing")
+            if status == "PENDING":
+                missing_or_invalid.append(f"{agent_name}: PENDING")
+            elif status == "FAIL":
+                missing_or_invalid.append(f"{agent_name}: FAIL")
+            # If status is None (agent never mentioned SIGN-OFF:), skip —
+            # not all agents are reviewers.
 
         if missing_or_invalid:
             reason = f"Cannot terminate: {', '.join(missing_or_invalid)}. All reviewers must have SIGN-OFF: PASS."
