@@ -70,7 +70,7 @@ class ManagerSelectionResponse(BaseModel):
     )
     final_message: str | None = None
 
-    model_config = {"extra": "allow", "populate_by_name": True}
+    model_config = {"extra": "forbid", "populate_by_name": True}
 
 
 @dataclass
