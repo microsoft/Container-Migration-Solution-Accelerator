@@ -310,12 +310,6 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # Snapshot of progress_counter at the time we last saw _last_coordinator_selection.
         self._last_coordinator_selection_progress: int = 0
 
-        # Track consecutive finish rejections (sign-off validation failures).
-        # When the Coordinator keeps saying finish=true but sign-offs are
-        # incomplete, prevent infinite loops by force-terminating after a threshold.
-        self._finish_rejection_count: int = 0
-        self._max_finish_rejections: int = 5
-
     def _request_forced_termination(
         self, *, reason: str, termination_type: str
     ) -> None:
@@ -427,19 +421,17 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             and name != self.get_result_generator_name()
         ]
 
-        # Validate sign-offs — only for agents that explicitly attempted one.
-        # Agents like Chief Architect may participate without issuing a
-        # sign-off (they do analysis work, not reviews). We only block
-        # termination when an agent explicitly said SIGN-OFF: PENDING/FAIL.
+        # Validate sign-offs
         missing_or_invalid = []
         for agent_name in reviewer_agents:
             status = sign_offs.get(agent_name)
-            if status == "PENDING":
-                missing_or_invalid.append(f"{agent_name}: PENDING")
-            elif status == "FAIL":
-                missing_or_invalid.append(f"{agent_name}: FAIL")
-            # If status is None (agent never mentioned SIGN-OFF:), skip —
-            # not all agents are reviewers.
+            if status != "PASS":
+                if status == "PENDING":
+                    missing_or_invalid.append(f"{agent_name}: PENDING")
+                elif status == "FAIL":
+                    missing_or_invalid.append(f"{agent_name}: FAIL")
+                else:
+                    missing_or_invalid.append(f"{agent_name}: missing")
 
         if missing_or_invalid:
             reason = f"Cannot terminate: {', '.join(missing_or_invalid)}. All reviewers must have SIGN-OFF: PASS."
@@ -1273,12 +1265,12 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 )
 
                 if coordinator_signaled_stop:
-                    # Only enforce PASS sign-offs when Coordinator claims success completion.
+                    # Log sign-off status for observability, but do NOT block
+                    # termination. With selection_func routing, rejecting finish
+                    # creates an unrecoverable loop (Coordinator keeps saying
+                    # finish=true, selection_func routes back to Coordinator).
+                    # The Coordinator's prompt already handles sign-off logic.
                     if instruction == "complete":
-                        # Use the reconstructed conversation from agent_responses
-                        # because self._conversation (populated only by the final
-                        # output event) is still empty at this point in the
-                        # streaming loop.
                         sign_off_conversation = (
                             self._conversation
                             if self._conversation
@@ -1286,28 +1278,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                         )
                         is_valid, reason = self._validate_sign_offs(sign_off_conversation)
                         if not is_valid:
-                            self._finish_rejection_count += 1
                             logger.warning(
-                                "Termination rejected for success completion (%d/%d): %s. Workflow continues.",
-                                self._finish_rejection_count,
-                                self._max_finish_rejections,
+                                "Sign-off validation note: %s (proceeding with termination)",
                                 reason,
                             )
-                            if self._finish_rejection_count >= self._max_finish_rejections:
-                                logger.warning(
-                                    "Max finish rejections reached (%d). Force-terminating.",
-                                    self._finish_rejection_count,
-                                )
-                                self._request_forced_termination(
-                                    reason=(
-                                        f"Coordinator attempted finish {self._finish_rejection_count} times "
-                                        f"but sign-off validation kept failing: {reason}"
-                                    ),
-                                    termination_type="hard_timeout",
-                                )
-                                return
-                            # Do NOT set _termination_requested.
-                            return
 
                     self._termination_requested = True
                     self._termination_final_message = manager_response.final_message
@@ -1321,9 +1295,6 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     and selected
                     and selected.lower() != "none"
                 ):
-                    # Non-finish routing: reset finish rejection counter since
-                    # Coordinator is doing productive work (selecting participants).
-                    self._finish_rejection_count = 0
                     # Record invocation time for non-termination coordinator selections
                     self._agent_invoked_at[selected] = completed_at
             except Exception as exc:

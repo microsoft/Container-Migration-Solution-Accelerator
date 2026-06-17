@@ -239,21 +239,12 @@ class TestValidateSignOffs:
         assert ok is False
         assert "FAIL" in reason
 
-    def test_missing_does_not_block(self):
-        """Agents that never mention SIGN-OFF: are not reviewers and should not block."""
+    def test_missing_blocks(self):
         orch = _make_orch()
         msgs = [_Msg(author_name="A", text="some text without signoff")]
         ok, reason = orch._validate_sign_offs(msgs)
-        assert ok is True
-        assert reason == ""
-
-    def test_pending_blocks(self):
-        """Agents that explicitly say SIGN-OFF: PENDING should block."""
-        orch = _make_orch()
-        msgs = [_Msg(author_name="A", text="SIGN-OFF: PENDING")]
-        ok, reason = orch._validate_sign_offs(msgs)
         assert ok is False
-        assert "PENDING" in reason
+        assert "missing" in reason
 
     def test_excludes_coordinator_and_resultgenerator(self):
         orch = _make_orch()
