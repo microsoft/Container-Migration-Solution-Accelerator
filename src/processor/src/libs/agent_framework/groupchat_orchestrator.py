@@ -265,6 +265,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         # Streaming response buffer
         self._last_executor_id: str | None = None
+        self._last_response_id: str | None = None
         self._current_agent_response: list[str] = []
         self._current_agent_start_time: datetime | None = None
 
@@ -781,7 +782,14 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             agent_name = author_name or self._normalize_executor_id(
                 getattr(event, "agent_id", None) or ""
             )
-        await self._start_agent_if_needed(agent_name, stream_callback, callback)
+        # Detect new invocations of the same agent via response_id change.
+        # In 1.3.0 with GroupChatBuilder, the Coordinator is internal — we only
+        # see participant events. When the same participant runs back-to-back,
+        # the executor_id is identical but response_id differs per invocation.
+        response_id = getattr(event, "response_id", None)
+        await self._start_agent_if_needed(
+            agent_name, stream_callback, callback, response_id=response_id
+        )
         self._append_text_chunk(event)
         await self._process_tool_calls(event, agent_name, stream_callback)
 
@@ -797,10 +805,28 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         agent_name: str,
         stream_callback: AgentResponseStreamCallback | None,
         callback: AgentResponseCallback | None,
+        response_id: str | None = None,
     ) -> None:
-        """Handle agent switches and emit a message-start stream event."""
-        if agent_name == self._last_executor_id:
+        """Handle agent switches and emit a message-start stream event.
+
+        In agent-framework 1.3.0 with GroupChatBuilder, the Coordinator is
+        internal — our streaming loop only sees participant events. When the
+        same participant is selected back-to-back, the executor_id is identical
+        but ``response_id`` differs per invocation. We use this to detect new
+        turns of the same agent.
+        """
+        # Detect same-agent new invocation via response_id change.
+        is_new_response = (
+            response_id is not None
+            and self._last_response_id is not None
+            and response_id != self._last_response_id
+        )
+        if agent_name == self._last_executor_id and not is_new_response:
+            # Same agent, same response — just accumulating streaming chunks.
             return
+
+        if response_id is not None:
+            self._last_response_id = response_id
 
         # Complete and save previous agent's response
         if self._last_executor_id and self._current_agent_response:
@@ -1105,6 +1131,32 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         )
 
         self.agent_responses.append(response)
+
+        # Participant-side loop detection. In 1.3.0 with GroupChatBuilder, the
+        # Coordinator is internal (its responses never appear in our streaming
+        # loop), so the Coordinator-based loop detection below (streak >= 3) is
+        # dead code. Instead, detect loops by checking if the last N responses
+        # are all from the same non-Coordinator agent.
+        if agent_name != self.coordinator_name:
+            consecutive_same = 0
+            for r in reversed(self.agent_responses):
+                if r.agent_name == agent_name:
+                    consecutive_same += 1
+                else:
+                    break
+            if consecutive_same >= 5:
+                logger.warning(
+                    "[LOOP] Same agent '%s' ran %d consecutive times; forcing termination.",
+                    agent_name,
+                    consecutive_same,
+                )
+                self._request_forced_termination(
+                    reason=(
+                        f"Loop detected: '{agent_name}' ran {consecutive_same} "
+                        f"consecutive times without any other agent participating"
+                    ),
+                    termination_type="hard_timeout",
+                )
 
         # Mark progress on any non-Coordinator completion. This is used to ensure loop
         # detection only triggers when the Coordinator is repeating itself *and* the
