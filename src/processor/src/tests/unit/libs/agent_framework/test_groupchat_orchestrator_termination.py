@@ -13,8 +13,10 @@ from libs.agent_framework.groupchat_orchestrator import GroupChatOrchestrator
 
 @dataclass
 class _Msg:
-    source: str
-    content: str
+    author_name: str = ""
+    text: str = ""
+    contents: object = None
+    role: object = None
 
 
 def _make_orchestrator() -> GroupChatOrchestrator:
@@ -34,8 +36,8 @@ def test_coordinator_complete_terminates_when_selected_participant_none_even_wit
 
         # Everyone who participated signed off PASS.
         orch._conversation = [
-            _Msg(source="AKS Expert", content="SIGN-OFF: PASS"),
-            _Msg(source="Chief Architect", content="SIGN-OFF: PASS"),
+            _Msg(author_name="AKS Expert", text="SIGN-OFF: PASS"),
+            _Msg(author_name="Chief Architect", text="SIGN-OFF: PASS"),
         ]
 
         orch._current_agent_start_time = datetime.now()
@@ -65,7 +67,7 @@ def test_coordinator_complete_rejected_when_signoffs_missing():
 
         # Agent participated but never produced a SIGN-OFF.
         orch._conversation = [
-            _Msg(source="AKS Expert", content="Reviewed; looks good."),
+            _Msg(author_name="AKS Expert", text="Reviewed; looks good."),
         ]
 
         orch._current_agent_start_time = datetime.now()

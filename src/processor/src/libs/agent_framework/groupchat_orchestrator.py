@@ -398,8 +398,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         # Search for sign-off patterns in messages
         for msg in recent_messages:
-            content = str(msg.content).upper()
-            agent_name = msg.source if hasattr(msg, "source") else None
+            content = (msg.text or str(msg.contents)).upper()
+            agent_name = getattr(msg, "author_name", None) or getattr(msg, "source", None)
 
             if not agent_name or agent_name == self.coordinator_name:
                 continue

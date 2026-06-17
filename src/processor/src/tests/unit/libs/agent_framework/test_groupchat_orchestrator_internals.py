@@ -219,29 +219,29 @@ class TestValidateSignOffs:
     def test_all_pass(self):
         orch = _make_orch()
         msgs = [
-            _Msg(source="A", content="SIGN-OFF: PASS"),
-            _Msg(source="B", content="SIGN-OFF:PASS"),
+            _Msg(author_name="A", text="SIGN-OFF: PASS"),
+            _Msg(author_name="B", text="SIGN-OFF:PASS"),
         ]
         ok, reason = orch._validate_sign_offs(msgs)
         assert ok is True
 
     def test_pending_blocks(self):
         orch = _make_orch()
-        msgs = [_Msg(source="A", content="SIGN-OFF: PENDING")]
+        msgs = [_Msg(author_name="A", text="SIGN-OFF: PENDING")]
         ok, reason = orch._validate_sign_offs(msgs)
         assert ok is False
         assert "PENDING" in reason
 
     def test_fail_blocks(self):
         orch = _make_orch()
-        msgs = [_Msg(source="A", content="SIGN-OFF: FAIL")]
+        msgs = [_Msg(author_name="A", text="SIGN-OFF: FAIL")]
         ok, reason = orch._validate_sign_offs(msgs)
         assert ok is False
         assert "FAIL" in reason
 
     def test_missing_blocks(self):
         orch = _make_orch()
-        msgs = [_Msg(source="A", content="some text without signoff")]
+        msgs = [_Msg(author_name="A", text="some text without signoff")]
         ok, reason = orch._validate_sign_offs(msgs)
         assert ok is False
         assert "missing" in reason
@@ -249,8 +249,8 @@ class TestValidateSignOffs:
     def test_excludes_coordinator_and_resultgenerator(self):
         orch = _make_orch()
         msgs = [
-            _Msg(source="Coordinator", content="ignored"),
-            _Msg(source="ResultGenerator", content="ignored"),
+            _Msg(author_name="Coordinator", text="ignored"),
+            _Msg(author_name="ResultGenerator", text="ignored"),
         ]
         ok, _ = orch._validate_sign_offs(msgs)
         assert ok is True
