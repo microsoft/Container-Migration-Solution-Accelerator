@@ -183,16 +183,19 @@ Review the configuration options below. You can customize any settings that meet
 
 ### 3.1 Choose Deployment Type (Optional)
 
-| **Aspect**             | **Development/Testing (Default)** | **Production**                                                                          |
-| ---------------------- | --------------------------------- | --------------------------------------------------------------------------------------- |
-| **Configuration File** | `main.parameters.json` (sandbox)  | Copy `main.waf.parameters.json` to `main.parameters.json`                               |
-| **Security Controls**  | Minimal (for rapid iteration)     | Enhanced (production best practices)                                                    |
-| **Cost**               | Lower costs                       | Cost optimized                                                                          |
-| **Use Case**           | POCs, development, testing        | Production workloads                                                                    |
-| **Framework**          | Basic configuration               | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
-| **Features**           | Core functionality                | Reliability, security, operational excellence                                           |
+| **Aspect**             | **Development/Testing (Default)**      | **Production (WAF-aligned)**                                                            |
+| ---------------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Deployment Flavor**  | `bicep` (Vanilla Bicep)                | `avm-waf` (AVM WAF-aligned)                                                            |
+| **Configuration File** | `main.parameters.json` (sandbox)       | Copy `main.waf.parameters.json` to `main.parameters.json`                               |
+| **Security Controls**  | Minimal (for rapid iteration)          | Enhanced (production best practices)                                                    |
+| **Cost**               | Lower costs                            | Cost optimized                                                                          |
+| **Use Case**           | POCs, development, testing             | Production workloads                                                                    |
+| **Framework**          | Basic configuration                    | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
+| **Features**           | Core functionality                     | Monitoring, private networking, scalability, redundancy                                  |
 
-**To use production configuration:**
+> **Note:** An intermediate option (`avm`) is also available — it uses AVM modules without WAF networking features. Set `DEPLOYMENT_FLAVOR` to `avm` for enterprise-grade modules without private endpoints.
+
+**To use production (WAF-aligned) configuration:**
 
 Copy the contents from the production configuration file to your main parameters file:
 
