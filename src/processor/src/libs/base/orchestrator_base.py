@@ -145,7 +145,7 @@ class OrchestratorBase(AgentBase, Generic[TaskParamT, ResultT]):
 
     async def create_agents(
         self, agent_infos: list[AgentInfo], process_id: str
-    ) -> list[Agent]:
+    ) -> dict[str, Agent]:
         agents = dict[str, Agent]()
         agent_client = await self.get_client(thread_id=process_id)
 

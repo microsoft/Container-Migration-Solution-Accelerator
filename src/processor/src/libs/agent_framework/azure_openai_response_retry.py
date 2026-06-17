@@ -284,8 +284,10 @@ def _sanitize_author_name(name: Any) -> Any:
     empty (e.g. name was all whitespace), returns ``None`` so the field can be
     dropped entirely.
     """
-    if not isinstance(name, str) or not name:
+    if not isinstance(name, str):
         return name
+    if not name:
+        return None
     if not _OPENAI_NAME_INVALID_CHARS.search(name):
         return name
     sanitized = _OPENAI_NAME_INVALID_CHARS.sub("_", name).strip("_")

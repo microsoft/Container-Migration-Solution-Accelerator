@@ -111,7 +111,7 @@ def test_sanitize_author_name_replaces_whitespace_and_specials() -> None:
 
 def test_sanitize_author_name_handles_edge_cases() -> None:
     assert _sanitize_author_name(None) is None
-    assert _sanitize_author_name("") == ""
+    assert _sanitize_author_name("") is None
     assert _sanitize_author_name(123) == 123
     # All-invalid input collapses to empty -> None (so callers drop the field).
     assert _sanitize_author_name("   ") is None
