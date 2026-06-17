@@ -31,7 +31,7 @@ from agent_framework import (
     Workflow,
     WorkflowEvent,
 )
-from agent_framework.orchestrations import GroupChatBuilder
+from agent_framework.orchestrations import GroupChatBuilder, GroupChatState
 from mem0 import AsyncMemory
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
@@ -47,17 +47,13 @@ class ManagerSelectionResponse(BaseModel):
     """Coordinator selection payload parsed from JSON output.
 
     The Coordinator prompt instructs the model to emit fields named
-    ``selected_participant`` / ``instruction`` / ``finish``. However, the
-    underlying ``agent_framework_orchestrations.GroupChatBuilder`` forces the
-    Coordinator's response_format to ``AgentOrchestrationOutput`` (strict
-    schema with fields ``next_speaker`` / ``reason`` / ``terminate``). With
-    strict structured output, the model always emits the framework's field
-    names regardless of the prompt.
-
-    We use Pydantic ``AliasChoices`` so this model accepts BOTH naming
-    conventions transparently. Without these aliases, parsing silently
-    succeeds (``extra=allow``) but every field ends up ``None``, disabling
-    loop detection and Coordinator-driven termination.
+    ``selected_participant`` / ``instruction`` / ``finish``. We use
+    ``selection_func`` (not ``orchestrator_agent``) so the Coordinator
+    runs as a regular participant and the framework does NOT override
+    its ``response_format``. The model should emit our prompt field
+    names, but we keep ``AliasChoices`` for robustness in case the
+    framework's ``AgentOrchestrationOutput`` names
+    (``next_speaker`` / ``reason`` / ``terminate``) leak through.
     """
 
     selected_participant: str | None = Field(
@@ -783,9 +779,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 getattr(event, "agent_id", None) or ""
             )
         # Detect new invocations of the same agent via response_id change.
-        # In 1.3.0 with GroupChatBuilder, the Coordinator is internal — we only
-        # see participant events. When the same participant runs back-to-back,
-        # the executor_id is identical but response_id differs per invocation.
+        # When the same agent runs back-to-back (e.g. Coordinator selected
+        # twice on parse failure), the executor_id is identical but
+        # response_id differs per invocation.
         response_id = getattr(event, "response_id", None)
         await self._start_agent_if_needed(
             agent_name, stream_callback, callback, response_id=response_id
@@ -809,11 +805,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
     ) -> None:
         """Handle agent switches and emit a message-start stream event.
 
-        In agent-framework 1.3.0 with GroupChatBuilder, the Coordinator is
-        internal — our streaming loop only sees participant events. When the
-        same participant is selected back-to-back, the executor_id is identical
-        but ``response_id`` differs per invocation. We use this to detect new
-        turns of the same agent.
+        With ``selection_func`` the Coordinator IS a visible participant,
+        so we see both Coordinator and participant events. The response_id
+        detection is kept as a safety net for same-agent back-to-back
+        invocations (e.g. Coordinator → Coordinator on parse failure).
         """
         # Detect same-agent new invocation via response_id change.
         is_new_response = (
@@ -1132,11 +1127,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         self.agent_responses.append(response)
 
-        # Participant-side loop detection. In 1.3.0 with GroupChatBuilder, the
-        # Coordinator is internal (its responses never appear in our streaming
-        # loop), so the Coordinator-based loop detection below (streak >= 3) is
-        # dead code. Instead, detect loops by checking if the last N responses
-        # are all from the same non-Coordinator agent.
+        # Participant-side loop detection (safety net). The Coordinator-based
+        # detection below (streak >= 3) is the primary guard. This catches
+        # edge cases where the Coordinator itself loops (e.g. selection_func
+        # returns Coordinator repeatedly on parse failure).
         if agent_name != self.coordinator_name:
             consecutive_same = 0
             for r in reversed(self.agent_responses):
@@ -1327,7 +1321,25 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 )
 
     async def _build_groupchat(self) -> Workflow:
-        """Build the GroupChat Orchestrator workflow"""
+        """Build the GroupChat Orchestrator workflow.
+
+        In agent-framework 1.3.0 the old ``GroupChatBuilder().set_manager()``
+        API was replaced. Using ``orchestrator_agent=`` wraps the Coordinator
+        inside ``AgentBasedGroupChatOrchestrator``, making its responses
+        invisible to our streaming loop and disabling loop detection, finish
+        signal extraction, and sign-off validation.
+
+        To restore the old behavior we use ``selection_func=`` with the
+        Coordinator included as a regular participant. The selection function
+        alternates between the Coordinator and participants:
+
+        1. After a participant responds → select Coordinator
+        2. After the Coordinator responds → parse its JSON to find the
+           next participant (or fall back to Coordinator on parse failure)
+
+        This keeps the Coordinator visible in the stream so all existing
+        detection/termination logic works unchanged.
+        """
         coordinator = self.agents[self.coordinator_name]
         participants = [
             agent
@@ -1336,22 +1348,58 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             and name != self.get_result_generator_name()
         ]
 
-        # ``max_rounds`` is enforced at the framework level so the workflow
-        # halts cleanly even if our orchestrator-side guards miss an event
-        # shape. Without this, the framework's default behavior is "continue
-        # indefinitely" (see GroupChatBuilder docstring) until the workflow
-        # runner hits its own 100-iteration cap and raises
-        # ``RuntimeError("Runner did not converge after 100 iterations")``.
-        #
-        # ``intermediate_outputs=True`` surfaces each participant's
-        # ``yield_output(AgentResponseUpdate)`` call as a workflow ``output``
-        # event. Without this, only the orchestrator's final yield reaches
-        # our streaming loop, which means per-agent loop detection, finish
-        # signal extraction, and streaming callbacks all silently no-op.
+        # Include Coordinator as a regular participant so its responses
+        # are visible in the streaming loop (unlike orchestrator_agent=).
+        all_participants = [coordinator] + participants
+        coordinator_name = self.coordinator_name
+
+        def selection_func(state: GroupChatState) -> str:
+            """Alternate between Coordinator and participants.
+
+            - First turn (no conversation): select Coordinator.
+            - After a participant: select Coordinator to evaluate.
+            - After the Coordinator: parse its JSON response and return
+              the selected participant name.
+            """
+            if not state.conversation:
+                return coordinator_name
+
+            last_msg = state.conversation[-1]
+            last_author = getattr(last_msg, "author_name", None) or ""
+
+            if last_author != coordinator_name:
+                # A participant just spoke → route to Coordinator
+                return coordinator_name
+
+            # Coordinator just spoke → parse its selection JSON
+            last_text = getattr(last_msg, "text", None) or ""
+            try:
+                # Find JSON payload in the Coordinator's response
+                start = last_text.find("{")
+                end = last_text.rfind("}") + 1
+                if start >= 0 and end > start:
+                    response_dict = json.loads(last_text[start:end])
+                    manager_response = ManagerSelectionResponse.model_validate(
+                        response_dict
+                    )
+                    selected = getattr(manager_response, "selected_participant", None)
+                    if (
+                        isinstance(selected, str)
+                        and selected
+                        and selected.lower() != "none"
+                        and selected in state.participants
+                    ):
+                        return selected
+            except Exception:
+                pass
+
+            # Fallback: route back to Coordinator (will trigger loop detection)
+            return coordinator_name
+
         return (
             GroupChatBuilder(
-                orchestrator_agent=coordinator,
-                participants=participants,
+                participants=all_participants,
+                selection_func=selection_func,
                 max_rounds=self.max_rounds,
                 intermediate_outputs=True,
             )

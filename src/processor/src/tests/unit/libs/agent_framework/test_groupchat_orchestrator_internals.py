@@ -854,9 +854,12 @@ class TestBuildGroupchat:
         assert wf == "wf"
         # Check constructor args
         ctor_kwargs = MockBuilder.call_args.kwargs
-        assert ctor_kwargs["orchestrator_agent"] == "coord"
-        # ResultGenerator excluded from participants
+        # Coordinator is included as a regular participant via selection_func
+        assert "selection_func" in ctor_kwargs
+        assert callable(ctor_kwargs["selection_func"])
+        # All participants include Coordinator + Architect (not ResultGenerator)
         participants = ctor_kwargs["participants"]
+        assert "coord" in participants
         assert "arch" in participants
         assert "rg" not in participants
 
