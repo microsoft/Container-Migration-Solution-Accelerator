@@ -210,7 +210,9 @@ Copy the contents from the production configuration file to your main parameters
 
 > **Note:** This section only applies if you selected **Production** deployment type in section 3.1. VMs are not deployed in the default Development/Testing configuration.
 
-By default, random GUIDs are generated for VM credentials. To set custom credentials:
+The VM is configured with **Microsoft Entra ID (AAD) authentication** by default, allowing you to connect via Azure Bastion without passwords. The deploying user is automatically granted the **Virtual Machine Administrator Login** role.
+
+Optionally, you can also set local admin credentials as a fallback:
 
 ```shell
 azd env set AZURE_ENV_VM_ADMIN_USERNAME <your-username>
@@ -322,7 +324,25 @@ After successful deployment:
 2. Confirm the application loads successfully
 3. Verify you can sign in with your authenticated account
 
-### 5.3 Test the Application
+### 5.3 Connect to VM via Bastion (Production Deployment Only)
+
+> **Note:** This section only applies if you deployed with the **Production (WAF-aligned)** configuration. The VM and Bastion Host are only created in WAF deployments.
+
+The jumpbox VM allows you to access private resources (e.g., upload files when storage has public access disabled). Connect using Microsoft Entra ID authentication:
+
+1. Navigate to your **Virtual Machine** in the [Azure portal](https://portal.azure.com)
+2. Click **Connect** → **Connect via Bastion**
+3. Under **Authentication Type**, select **Microsoft Entra ID**
+4. Click **Connect** — no username/password required
+5. A new browser tab opens with your VM desktop session
+
+> **Prerequisites:**
+> - Your account must have the **Virtual Machine Administrator Login** role on the VM (automatically assigned to the deploying user during deployment)
+> - The Bastion Host must be fully provisioned (may take 5-10 minutes after deployment)
+
+> **Fallback:** If Entra ID login fails, you can use the local admin credentials set in [Section 3.2](#32-set-vm-credentials-optional---production-deployment-only) with **Authentication Type** set to "Password".
+
+### 5.4 Test the Application
 
 Follow the detailed workflow to test the migration functionality:
 
