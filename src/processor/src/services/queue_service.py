@@ -1274,6 +1274,7 @@ class QueueMigrationService:
             source_file_folder=req["source_file_folder"],
             workspace_file_folder=req["workspace_file_folder"],
             output_file_folder=req["output_file_folder"],
+            user_id=parsed.user_id or req.get("user_id", ""),
         )
 
     async def _ensure_queues_exist(self):

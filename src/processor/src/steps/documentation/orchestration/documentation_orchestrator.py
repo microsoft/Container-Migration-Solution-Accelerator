@@ -98,6 +98,7 @@ class DocumentationOrchestrator(
                 participants=self.agents,
                 memory_client=None,
                 result_output_format=Documentation_ExtendedBooleanResult,
+                token_usage_tracker=self.token_tracker,
             )
 
             orchestration_result = await orchestrator.run_stream(
