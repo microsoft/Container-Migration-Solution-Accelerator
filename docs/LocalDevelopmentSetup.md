@@ -337,7 +337,7 @@ py -3.12 -m uv venv .venv
 py -3.12 -m uv sync --prerelease=allow
 ```
 
-> **⚠️ Important**: This repo currently depends on a prerelease/dev version of Microsoft Agent Framework. Always run `uv sync --prerelease=allow` (or `py -3.12 -m uv sync --prerelease=allow` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
+> **⚠️ Important**: Always run `uv sync --prerelease=allow` (or `py -3.12 -m uv sync --prerelease=allow` on Windows) after creating the virtual environment to install all required dependencies. The `--prerelease=allow` flag is needed because some transitive dependencies may still use pre-release versions. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
 
 ### 5.4. Run the Processor
 

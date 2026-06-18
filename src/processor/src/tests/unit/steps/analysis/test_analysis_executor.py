@@ -6,9 +6,45 @@ from __future__ import annotations
 import asyncio
 
 from libs.agent_framework.groupchat_orchestrator import OrchestrationResult
-from steps.analysis.models.step_output import Analysis_BooleanExtendedResult
+from steps.analysis.models.step_output import (
+    AnalysisOutput,
+    Analysis_BooleanExtendedResult,
+    ComplexityAnalysis,
+    FileType,
+    MigrationReadiness,
+)
 from steps.analysis.models.step_param import Analysis_TaskParam
 from steps.analysis.workflow.analysis_executor import AnalysisExecutor
+
+
+def _make_analysis_output(process_id: str) -> AnalysisOutput:
+    return AnalysisOutput(
+        process_id=process_id,
+        platform_detected="EKS",
+        confidence_score="95%",
+        files_discovered=[
+            FileType(
+                filename="app.yaml",
+                type="Deployment",
+                complexity="Low",
+                azure_mapping="AKS Deployment",
+            )
+        ],
+        complexity_analysis=ComplexityAnalysis(
+            network_complexity="Low",
+            security_complexity="Low",
+            storage_complexity="Low",
+            compute_complexity="Low",
+        ),
+        migration_readiness=MigrationReadiness(
+            overall_score="A",
+            concerns=[],
+            recommendations=[],
+        ),
+        summary="ok",
+        expert_insights=[],
+        analysis_file="analysis.md",
+    )
 
 
 class _FakeTelemetry:
@@ -59,6 +95,7 @@ def test_analysis_executor_sends_message_on_soft_completion(monkeypatch):
                         result=True,
                         is_hard_terminated=False,
                         process_id=task_param.process_id,
+                        output=_make_analysis_output(task_param.process_id),
                     ),
                 )
 
@@ -141,5 +178,65 @@ def test_analysis_executor_yields_output_on_hard_termination(monkeypatch):
         assert len(ctx.sent) == 0
         assert len(ctx.yielded) == 1
         assert isinstance(ctx.yielded[0], Analysis_BooleanExtendedResult)
+
+    asyncio.run(_run())
+
+
+def test_analysis_executor_raises_when_soft_completion_has_no_output(monkeypatch):
+    """Soft completion with output=None is incoherent: AnalysisExecutor must raise.
+
+    This guards against ResultGenerator returning a self-contradictory shell
+    (success=True, is_hard_terminated=False, output=None) which would otherwise
+    propagate to Design and crash there with `NoneType.process_id`.
+    """
+    async def _run():
+        import pytest
+
+        telemetry = _FakeTelemetry()
+        app_context = _FakeAppContext(telemetry)
+        ctx = _FakeCtx()
+
+        class _FakeOrchestrator:
+            def __init__(self, _app_context):
+                pass
+
+            async def execute(self, task_param=None):
+                return OrchestrationResult(
+                    success=True,
+                    conversation=[],
+                    agent_responses=[],
+                    tool_usage={},
+                    result=Analysis_BooleanExtendedResult(
+                        result=True,
+                        is_hard_terminated=False,
+                        process_id=task_param.process_id,
+                        reason="agents never produced output",
+                    ),
+                )
+
+        monkeypatch.setattr(
+            "steps.analysis.workflow.analysis_executor.text2art",
+            lambda _s: "ART",
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "steps.analysis.workflow.analysis_executor.AnalysisOrchestrator",
+            _FakeOrchestrator,
+        )
+
+        executor = AnalysisExecutor(id="analysis", app_context=app_context)
+        message = Analysis_TaskParam(
+            process_id="p1",
+            container_name="c1",
+            source_file_folder="p1/source",
+            workspace_file_folder="p1/workspace",
+            output_file_folder="p1/output",
+        )
+
+        with pytest.raises(Exception, match="produced no AnalysisOutput"):
+            await executor.handle_execute(message, ctx)  # type: ignore[arg-type]
+
+        assert len(ctx.sent) == 0
+        assert len(ctx.yielded) == 0
 
     asyncio.run(_run())
