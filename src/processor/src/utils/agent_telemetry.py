@@ -120,18 +120,6 @@ def get_orchestration_agents() -> set[str]:
     }
 
 
-# def get_common_agents() -> list[str]:
-#     """Get common agent names."""
-#     return [
-#         "Chief_Architect",
-#         "EKS_Expert",
-#         "GKE_Expert",
-#         "Azure_Expert",
-#         "Technical_Writer",
-#         "QA_Engineer",
-#     ]
-
-
 def _get_utc_timestamp() -> str:
     """Get current UTC timestamp in human-readable format"""
     return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -379,15 +367,6 @@ class TelemetryManager:
         """Initialize telemetry for a new process."""
         initial_agents = {}
 
-        # Initialize orchestration agents
-        # for agent_name in get_orchestration_agents():
-        #     initial_agents[agent_name] = AgentActivity(
-        #         name=agent_name,
-        #         current_action="ready",
-        #         participation_status="standby",
-        #         is_active=False,
-        #     )
-
         # Initialize core system agents (not actual responding agents)
         for agent_name in get_orchestration_agents():
             initial_agents[agent_name] = AgentActivity(
@@ -629,9 +608,6 @@ class TelemetryManager:
 
     async def update_process_status(self, process_id: str, status: str):
         """Update the overall process status."""
-        # if self.current_process:
-        #     self.current_process.status = status
-        #     self.current_process.last_update_time = _get_utc_timestamp()
         current_process: ProcessStatus | None = None
 
         if self.repository:
@@ -769,15 +745,6 @@ class TelemetryManager:
                         step,
                     )
 
-    # async def _cleanup_phase_agents(self, process_id: str, previous_phase: str):
-    #     """Remove or mark inactive agents not relevant to current phase."""
-    #     if not self.current_process:
-    #         return
-
-    #     # Note: Removed fake orchestration agent cleanup since we no longer create them
-    #     # Phase orchestrators are Python classes, not agents to be tracked
-    #     logger.debug(f"[TELEMETRY] Phase cleanup completed: {previous_phase}")
-
     async def _initialize_phase_agents(self, process_id: str, phase: str):
         """Initialize agents relevant to the new phase."""
         current_process: ProcessStatus | None = None
@@ -861,6 +828,7 @@ class TelemetryManager:
         """Get the current process status."""
         if self.repository:
             return await self.repository.get_async(process_id)
+        return None
 
     async def get_process_outcome(self, process_id: str) -> str:
         """Get a human-readable process outcome."""
@@ -1146,7 +1114,7 @@ class TelemetryManager:
                     ):
                         current_process.step_results[step_name]["result"] = stored[0]
                 except Exception:
-                    pass
+                    logger.debug("Failed to unwrap singleton step result for step=%s", step_name, exc_info=True)
 
                 # Lap time: end the timer for this step.
                 if step_name:
@@ -1461,7 +1429,7 @@ class TelemetryManager:
                         else current_process.failure_details
                     )
                 except Exception:
-                    pass
+                    logger.debug("Failed to serialize failure_details for Cosmos", exc_info=True)
                 current_process.failure_step = failed_step or current_process.step
                 current_process.failure_timestamp = _get_utc_timestamp()
 

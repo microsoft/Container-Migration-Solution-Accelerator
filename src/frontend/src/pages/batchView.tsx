@@ -13,7 +13,6 @@ import {
   Card,
   tokens,
   Spinner,
-  Tooltip,
 } from "@fluentui/react-components"
 import {
   DismissCircle24Regular,
@@ -26,10 +25,10 @@ import {
   Warning24Regular
 } from "@fluentui/react-icons"
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
-import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql"
-import yaml from "react-syntax-highlighter/dist/esm/languages/hljs/yaml"
-import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown"
-import json from "react-syntax-highlighter/dist/esm/languages/hljs/json"
+import yamlLang from "highlight.js/lib/languages/yaml"
+import markdownLang from "highlight.js/lib/languages/markdown"
+import jsonLang from "highlight.js/lib/languages/json"
+import sqlLang from "highlight.js/lib/languages/sql"
 import { vs } from "react-syntax-highlighter/dist/esm/styles/hljs"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -39,15 +38,15 @@ import PanelRight from "../components/Panels/PanelRight";
 import PanelRightToolbar from "../components/Panels/PanelRightToolbar";
 import BatchHistoryPanel from "../components/batchHistoryPanel";
 import ConfirmationDialog from "../commonComponents/ConfirmationDialog/confirmationDialogue";
-import { determineFileStatus, filesLogsBuilder, renderErrorSection, useStyles, renderFileError, filesErrorCounter, completedFiles, hasFiles, fileErrorCounter, BatchSummary, fileWarningCounter } from "../api/utils";
+import { renderErrorSection, useStyles, renderFileError, BatchSummary } from "../api/utils";
 export const History = bundleIcon(HistoryFilled, HistoryRegular);
-import { format } from "sql-formatter";
 
 
-SyntaxHighlighter.registerLanguage("sql", sql)
-SyntaxHighlighter.registerLanguage("yaml", yaml)
-SyntaxHighlighter.registerLanguage("markdown", markdown)
-SyntaxHighlighter.registerLanguage("json", json)
+const unwrap = (mod: any) => (typeof mod === "function" ? mod : mod.default);
+SyntaxHighlighter.registerLanguage("yaml", unwrap(yamlLang))
+SyntaxHighlighter.registerLanguage("markdown", unwrap(markdownLang))
+SyntaxHighlighter.registerLanguage("json", unwrap(jsonLang))
+SyntaxHighlighter.registerLanguage("sql", unwrap(sqlLang))
 
 
 
@@ -183,7 +182,6 @@ const BatchStoryPage = () => {
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState(["errors"]);
   const [batchSummary, setBatchSummary] = useState<BatchSummary | null>(null);
-  const [selectedFileContent, setSelectedFileContent] = useState<string>("");
   const [selectedFileTranslatedContent, setSelectedFileTranslatedContent] = useState<string>("");
   const [telemetryData, setTelemetryData] = useState<any>(null);
 
@@ -207,20 +205,7 @@ const BatchStoryPage = () => {
   };
 
   // Helper function to format content based on file type
-  const formatContent = (content: string, fileName: string) => {
-    const { language } = getFileLanguageAndType(fileName);
-
-    // Only apply SQL formatting for SQL files
-    if (language === 'sql') {
-      try {
-        return format(content, { language: "tsql" });
-      } catch (error) {
-        console.warn("SQL formatting failed, returning original content:", error);
-        return content;
-      }
-    }
-
-    // Return content as-is for YAML and Markdown files
+  const formatContent = (content: string, _fileName: string) => {
     return content;
   };
 
@@ -339,7 +324,6 @@ const BatchStoryPage = () => {
         const data = await apiService.get(`/process/${batchId}/file/${encodeURIComponent(selectedFileId)}`);
 
         if (data) {
-          setSelectedFileContent(data.content || "");
           setSelectedFileTranslatedContent(data.content || ""); // Use content for both since we only have one version
         }
 
@@ -354,38 +338,6 @@ const BatchStoryPage = () => {
   }, [selectedFileId]);
 
 
-  const renderWarningContent = () => {
-    if (!expandedSections.includes("warnings")) return null;
-
-    if (!batchSummary) return null;
-
-    // Group warnings by file
-    const warningFiles = files.filter(file => file.warningCount && file.warningCount > 0 && file.id !== "summary");
-
-    if (warningFiles.length === 0) {
-      return (
-        <div className={styles.errorItem}>
-          <Text>No warnings found.</Text>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        {warningFiles.map((file, fileIndex) => (
-          <div key={fileIndex} className={styles.errorItem}>
-            <div className={styles.errorTitle}>
-              <Text weight="semibold">{file.name} ({file.warningCount})</Text>
-              <Text className={styles.errorSource}>source</Text>
-            </div>
-            <div className={styles.errorDetails}>
-              <Text>Warning in file processing. See file for details.</Text>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   // Helper function to count JSON/YAML files
   const getJsonYamlFileCount = () => {
@@ -601,7 +553,7 @@ const BatchStoryPage = () => {
     }
 
     // Show the summary page when summary is selected
-    if (selectedFile.id === "summary" && batchSummary) {
+    if (selectedFile.id === "summary") {
       // Check if there are no errors and all JSON/YAML files are processed successfully
       const noErrors = (batchSummary.error_count === 0);
       const jsonYamlFileCount = getJsonYamlFileCount();

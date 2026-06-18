@@ -412,7 +412,7 @@ class MigrationProcessor:
                                 ),
                             }
                         except Exception:
-                            pass
+                            logger.debug("Failed to generate report summary for failure details", exc_info=True)
 
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
@@ -515,7 +515,7 @@ class MigrationProcessor:
                                 ),
                             }
                         except Exception:
-                            pass
+                            logger.debug("Failed to generate report summary for hard termination", exc_info=True)
 
                         await telemetry.record_failure_outcome(
                             process_id=input_data.process_id,
@@ -566,7 +566,7 @@ class MigrationProcessor:
                                 "migration_report_summary"
                             ] = await _generate_report_summary(ReportStatus.SUCCESS)
                         except Exception:
-                            pass
+                            logger.debug("Failed to generate report summary for outcome", exc_info=True)
 
                         await telemetry.record_final_outcome(
                             process_id=input_data.process_id,
@@ -574,7 +574,7 @@ class MigrationProcessor:
                             success=True,
                         )
                     except Exception:
-                        pass
+                        logger.debug("Failed to record final outcome telemetry", exc_info=True)
 
                     await telemetry.update_process_status(
                         process_id=input_data.process_id, status="completed"
@@ -632,7 +632,7 @@ class MigrationProcessor:
                             ),
                         }
                     except Exception:
-                        pass
+                        logger.debug("Failed to generate report summary for executor failure", exc_info=True)
 
                     await telemetry.record_failure_outcome(
                         process_id=input_data.process_id,
@@ -697,7 +697,7 @@ class MigrationProcessor:
                                 mem_count,
                             )
                         except Exception:
-                            pass
+                            logger.debug("Failed to log memory store count after step", exc_info=True)
 
                     # step name -> executor_id
                     # output result -> event.data => if event.data is not None
@@ -762,3 +762,5 @@ class MigrationProcessor:
                 start_dt.isoformat(timespec="seconds"),
                 end_dt.isoformat(timespec="seconds"),
             )
+
+        return None

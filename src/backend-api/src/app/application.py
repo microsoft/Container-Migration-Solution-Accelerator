@@ -229,7 +229,7 @@ class Application(Application_Base):
             )
             .add_singleton(ILoggerService, ConsoleLoggerService)
             .add_transient(IHttpService, HttpClientService)
-            .add_singleton(IDataService, lambda: InMemoryDataService())
+            .add_singleton(IDataService, InMemoryDataService)
         )
 
     def run(self, host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
