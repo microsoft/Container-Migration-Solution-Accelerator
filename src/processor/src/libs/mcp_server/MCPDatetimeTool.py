@@ -15,14 +15,14 @@ Example:
 
         from libs.mcp_server.MCPDatetimeTool import get_datetime_mcp
         from libs.agent_framework.mcp_context import MCPContext
-        from agent_framework import ChatAgent
+        from agent_framework import Agent
 
         # Get the datetime MCP tool
         datetime_tool = get_datetime_mcp()
 
         # Use with MCPContext for TaskGroup-safe management
         async with MCPContext(tools=[datetime_tool]) as mcp_ctx:
-            async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+            async with Agent(client, tools=mcp_ctx.tools) as agent:
                 response = await agent.run("What time is it right now?")
                 print(response)
 """
@@ -60,7 +60,7 @@ def get_datetime_mcp() -> MCPStdioTool:
             datetime_tool = get_datetime_mcp()
 
             async with datetime_tool:
-                async with ChatAgent(client, tools=[datetime_tool]) as agent:
+                async with Agent(client, tools=[datetime_tool]) as agent:
                     result = await agent.run("What's today's date?")
                     print(result)
 
@@ -74,7 +74,7 @@ def get_datetime_mcp() -> MCPStdioTool:
             weather_tool = get_weather_mcp()
 
             async with MCPContext(tools=[datetime_tool, weather_tool]) as mcp_ctx:
-                async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+                async with Agent(client, tools=mcp_ctx.tools) as agent:
                     response = await agent.run(
                         "What's the current time and what's the weather like?"
                     )
@@ -88,10 +88,10 @@ def get_datetime_mcp() -> MCPStdioTool:
 
             async with MCPContext(tools=[datetime_tool]) as mcp_ctx:
                 # Share tool across multiple agents
-                async with ChatAgent(client1, tools=mcp_ctx.tools) as agent1:
+                async with Agent(client1, tools=mcp_ctx.tools) as agent1:
                     time_info = await agent1.run("Get the current time")
 
-                async with ChatAgent(client2, tools=mcp_ctx.tools) as agent2:
+                async with Agent(client2, tools=mcp_ctx.tools) as agent2:
                     schedule = await agent2.run(
                         f"Based on the time {time_info}, suggest a meeting slot"
                     )

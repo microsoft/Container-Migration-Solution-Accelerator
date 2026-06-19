@@ -51,14 +51,14 @@ wheels = [
 
 [[package]]
 name = "agent-framework"
-version = "1.0.0b260107"
+version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agent-framework-core", extra = ["all"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7e/e7/5ad52075da4e586ca94fb8806b3085ac5dea8059413e413bff88c0452e88/agent_framework-1.0.0b260107.tar.gz", hash = "sha256:a2f6508a0ca1df3b7ca4e3a64e45bac8e33cdfe02cf69e9056e37e881a58aad7", size = 2898189, upload-time = "2026-01-07T23:57:48.213Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/e8/c2ee1c4dae4a86b95091969426d11361232a0c554124ba321852a6b6b9bd/agent_framework-1.3.0.tar.gz", hash = "sha256:a13423aceaf587cf28180138151d445bd2d4ce82908cef4a6fbb85fa1771bac1", size = 5509571, upload-time = "2026-05-08T00:09:16.022Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/55/ffef27526cc26bf163ccf9d58ba87bf4e677bba343a542e7b666846f744d/agent_framework-1.0.0b260107-py3-none-any.whl", hash = "sha256:080deb32bff4ef07227a4ba709798c67079ff8a2997fe7a0aed0010adc0c18cf", size = 5554, upload-time = "2026-01-07T23:57:08.433Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/81/050f8f8bce8c629a88197837b4beb35cb287f880789fc01923fd5938f142/agent_framework-1.3.0-py3-none-any.whl", hash = "sha256:baaaa932639c87be99d43333f612c3b4112d6d976f0e1e72238e42a4bd572438", size = 5684, upload-time = "2026-05-08T00:09:54.064Z" },
 ]
 
 [[package]]
@@ -103,21 +103,6 @@ wheels = [
 ]
 
 [[package]]
-name = "agent-framework-azure-ai"
-version = "1.0.0b260130"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "agent-framework-core" },
-    { name = "aiohttp" },
-    { name = "azure-ai-agents" },
-    { name = "azure-ai-projects" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/ef/69ead4fcd2c21608ce35353a507df23df51872552747f803c43d1d81f612/agent_framework_azure_ai-1.0.0b260130.tar.gz", hash = "sha256:c571275089a801f961370ba824568c8b02143b1a6bb5b1d78b97c6debdf4906f", size = 32723, upload-time = "2026-01-30T18:56:41.07Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/8f/a1467c352fed5eb6ebb9567109251cc39b5b3ebb5137a2d14c71fea51bc8/agent_framework_azure_ai-1.0.0b260130-py3-none-any.whl", hash = "sha256:87f0248fe6d4f2f4146f0a56a53527af6365d4a377dc2e3d56c37cbb9deae098", size = 38542, upload-time = "2026-01-30T19:01:12.102Z" },
-]
-
-[[package]]
 name = "agent-framework-azure-ai-search"
 version = "1.0.0b260130"
 source = { registry = "https://pypi.org/simple" }
@@ -128,6 +113,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/64/63/81c7853aa526f3c3667871cea14667af73323c6c53d31c34be34926a9de4/agent_framework_azure_ai_search-1.0.0b260130.tar.gz", hash = "sha256:0a622fdddd7dc0287de693f2aa6f770ec52ea8d1eaca817c4276daa08001c10b", size = 13312, upload-time = "2026-01-30T19:01:08.046Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f5/ec/ac8143dbb1af2ec510f7772d712803193a6a0ad5f36b06e7ec7121df5c80/agent_framework_azure_ai_search-1.0.0b260130-py3-none-any.whl", hash = "sha256:0278c948696d7a00193a0271074c6057b57589ff98eda5544f2eafeac051d6e9", size = 13449, upload-time = "2026-01-30T19:01:23.262Z" },
+]
+
+[[package]]
+name = "agent-framework-azure-cosmos"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "azure-cosmos" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/27/97/fd8b045fc4eb1d213d7a91eff6e48e030fdb67da30505f46f1ed20a7aa48/agent_framework_azure_cosmos-1.0.0b260507.tar.gz", hash = "sha256:2c8ec2d5eae52b9e92fd14b4adecd5a52a900a7897589549c32852d9488112c7", size = 10984, upload-time = "2026-05-08T00:09:22.016Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/b9/6ac1960dae49ecde8ea906b302abe79b66d09d4cf74f8ed3f7dd9fc6230f/agent_framework_azure_cosmos-1.0.0b260507-py3-none-any.whl", hash = "sha256:c1d7ae4a560b592d2bff9c1ec75a7910101baf8c1778443644cc8cb81c82c1a1", size = 11989, upload-time = "2026-05-08T00:09:02.858Z" },
 ]
 
 [[package]]
@@ -147,6 +145,20 @@ wheels = [
 ]
 
 [[package]]
+name = "agent-framework-bedrock"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "boto3" },
+    { name = "botocore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/86/0b7dd9d1c043b251ff8bd0e037a20495c82c798914db0372040625cae889/agent_framework_bedrock-1.0.0b260507.tar.gz", hash = "sha256:38953ab30f7aff651a9c85c1ceeefd2ad85fa094b3316858930f1c18dcaff2c6", size = 17467, upload-time = "2026-05-08T00:09:24.852Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/b4/fc4277a50b7a0a7cd038e4511a0215fb98ab5e394f719506e30c31854335/agent_framework_bedrock-1.0.0b260507-py3-none-any.whl", hash = "sha256:28ce485c639e467ca4fae4d5b747cd7f9438b8145ca096c658ab5c694611edcc", size = 13907, upload-time = "2026-05-08T00:09:18.84Z" },
+]
+
+[[package]]
 name = "agent-framework-chatkit"
 version = "1.0.0b260130"
 source = { registry = "https://pypi.org/simple" }
@@ -157,6 +169,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/be/9e/3f2d6440ad2a16308c26d894995895d131225c5284328190b1c5ae7f769a/agent_framework_chatkit-1.0.0b260130.tar.gz", hash = "sha256:e5953337a5d8dd7930c2692ba1b23cf771002a9797b5c2306e3f3b256db200cc", size = 12415, upload-time = "2026-01-30T19:01:20.637Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/f1/68496e52aa36e66cf2962b8a8c6937053e2e57ad5f135b6983d705172554/agent_framework_chatkit-1.0.0b260130-py3-none-any.whl", hash = "sha256:a7814a5b222de7a0ac57fb89f4a6e534521c7e58bdc86a6465885fb9d57e63f1", size = 11712, upload-time = "2026-01-30T18:56:49.14Z" },
+]
+
+[[package]]
+name = "agent-framework-claude"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "claude-agent-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/17/1a/1a1c810e7c74075a4766ac0de66e3e510e0267533baa41a089ab1eb5bf01/agent_framework_claude-1.0.0b260507.tar.gz", hash = "sha256:0daccfef8141470fd206bb8b30925a44ba42ec6fb8946934dbcefe50cfeae14c", size = 11618, upload-time = "2026-05-08T00:08:57.253Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/f8/4977b7d7f1f2ea82c396de07b04f999c58475476722836f3ed0337722495/agent_framework_claude-1.0.0b260507-py3-none-any.whl", hash = "sha256:3ebd1d391b4413512970da62eb5377099ecd66305048594ec5b65cbdf141623f", size = 11588, upload-time = "2026-05-08T00:09:00.32Z" },
 ]
 
 [[package]]
@@ -174,23 +199,17 @@ wheels = [
 
 [[package]]
 name = "agent-framework-core"
-version = "1.0.0b260107"
+version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "azure-identity" },
-    { name = "mcp", extra = ["ws"] },
-    { name = "openai" },
     { name = "opentelemetry-api" },
-    { name = "opentelemetry-sdk" },
-    { name = "opentelemetry-semantic-conventions-ai" },
-    { name = "packaging" },
     { name = "pydantic" },
-    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/44/06f5d2c99dd7bdb82c2cb5cbc354b5bc6af72d1886d20eff1dff83508fae/agent_framework_core-1.0.0b260107.tar.gz", hash = "sha256:12636fb64664c6153546f0d85dafccdbe57226767c14b3f38985867389f980bb", size = 3574757, upload-time = "2026-01-07T23:57:16.113Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/59/4c212abdb93074677d643e31a3c21e33ff26a3ccc351145475cd1ffffad7/agent_framework_core-1.3.0.tar.gz", hash = "sha256:91c3659718b733f70dde6fb3626edb044733e0f7aa5f9726c9774e17fae328ef", size = 365395, upload-time = "2026-05-08T00:09:09.36Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/5a/8c6315a2ca119ad48340344616d4b8e77fd68e2892f82c402069a52ad647/agent_framework_core-1.0.0b260107-py3-none-any.whl", hash = "sha256:5bd119b8d30dc2d5bee1c4a5c3597d7afc808a52e4de148725c4f2d9bcc7632b", size = 5687298, upload-time = "2026-01-07T23:57:26.286Z" },
+    { url = "https://files.pythonhosted.org/packages/56/f2/c4258333f2691ee10869bf72f51d423808962ccf0c195b1f893c06c348ad/agent_framework_core-1.3.0-py3-none-any.whl", hash = "sha256:b7a5baf2beb383e9042af057df79dae4fda0b836cbc8530b3b2a57a3c12bb7ac", size = 407978, upload-time = "2026-05-08T00:09:32.752Z" },
 ]
 
 [package.optional-dependencies]
@@ -198,18 +217,28 @@ all = [
     { name = "agent-framework-a2a" },
     { name = "agent-framework-ag-ui" },
     { name = "agent-framework-anthropic" },
-    { name = "agent-framework-azure-ai" },
     { name = "agent-framework-azure-ai-search" },
+    { name = "agent-framework-azure-cosmos" },
     { name = "agent-framework-azurefunctions" },
+    { name = "agent-framework-bedrock" },
     { name = "agent-framework-chatkit" },
+    { name = "agent-framework-claude" },
     { name = "agent-framework-copilotstudio" },
     { name = "agent-framework-declarative" },
     { name = "agent-framework-devui" },
+    { name = "agent-framework-durabletask" },
+    { name = "agent-framework-foundry" },
+    { name = "agent-framework-foundry-local" },
+    { name = "agent-framework-github-copilot" },
+    { name = "agent-framework-hyperlight", marker = "(python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.14' and platform_machine == 'AMD64' and sys_platform == 'win32')" },
     { name = "agent-framework-lab" },
     { name = "agent-framework-mem0" },
     { name = "agent-framework-ollama" },
+    { name = "agent-framework-openai" },
+    { name = "agent-framework-orchestrations" },
     { name = "agent-framework-purview" },
     { name = "agent-framework-redis" },
+    { name = "mcp" },
 ]
 
 [[package]]
@@ -257,6 +286,63 @@ wheels = [
 ]
 
 [[package]]
+name = "agent-framework-foundry"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "agent-framework-openai" },
+    { name = "azure-ai-inference" },
+    { name = "azure-ai-projects" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/f6/8700acd779cbffd933dcb5dc878abce3e0a2f536962567665ccc49965715/agent_framework_foundry-1.3.0.tar.gz", hash = "sha256:8a4b137efa0a7000e60fb396ad90e01c271d14a52f1325f1f0a32177d944bcff", size = 32620, upload-time = "2026-05-08T00:09:04.274Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/53/9acf5831263d4fcd1d5b8d39af99ee430ec2710d2f9adeab5a1fe7559da0/agent_framework_foundry-1.3.0-py3-none-any.whl", hash = "sha256:49987bc01b077f6c60af33c475f9770a02b4ff6d6822aede18fc5471b46ffd41", size = 37052, upload-time = "2026-05-08T00:09:13.139Z" },
+]
+
+[[package]]
+name = "agent-framework-foundry-local"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "agent-framework-openai" },
+    { name = "foundry-local-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/03/8f0b8a2209fd091903bbb068c4458f19c74e48d37f4fa08748d76c3f3091/agent_framework_foundry_local-1.0.0b260507.tar.gz", hash = "sha256:fc2d98ff1f98d0481544c3ad8453f2d56096203fd368d0b68f52ef6ae4c7b0a6", size = 6719, upload-time = "2026-05-08T00:09:35.302Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d9/07/1120c862714d89f40d4575a052a495f86bda0fdb4132d5c4597c7a735875/agent_framework_foundry_local-1.0.0b260507-py3-none-any.whl", hash = "sha256:515346ca7716d86c9a4110db9f5586a65c4970ac442aaa00725d27341c5825df", size = 7176, upload-time = "2026-05-08T00:09:28.74Z" },
+]
+
+[[package]]
+name = "agent-framework-github-copilot"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "github-copilot-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3e/0f/0cab3d20c84ff309f820d02e810c1fa17f1a6fc432775605e34f651955ae/agent_framework_github_copilot-1.0.0b260507.tar.gz", hash = "sha256:f8640d4a18beca67a83b833b5d23f873aa5e1d4e91423ee1923d650b7b97d06d", size = 12546, upload-time = "2026-05-08T00:08:59.419Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/75/c8747c30acf236daa97063763fd16e443a2734e80c5678c42e103d1b50d6/agent_framework_github_copilot-1.0.0b260507-py3-none-any.whl", hash = "sha256:53a5daae86824fce017f30637edd5e50675e4630da5be09bb259383713198f40", size = 12510, upload-time = "2026-05-08T00:09:42.889Z" },
+]
+
+[[package]]
+name = "agent-framework-hyperlight"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core", marker = "python_full_version < '3.14'" },
+    { name = "hyperlight-sandbox", marker = "python_full_version < '3.14'" },
+    { name = "hyperlight-sandbox-backend-wasm", marker = "(python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.14' and platform_machine == 'AMD64' and sys_platform == 'win32')" },
+    { name = "hyperlight-sandbox-python-guest", marker = "python_full_version < '3.14'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/1f/52a2541d4a0bc5657ca9c2ef4f85885fb323682052da3fc1451eabafb73d/agent_framework_hyperlight-1.0.0b260507.tar.gz", hash = "sha256:845baab7439ac7b94ee53805cf3d32d0eea3b77a040d0f1b367f0a395fd8c08b", size = 19057, upload-time = "2026-05-08T00:09:56.056Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/d8/c2e0d3f63ea53f9897bd6c31a3d07c41c48a7b30fd7a1c2b5182fffe32ca/agent_framework_hyperlight-1.0.0b260507-py3-none-any.whl", hash = "sha256:121b464edf32f3db0e5b2891525d8937f0854bc19102a7c50b1905ff29063da7", size = 19589, upload-time = "2026-05-08T00:09:52.71Z" },
+]
+
+[[package]]
 name = "agent-framework-lab"
 version = "1.0.0b251024"
 source = { registry = "https://pypi.org/simple" }
@@ -292,6 +378,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e9/a3/2c18ad3f7878415148a118a6695eb2bf02d2ba99a4138992bad3ad7a194f/agent_framework_ollama-1.0.0b260130.tar.gz", hash = "sha256:312b5d7eaf6894307c57844bf7cd7172f0592cf28f7c253d0a6460992dd87392", size = 8096, upload-time = "2026-01-30T19:01:01.937Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/27/23e23a1919592dcf2aaf25aa9950a7dbda77c4ba03cba8843491b9f12024/agent_framework_ollama-1.0.0b260130-py3-none-any.whl", hash = "sha256:55e4e17f226ad61e8a9dcbbcc24ab006a3480043ecb4d32c12d2444f628054d6", size = 9167, upload-time = "2026-01-30T19:01:05.647Z" },
+]
+
+[[package]]
+name = "agent-framework-openai"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "openai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/54/26595b5fa394dd91a5bd434f87b1e7d781545efbf0bd8053de193f89ec63/agent_framework_openai-1.3.0.tar.gz", hash = "sha256:770828447875ee169dde8cd2f2a0343f427d856af7c83895ca12d59f8c24a7f2", size = 49146, upload-time = "2026-05-08T00:09:44.373Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/75/d8/a0e0af08123d3c2ff3f42b6976eed155536c73be4d61b898bc15cf31a38c/agent_framework_openai-1.3.0-py3-none-any.whl", hash = "sha256:1953dcb9f3e852362be84b4316ee69639313a7f119eab6ce8c88949e1f24aa4b", size = 54041, upload-time = "2026-05-08T00:09:17.744Z" },
+]
+
+[[package]]
+name = "agent-framework-orchestrations"
+version = "1.0.0b260507"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ca/84/1a26978d91c40f62ef472fd36d1502545bb7425b94b03765c41b322e3398/agent_framework_orchestrations-1.0.0b260507.tar.gz", hash = "sha256:3f17281a2603240e3eed26174cab6b3dca153cb18cec8380f4719e598a55013f", size = 55971, upload-time = "2026-05-08T00:09:37.058Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/dd/f2df27ba789130470311e7487d19815483f837094672408a22655b33784a/agent_framework_orchestrations-1.0.0b260507-py3-none-any.whl", hash = "sha256:396a5ed962c2a3b1f09d8fc777933397df486bdae0a5f81cf63595c4c6f102de", size = 62074, upload-time = "2026-05-08T00:09:31.24Z" },
 ]
 
 [[package]]
@@ -881,6 +992,34 @@ wheels = [
 ]
 
 [[package]]
+name = "boto3"
+version = "1.43.27"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+    { name = "jmespath" },
+    { name = "s3transfer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7e/ad/32ac82224c571776d1119c8d2a5eafeab97bace3b4ed2870cb80d5cda140/boto3-1.43.27.tar.gz", hash = "sha256:dc0d1b47f391983d8b3047e49402d31f9aaa4d7b398d3b4ea986fe680cbea43a", size = 113143, upload-time = "2026-06-10T19:38:35.874Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/1b/e423f7ed0177f0cc629f9bba39f505ad4a571b1f73c51402e6000bbf453b/boto3-1.43.27-py3-none-any.whl", hash = "sha256:b3eea072c2fdbbdd8c6161f912f603be10c8ec477625926dea8b91a0842a3482", size = 140538, upload-time = "2026-06-10T19:38:34.012Z" },
+]
+
+[[package]]
+name = "botocore"
+version = "1.43.27"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fa/4e/db50ef135f1d9ffc85e209a124004a5829d8f12f4a7a0afdf380cb19866d/botocore-1.43.27.tar.gz", hash = "sha256:2093c316c24214e50e18640b1869513b759bb8cc48b95b004a8306cb9f0d6703", size = 15504242, upload-time = "2026-06-10T19:38:25.389Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/46/05b227b34e434b54867c2c942b0bfbbe2fe41789c18bb15ef787d03e9a56/botocore-1.43.27-py3-none-any.whl", hash = "sha256:4976544e652d5a1d8eca135da019f8e1c2d749efa2f9a31a8fb8c76f1895a40b", size = 15190293, upload-time = "2026-06-10T19:38:22.298Z" },
+]
+
+[[package]]
 name = "cachetools"
 version = "7.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1056,6 +1195,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/1d/29d32e0fb40864b1f878c7f5a0b343ae676c6e2b271a2d55cc3a152391da/charset_normalizer-3.4.7-cp314-cp314t-win_amd64.whl", hash = "sha256:03853ed82eeebbce3c2abfdbc98c96dc205f32a79627688ac9a27370ea61a49c", size = 174168, upload-time = "2026-04-02T09:27:49.795Z" },
     { url = "https://files.pythonhosted.org/packages/de/32/d92444ad05c7a6e41fb2036749777c163baf7a0301a040cb672d6b2b1ae9/charset_normalizer-3.4.7-cp314-cp314t-win_arm64.whl", hash = "sha256:c35abb8bfff0185efac5878da64c45dafd2b37fb0383add1be155a763c1f083d", size = 153018, upload-time = "2026-04-02T09:27:51.116Z" },
     { url = "https://files.pythonhosted.org/packages/db/8f/61959034484a4a7c527811f4721e75d02d653a35afb0b6054474d8185d4c/charset_normalizer-3.4.7-py3-none-any.whl", hash = "sha256:3dce51d0f5e7951f8bb4900c257dad282f49190fdbebecd4ba99bcc41fef404d", size = 61958, upload-time = "2026-04-02T09:28:37.794Z" },
+]
+
+[[package]]
+name = "claude-agent-sdk"
+version = "0.1.48"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "mcp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6c/dd/2818538efd18ed4ef72d4775efa75bb36cbea0fa418eda51df85ee9c2424/claude_agent_sdk-0.1.48.tar.gz", hash = "sha256:ee294d3f02936c0b826119ffbefcf88c67731cf8c2d2cb7111ccc97f76344272", size = 87375, upload-time = "2026-03-07T00:21:37.087Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/cf/bbbdee52ee0c63c8709b0ac03ce3c1da5bdc37def5da0eca63363448744f/claude_agent_sdk-0.1.48-py3-none-macosx_11_0_arm64.whl", hash = "sha256:5761ff1d362e0f17c2b1bfd890d1c897f0aa81091e37bbd15b7d06f05ced552d", size = 57559306, upload-time = "2026-03-07T00:21:20.011Z" },
+    { url = "https://files.pythonhosted.org/packages/57/d1/2179154b88d4cf6ba1cf6a15066ee8e96257aaeb1330e625e809ba2f28eb/claude_agent_sdk-0.1.48-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:39c1307daa17e42fa8a71180bb20af8a789d72d3891fc93519ff15540badcb83", size = 73980309, upload-time = "2026-03-07T00:21:24.592Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/99/55b0cd3bf54a7449e744d23cf50be104e9445cf623e1ed75722112aa6264/claude_agent_sdk-0.1.48-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:543d70acba468eccfff836965a14b8ac88cf90809aeeb88431dfcea3ee9a2fa9", size = 74583686, upload-time = "2026-03-07T00:21:28.969Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/f6/4851bd9a238b7aadba7639eb906aca7da32a51f01563fa4488469c608b3a/claude_agent_sdk-0.1.48-py3-none-win_amd64.whl", hash = "sha256:0d37e60bd2b17efc3f927dccef080f14897ab62cd1d0d67a4abc8a0e2d4f1006", size = 74956045, upload-time = "2026-03-07T00:21:33.475Z" },
 ]
 
 [[package]]
@@ -1316,6 +1471,19 @@ wheels = [
 ]
 
 [[package]]
+name = "foundry-local-sdk"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "tqdm" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/6b/76a7fe8f9f4c52cc84eaa1cd1b66acddf993496d55d6ea587bf0d0854d1c/foundry_local_sdk-0.5.1-py3-none-any.whl", hash = "sha256:f3639a3666bc3a94410004a91671338910ac2e1b8094b1587cc4db0f4a7df07e", size = 14003, upload-time = "2025-11-21T05:39:58.099Z" },
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1415,6 +1583,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/53/e4/203a76fa2ef46cdb0a618295cc115220cbb874229d4d8721068335eb87f0/furl-2.1.4.tar.gz", hash = "sha256:877657501266c929269739fb5f5980534a41abd6bbabcb367c136d1d3b2a6015", size = 57526, upload-time = "2025-03-09T05:36:21.175Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/8c/dce3b1b7593858eba995b2dfdb833f872c7f863e3da92aab7128a6b11af4/furl-2.1.4-py2.py3-none-any.whl", hash = "sha256:da34d0b34e53ffe2d2e6851a7085a05d96922b5b578620a37377ff1dbeeb11c8", size = 27550, upload-time = "2025-03-09T05:36:19.928Z" },
+]
+
+[[package]]
+name = "github-copilot-sdk"
+version = "1.0.0b2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/fe/2cb98d4b9f57f8062ea72775bde72aed1958305016753f7296398e0ceb45/github_copilot_sdk-1.0.0b2-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:1b5941d8b6e3d94d42a5bec6607a26f562e6535d5c981089d23d3d224b94601c", size = 67061619, upload-time = "2026-05-06T20:02:08.636Z" },
+    { url = "https://files.pythonhosted.org/packages/57/45/76567821b2d36f81e6bca78c98d265e2762733f765fa51d69602b7f81867/github_copilot_sdk-1.0.0b2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c5b8f6a087a0cf02bb0d33976e8f8c009578d84d701a0b28d52051304791ac70", size = 63790955, upload-time = "2026-05-06T20:02:12.354Z" },
+    { url = "https://files.pythonhosted.org/packages/15/67/684b0da0b1207a2bdf025c22ee075d34a1736d61a4973651035d4fd4d8dc/github_copilot_sdk-1.0.0b2-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:f403638c11b82bddb81c94675fc4e8014a1bb2e86a679a39fa167dcc3ad5416a", size = 69538664, upload-time = "2026-05-06T20:02:16.363Z" },
+    { url = "https://files.pythonhosted.org/packages/57/1d/80d88ecf83683535d1a16d4817f1683db3b125f52a924ebdfe9764f5e4c3/github_copilot_sdk-1.0.0b2-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:433d16bb31171fee8d3a5b70259c527f63b297e83a8f8761ae1f16f14d641f32", size = 68163648, upload-time = "2026-05-06T20:02:21.139Z" },
+    { url = "https://files.pythonhosted.org/packages/32/d3/b72aa2fbb3194b50b53e8cb1484f5606a1f8eedcdb0bfb5747da52079553/github_copilot_sdk-1.0.0b2-py3-none-win_amd64.whl", hash = "sha256:a6e9782dae4c3c2ab3527b45bb5de0f61998104c10e9ff64698280eaf37ab5dd", size = 62649144, upload-time = "2026-05-06T20:02:24.953Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/e2/be95b8ea0ac11d1ca474e28a59284f4e395c2710734eadfb657f5de8ace2/github_copilot_sdk-1.0.0b2-py3-none-win_arm64.whl", hash = "sha256:2e97d0ce4bad67dc5929091cb429e7bbae7d4643e4908a6af256a41439000740", size = 60374365, upload-time = "2026-05-06T20:02:29.02Z" },
 ]
 
 [[package]]
@@ -1627,6 +1812,35 @@ wheels = [
 ]
 
 [[package]]
+name = "hyperlight-sandbox"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/5e/14c69eac7e1c74fbd556c6f890729a3d232d32d65cd9f8cfde72c0534e61/hyperlight_sandbox-0.4.0.tar.gz", hash = "sha256:90d7b91d4d8e17054e282b0daed55c261392a748dafc57e6416d3184cdac910b", size = 9262, upload-time = "2026-05-02T00:00:02.866Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/e3/b8c106a274c08a30261105afa5511e0ec55960e86b2f6c51e3095e96647c/hyperlight_sandbox-0.4.0-py3-none-any.whl", hash = "sha256:7ae44d2448ed6ecadb368373c7e45eb395521e7774c86a1cbc1ef9cdfc25cd2a", size = 5723, upload-time = "2026-05-02T00:00:03.811Z" },
+]
+
+[[package]]
+name = "hyperlight-sandbox-backend-wasm"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/e5/3cdf21594eb28de7ca1a5a1ade27e137c8f3d7ab48d65fed87a3b74c4039/hyperlight_sandbox_backend_wasm-0.4.0-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:ff4627950708909202ee24c6175dc41e9c05479f89393575e3de0f14e6f5a193", size = 3918189, upload-time = "2026-05-01T23:59:16.666Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/97/b1bb9893bbeb979d133dc542520125dcbf8394d1a2537e753118b37c7cab/hyperlight_sandbox_backend_wasm-0.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:cce7dc28b9ded034a11a9a8cf7b9ffb838e29006be8d2e01646dd131ba501b73", size = 3383520, upload-time = "2026-05-01T23:59:27.261Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/29/deee4e31086628750f0ce1f67da1e28c613fd2df68465de130cbfe51e72d/hyperlight_sandbox_backend_wasm-0.4.0-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:88e194515e4784f68676b6906c98a4000f913c93172cf07981d8a977e756bbd6", size = 3917939, upload-time = "2026-05-01T23:59:14.805Z" },
+    { url = "https://files.pythonhosted.org/packages/15/2a/6822aec3c04c46893406d0d6ed576dbdb4b5c1d76a0124dc220bb45b0d34/hyperlight_sandbox_backend_wasm-0.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:d1cd2269a5651ea9be1f94a3e3388f6af69e41dbc2b808c3b806481fe17ce163", size = 3383110, upload-time = "2026-05-01T23:59:23.736Z" },
+]
+
+[[package]]
+name = "hyperlight-sandbox-python-guest"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/fd/816d1f3f277ff149a45da5381967aa04c22bc7702b5c14f0acfd9db2cee7/hyperlight_sandbox_python_guest-0.4.0.tar.gz", hash = "sha256:64c3c6c13fe550bf5b680fa0b965cf62bc4668084cc275c3467e3c015e6ead36", size = 21657381, upload-time = "2026-05-01T23:59:46.589Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/98/ba/efb9aacf993f0ac142da5beb9177b221e49dc860c6ea398de236015a52a0/hyperlight_sandbox_python_guest-0.4.0-py3-none-any.whl", hash = "sha256:0789eb794b99606288402ed3921b5e2630800a69d24117ecd9b82e816568202d", size = 21822062, upload-time = "2026-05-01T23:59:50.99Z" },
+]
+
+[[package]]
 name = "identify"
 version = "2.6.19"
 source = { registry = "https://pypi.org/simple" }
@@ -1798,6 +2012,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/95/a06692b29e77473f286e1ec1f426d3ca44d7b5843be8ad21d7a5f3fcdcc0/jiter-0.15.0-graalpy312-graalpy250_312_native-macosx_11_0_arm64.whl", hash = "sha256:b6c0ffae686c39bf3737be60793783267628783ea42545632c10b291105aee45", size = 305128, upload-time = "2026-05-19T10:09:43.657Z" },
     { url = "https://files.pythonhosted.org/packages/23/85/7270d7ad41d6061a25b950c6bf91d638bd9aacb113200a8c8d57a055fd67/jiter-0.15.0-graalpy312-graalpy250_312_native-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1d54fb5b31dea401a41af3f8a7d2512e9b6a6a005491e6166c7e4ffab9639a9c", size = 340459, upload-time = "2026-05-19T10:09:45.452Z" },
     { url = "https://files.pythonhosted.org/packages/c8/8d/302cb2057b7513327b4d575cff6b1d066ee6431a5357fc3f8867cd684406/jiter-0.15.0-graalpy312-graalpy250_312_native-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:54d5d6090cdc1b7c9e780dfb04949a990adb1e301a2fc0bbcee7de4638d33f9a", size = 344469, upload-time = "2026-05-19T10:09:46.864Z" },
+]
+
+[[package]]
+name = "jmespath"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/59/322338183ecda247fb5d1763a6cbe46eff7222eaeebafd9fa65d4bf5cb11/jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d", size = 27377, upload-time = "2026-01-22T16:35:26.279Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/2f/967ba146e6d58cf6a652da73885f52fc68001525b4197effc174321d70b4/jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64", size = 20419, upload-time = "2026-01-22T16:35:24.919Z" },
 ]
 
 [[package]]
@@ -2005,11 +2228,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8b/eb/c0cfc62075dc6e1ec1c64d352ae09ac051d9334311ed226f1f425312848a/mcp-1.27.0.tar.gz", hash = "sha256:d3dc35a7eec0d458c1da4976a48f982097ddaab87e278c5511d5a4a56e852b83", size = 607509, upload-time = "2026-04-02T14:48:08.88Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9c/46/f6b4ad632c67ef35209a66127e4bddc95759649dd595f71f13fba11bdf9a/mcp-1.27.0-py3-none-any.whl", hash = "sha256:5ce1fa81614958e267b21fb2aa34e0aea8e2c6ede60d52aba45fd47246b4d741", size = 215967, upload-time = "2026-04-02T14:48:07.24Z" },
-]
-
-[package.optional-dependencies]
-ws = [
-    { name = "websockets" },
 ]
 
 [[package]]
@@ -2825,7 +3043,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework", specifier = "==1.0.0b260107" },
+    { name = "agent-framework", specifier = "==1.3.0" },
     { name = "aiohttp", specifier = "==3.13.5" },
     { name = "art", specifier = "==6.5" },
     { name = "azure-ai-agents", specifier = "==1.2.0b5" },
@@ -3627,6 +3845,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/77/65/38ab2f90df44c2febfb63cc10ced40763d9b4bc94d173e734528663fe7f5/rpds_py-2026.5.1-cp315-cp315t-musllinux_1_2_x86_64.whl", hash = "sha256:b1be5c35683684d5331b93600c210e8367c254683d8a6df6bd21bd2da3a334fb", size = 581839, upload-time = "2026-05-28T12:01:48.109Z" },
     { url = "https://files.pythonhosted.org/packages/15/2d/ce1f605fe036aadd460e5822e578c6c7ec3a860936cca37d6e0f299daa77/rpds_py-2026.5.1-cp315-cp315t-win32.whl", hash = "sha256:75808f6c38ce7749bb68cc2770161aae5045e6c6f6781a9782e74b93304399df", size = 207866, upload-time = "2026-05-28T12:01:49.648Z" },
     { url = "https://files.pythonhosted.org/packages/79/cb/966040123eb102371559746908ef2c9471f4d43e17ec9a645a2258dab64b/rpds_py-2026.5.1-cp315-cp315t-win_amd64.whl", hash = "sha256:90bd6630002a1c7f09e7843dd79f0d24f3d2897cc25a753480917865d14f15b3", size = 225441, upload-time = "2026-05-28T12:01:51.408Z" },
+]
+
+[[package]]
+name = "s3transfer"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e0/1f/12417f7f493fc45e1f9fd5d4a9b6c125cf8d2cf3f8ddbdfab3e76406e9d6/s3transfer-0.18.0.tar.gz", hash = "sha256:3760b8b7ec1315da54048b2d626276732bee4300d054d492d4e1d43e20d4ecbd", size = 160560, upload-time = "2026-05-28T19:39:09.124Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/58/a58fc997655386daa2e25784e30c288aa3e3819e401f77029ee4899fb55a/s3transfer-0.18.0-py3-none-any.whl", hash = "sha256:239c13b09e65ad0346e1be7348b8a202dcad44ac7ea7c6eb858fc881dce739b6", size = 88572, upload-time = "2026-05-28T19:39:07.999Z" },
 ]
 
 [[package]]

@@ -42,6 +42,13 @@ class DesignExecutor(Executor):
             error_msg = result.error or "Design orchestration failed with no output"
             raise Exception(f"DesignExecutor failed: {error_msg}")
 
+        if not result.result.is_hard_terminated and result.result.termination_output is None:
+            reason = result.result.reason or "<no reason given>"
+            raise Exception(
+                "DesignExecutor failed: orchestration reported success but produced "
+                f"no DesignOutput. Reason: {reason}"
+            )
+
         if result.result:
             if not result.result.is_hard_terminated:
                 await ctx.send_message(result.result)
