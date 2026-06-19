@@ -31,6 +31,12 @@ param backendAppServicePrincipalId string = ''
 @description('Principal ID of the processor App Service system-assigned identity (empty if not deployed).')
 param processorAppServicePrincipalId string = ''
 
+@description('Principal ID of the frontend App Service system-assigned identity (empty if not deployed).')
+param frontendAppServicePrincipalId string = ''
+
+@description('Principal ID of the user-assigned identity used by container apps to pull images from ACR (empty if not used).')
+param acrPullIdentityPrincipalId string = ''
+
 @description('Principal ID of the deploying user (for user access roles).')
 param deployerPrincipalId string = ''
 
@@ -48,6 +54,9 @@ param aiSearchResourceId string = ''
 
 @description('Resource ID of the Storage Account (empty if not deployed).')
 param storageAccountResourceId string = ''
+
+@description('Resource ID of the Azure Container Registry (empty if not deployed).')
+param acrResourceId string = ''
 
 @description('Name of the Cosmos DB account (empty if not deployed).')
 param cosmosDbAccountName string = ''
@@ -74,6 +83,7 @@ var roleDefinitions = {
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
   storageQueueDataContributor: '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+  acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 }
 
 // ============================================================================
@@ -90,6 +100,10 @@ resource aiSearchService 'Microsoft.Search/searchServices@2025-05-01' existing =
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing = if (!empty(storageAccountResourceId)) {
   name: last(split(storageAccountResourceId, '/'))
+}
+
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' existing = if (!empty(acrResourceId)) {
+  name: last(split(acrResourceId, '/'))
 }
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2025-10-15' existing = if (!empty(cosmosDbAccountName)) {
@@ -342,10 +356,57 @@ resource processorAppQueueContributor 'Microsoft.Authorization/roleAssignments@2
 }
 
 // ============================================================================
+// 3b. CONTAINER REGISTRY ROLE ASSIGNMENTS
+//     Backend, Processor, and Frontend container apps → ACR (AcrPull)
+// ============================================================================
+
+resource backendAppAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(acrResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(solutionName, containerRegistry.id, backendAppServicePrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource processorAppAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(acrResourceId) && !empty(processorAppServicePrincipalId)) {
+  name: guid(solutionName, containerRegistry.id, processorAppServicePrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: processorAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource frontendAppAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(acrResourceId) && !empty(frontendAppServicePrincipalId)) {
+  name: guid(solutionName, containerRegistry.id, frontendAppServicePrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: frontendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// User-assigned ACR pull identity → ACR (AcrPull). Granted up-front (no dependency
+// on the container apps) so the apps can authenticate to ACR at provision time,
+// avoiding the system-assigned-identity AcrPull deadlock.
+resource acrPullIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(acrResourceId) && !empty(acrPullIdentityPrincipalId)) {
+  name: guid(solutionName, containerRegistry.id, acrPullIdentityPrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: acrPullIdentityPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ============================================================================
 // 4. COSMOS DB ROLE ASSIGNMENTS
 //    Backend and Processor App Service → Cosmos DB (data-plane, uses sqlRoleAssignments)
 // ============================================================================
-
 resource backendAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(backendAppServicePrincipalId)) {
   parent: cosmosAccount
   name: guid(solutionName, cosmosContributorRoleDefinition.id, cosmosAccount.id, backendAppServicePrincipalId)
