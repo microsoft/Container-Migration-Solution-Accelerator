@@ -994,6 +994,11 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
 // ========== AI Foundry Private Endpoint ========== //
 module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
   name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
+  dependsOn: [
+    aiFoundryAiServices
+    virtualNetwork
+    avmPrivateDnsZones
+  ]
   params: {
     name: 'pep-${aiFoundryAiServicesResourceName}'
     customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
