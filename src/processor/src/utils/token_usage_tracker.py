@@ -14,6 +14,7 @@ that adds thread-safe aggregation and per-step tracking.
 """
 from __future__ import annotations
 
+import contextvars
 import logging
 import threading
 from dataclasses import dataclass
@@ -295,3 +296,106 @@ def _parse_usage_object(usage: Any) -> TokenUsageRecord | None:
         output_tokens=result.output_tokens,
         total_tokens=result.total_tokens,
     )
+
+
+# ---------------------------------------------------------------------------
+# Active-tracker context plumbing
+#
+# Token usage is reliably extracted deep inside the chat client retry wrapper
+# (``azure_openai_response_retry``), which has the raw LLM response with
+# ``usage_details``. That layer, however, has no reference to the per-workflow
+# ``TokenUsageTracker`` (which owns process/user identity and the App Insights
+# emitter). We bridge the two with a context-local + module-global reference to
+# the currently active tracker, plus the current agent/step labels. The chat
+# client calls :func:`record_usage_from_context` so every LLM call's tokens are
+# emitted as ``LLM_*`` custom events even though the orchestrator's streaming
+# events and final conversation never surface usage Content.
+#
+# A ContextVar is used so the value propagates to asyncio tasks created after it
+# is set; a module-level global is kept as a fallback because the processor
+# handles a single workflow at a time per process (TokenUsageTracker is a
+# per-workflow app_context singleton).
+# ---------------------------------------------------------------------------
+
+_current_tracker_ctx: contextvars.ContextVar[TokenUsageTracker | None] = (
+    contextvars.ContextVar("token_usage_current_tracker", default=None)
+)
+_current_agent_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "token_usage_current_agent", default=""
+)
+_current_step_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "token_usage_current_step", default=""
+)
+
+# Module-level fallback (single active workflow per process).
+_active_tracker: TokenUsageTracker | None = None
+
+
+def set_active_tracker(tracker: TokenUsageTracker | None) -> None:
+    """Mark ``tracker`` as the active tracker for token emission from the chat client."""
+    global _active_tracker
+    _active_tracker = tracker
+    try:
+        _current_tracker_ctx.set(tracker)
+    except Exception:  # pragma: no cover - contextvar set is effectively infallible
+        pass
+
+
+def clear_active_tracker() -> None:
+    """Clear the active tracker reference (call when a workflow finishes)."""
+    set_active_tracker(None)
+
+
+def set_token_context(
+    *, agent_name: str | None = None, step_name: str | None = None
+) -> None:
+    """Update the current agent/step labels used when recording from context."""
+    if agent_name is not None:
+        _current_agent_ctx.set(agent_name)
+    if step_name is not None:
+        _current_step_ctx.set(step_name)
+
+
+def get_active_tracker() -> TokenUsageTracker | None:
+    """Return the active tracker (ContextVar first, module-global fallback)."""
+    tracker = _current_tracker_ctx.get()
+    if tracker is not None:
+        return tracker
+    return _active_tracker
+
+
+def record_usage_from_context(
+    *,
+    input_tokens: int,
+    output_tokens: int,
+    total_tokens: int,
+    model_deployment_name: str = "",
+    agent_name: str = "",
+    step_name: str = "",
+) -> bool:
+    """Record a single LLM call's token usage against the active tracker.
+
+    Resolves the tracker and agent/step labels from context when not provided.
+    Returns ``True`` if a tracker was available and the usage was recorded (which
+    also emits per-call ``LLM_*`` App Insights events), ``False`` otherwise.
+    """
+    tracker = get_active_tracker()
+    if tracker is None:
+        return False
+
+    agent = agent_name or _current_agent_ctx.get("") or ""
+    step = step_name or _current_step_ctx.get("") or ""
+    try:
+        tracker.record(
+            input_tokens=int(input_tokens),
+            output_tokens=int(output_tokens),
+            total_tokens=int(total_tokens),
+            agent_name=agent,
+            step_name=step,
+            model_deployment_name=model_deployment_name,
+        )
+        return True
+    except Exception:
+        logger.exception("[TOKEN] record_usage_from_context failed")
+        return False
+

@@ -42,16 +42,44 @@ def _extract_tokens_from_dict_or_obj(ud: Any) -> tuple[int, int, int]:
 
 
 def _try_emit_token_event(inp: int, out: int, tot: int, source: str) -> None:
-    """Log token usage found in stream/response for diagnostics.
+    """Emit token usage found in a stream/response to App Insights.
 
-    The actual LLM_Token_Usage event is emitted by TokenUsageTracker.record()
-    in the orchestrator, which has full context (agent, step, model, user).
-    This function only logs for debugging to avoid duplicate events.
+    The chat client retry wrapper is the only layer that reliably sees raw LLM
+    ``usage_details``; the orchestrator's streaming events and final conversation
+    do not surface usage Content. We therefore record here, against the active
+    ``TokenUsageTracker`` (resolved from context), which both aggregates the
+    usage and emits the per-call ``LLM_*`` Application Insights events. When no
+    tracker is active in the current context this falls back to a diagnostic log.
     """
-    if tot > 0 or inp > 0 or out > 0:
-        logger.info(
-            "[TOKEN_STREAM] usage found: input=%s output=%s total=%s source=%s",
-            inp, out, tot, source,
+    if not (tot > 0 or inp > 0 or out > 0):
+        return
+
+    logger.info(
+        "[TOKEN_STREAM] usage found: input=%s output=%s total=%s source=%s",
+        inp, out, tot, source,
+    )
+    try:
+        from utils.token_usage_tracker import record_usage_from_context
+
+        emitted = record_usage_from_context(
+            input_tokens=int(inp),
+            output_tokens=int(out),
+            total_tokens=int(tot),
+        )
+        if emitted:
+            logger.info(
+                "[TOKEN_STREAM] emitted LLM token event: total=%s source=%s",
+                tot, source,
+            )
+        else:
+            logger.warning(
+                "[TOKEN_STREAM] no active TokenUsageTracker in context; "
+                "token usage NOT emitted (total=%s source=%s)",
+                tot, source,
+            )
+    except Exception as e:
+        logger.warning(
+            "[TOKEN_STREAM] failed to emit token usage (source=%s): %s", source, e
         )
 
 
@@ -836,8 +864,8 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
 
         try:
             response = await _retry_call(
-                lambda: parent_inner_get_response(
-                    messages=effective_messages, chat_options=chat_options, **kwargs
+                lambda: parent_inner(
+                    messages=effective_messages, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
@@ -891,12 +919,15 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
                 "[AOAI_CTX_TRIM] sleeping %ss before retry", round(trim_delay, 1)
             )
             await asyncio.sleep(trim_delay)
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=trimmed, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Emit token usage from the retried (context-trimmed) response too.
+            _emit_usage_from_response(response)
+            return response
 
 
 class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
@@ -1040,123 +1071,29 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
             return trimmed
         return messages
 
-            iterator = stream.__aiter__()
-            try:
-                first = await iterator.__anext__()
-
-                async def _tail():
-                    yield first
-                    async for item in iterator:
-                        yield item
-
-                _item_count = 0
-                _last_item = None
-                async for item in _tail():
-                    _item_count += 1
-                    _last_item = item
-                    _emit_usage_from_stream_item(item)
-                    yield item
-
-                # After stream completes, log diagnostic about the last item
-                if _last_item is not None:
-                    try:
-                        _attrs = [a for a in dir(_last_item) if not a.startswith("_")]
-                        _contents = getattr(_last_item, "contents", None)
-                        _content_info = []
-                        if _contents:
-                            for _c in _contents:
-                                _ct = getattr(_c, "type", "?")
-                                _ca = [a for a in dir(_c) if not a.startswith("_")]
-                                _content_info.append({"type": _ct, "attrs": _ca})
-                        _usage_attr = getattr(_last_item, "usage", None)
-                        logger.info(
-                            "[TOKEN_DIAG_FINAL] stream_items=%d last_item_type=%s attrs=%s contents=%s usage_attr=%s",
-                            _item_count,
-                            type(_last_item).__name__,
-                            _attrs,
-                            _content_info,
-                            repr(_usage_attr) if _usage_attr is not None else "None",
-                        )
-                    except Exception:
-                        pass
-                return
-            except StopAsyncIteration:
-                return
-            except Exception as e:
-                close = getattr(stream, "aclose", None)
-                if callable(close):
-                    try:
-                        await close()
-                    except Exception:
-                        logger.debug("Best-effort close of response stream failed", exc_info=True)
-
-                # Progressive retry for context-length failures.
-                if (
-                    self._context_trim_config.enabled
-                    and self._context_trim_config.retry_on_context_error
-                    and _looks_like_context_length(e)
-                ):
-                    # Make trimming progressively more aggressive on each retry
-                    # GPT-5.1: 272K input tokens ≈ 800K chars. Scale down from 600K default.
-                    scale = attempt_index + 1
-                    aggressive_cfg = ContextTrimConfig(
-                        enabled=True,
-                        max_total_chars=max(
-                            30_000,
-                            self._context_trim_config.max_total_chars - scale * 100_000,
-                        ),
-                        max_message_chars=max(
-                            2_000,
-                            self._context_trim_config.max_message_chars - scale * 8_000,
-                        ),
-                        keep_last_messages=max(
-                            4,
-                            self._context_trim_config.keep_last_messages - scale * 8,
-                        ),
-                        keep_head_chars=max(
-                            500,
-                            self._context_trim_config.keep_head_chars - scale * 3_000,
-                        ),
-                        keep_tail_chars=max(
-                            500,
-                            self._context_trim_config.keep_tail_chars - scale * 1_000,
-                        ),
-                        keep_system_messages=True,
-                        retry_on_context_error=True,
-                    )
-                    trimmed = _trim_messages(effective_messages, cfg=aggressive_cfg)
-                    logger.warning(
-                        "[AOAI_CTX_TRIM_STREAM] retrying after context-length error (attempt %s); count=%s -> %s, budget=%s",
-                        attempt_index + 1,
-                        len(effective_messages),
-                        len(trimmed),
-                        aggressive_cfg.max_total_chars,
-                    )
-                    effective_messages = trimmed
-                    if attempt_index >= attempts - 1:
-                        # No more retries available.
-                        raise
-
-                    # Cool down before retrying — immediate retries after trimming
-                    # tend to trigger 429s because the API hasn't recovered yet.
-                    trim_delay = self._retry_config.base_delay_seconds * (
-                        2**attempt_index
-                    )
-                    trim_delay = min(trim_delay, self._retry_config.max_delay_seconds)
-                    logger.info(
-                        "[AOAI_CTX_TRIM_STREAM] sleeping %ss before retry",
-                        round(trim_delay, 1),
-                    )
-                    await asyncio.sleep(trim_delay)
-                    continue
+    async def _non_streaming_with_retry(
+        self,
+        *,
+        effective_messages: MutableSequence[Any] | list[Any],
+        original_messages: MutableSequence[Any],
+        options: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Non-streaming path: full retry + context-trim fallback."""
+        parent_inner = super(
+            AzureOpenAIChatClientWithRetry, self
+        )._inner_get_response
 
         try:
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=effective_messages, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Extract and emit token usage from the non-streaming response.
+            _emit_usage_from_response(response)
+            return response
         except Exception as e:
             if not (
                 self._context_trim_config.enabled
@@ -1206,9 +1143,12 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
                 "[AOAI_CTX_TRIM] sleeping %ss before retry", round(trim_delay, 1)
             )
             await asyncio.sleep(trim_delay)
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=trimmed, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Emit token usage from the retried (context-trimmed) response too.
+            _emit_usage_from_response(response)
+            return response

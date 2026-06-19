@@ -35,7 +35,13 @@ from agent_framework.orchestrations import GroupChatBuilder, GroupChatState
 from mem0 import AsyncMemory
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
-from utils.token_usage_tracker import TokenUsageTracker, extract_usage_from_response, _parse_usage_object
+from utils.token_usage_tracker import (
+    TokenUsageTracker,
+    extract_usage_from_response,
+    _parse_usage_object,
+    set_active_tracker,
+    set_token_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -522,7 +528,14 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._tool_call_recorded.clear()
         self._tool_call_index.clear()
         self._streaming_captured_usage = False
-        self._conversation: list[ChatMessage] = []  # Track conversation during workflow
+        self._conversation: list[Message] = []  # Track conversation during workflow
+
+        # Register this orchestrator's tracker as the active one so the chat
+        # client retry wrapper can emit token usage from the raw LLM responses
+        # (the streaming events / final conversation never surface usage Content).
+        if self.token_usage_tracker is not None:
+            set_active_tracker(self.token_usage_tracker)
+            set_token_context(step_name=self.name)
 
         try:
             # Ensure initialized
@@ -809,6 +822,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # twice on parse failure), the executor_id is identical but
         # response_id differs per invocation.
         response_id = getattr(event, "response_id", None)
+        # Update the active agent label so token usage recorded by the chat
+        # client retry wrapper is attributed to the right agent.
+        if agent_name:
+            set_token_context(agent_name=agent_name)
         await self._start_agent_if_needed(
             agent_name, stream_callback, callback, response_id=response_id
         )
@@ -1160,7 +1177,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 continue
 
     def _backfill_token_usage_from_conversation(
-        self, conversation: list[ChatMessage]
+        self, conversation: list[Message]
     ) -> None:
         """Extract token usage from the final conversation messages.
 
