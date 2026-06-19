@@ -612,12 +612,12 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     supportsHttpsTrafficOnly: true
     roleAssignments: [
       {
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' //'Storage Blob Data Contributor'
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
       {
-        roleDefinitionIdOrName: 'Storage Queue Data Contributor'
+        roleDefinitionIdOrName: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' //'Storage Queue Data Contributor'
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -806,7 +806,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'DocumentDB Account Contributor'
+        roleDefinitionIdOrName: '5bd9cd88-fe45-4216-938b-f97437e15450' //'DocumentDB Account Contributor'
       }
     ]
     // Create custom data plane role definition and assignment
@@ -902,7 +902,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
       }
       {
         principalId: appIdentity.outputs.principalId
@@ -956,7 +956,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
     roleAssignments: [
       // Service Principal permissions
       {
-        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -972,12 +972,12 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
       }
       // Deployer permissions for local debugging
       {
-        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
         principalId: deployingUserPrincipalId
         principalType: 'User'
       }
       {
-        roleDefinitionIdOrName: 'Cognitive Services User'
+        roleDefinitionIdOrName: 'a97b65f3-24c7-4388-baec-2e87135dc908' //'Cognitive Services User'
         principalId: deployingUserPrincipalId
         principalType: 'User'
       }

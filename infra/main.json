@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "2561563027340256551"
+      "version": "0.44.1.10279",
+      "templateHash": "8615995649961363295"
     }
   },
   "parameters": {
@@ -4717,8 +4717,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "4604761290796021104"
+              "version": "0.44.1.10279",
+              "templateHash": "8338582776365718527"
             }
           },
           "definitions": {
@@ -21723,22 +21723,22 @@
           "roleAssignments": {
             "value": [
               {
-                "roleDefinitionIdOrName": "Storage Blob Data Contributor",
+                "roleDefinitionIdOrName": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
                 "principalType": "ServicePrincipal"
               },
               {
-                "roleDefinitionIdOrName": "Storage Queue Data Contributor",
+                "roleDefinitionIdOrName": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
                 "principalType": "ServicePrincipal"
               },
               {
-                "roleDefinitionIdOrName": "Storage Blob Data Contributor",
+                "roleDefinitionIdOrName": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]"
               },
               {
-                "roleDefinitionIdOrName": "Storage Queue Data Contributor",
+                "roleDefinitionIdOrName": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]"
               }
@@ -27476,8 +27476,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
@@ -27564,12 +27564,12 @@
               {
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
                 "principalType": "ServicePrincipal",
-                "roleDefinitionIdOrName": "DocumentDB Account Contributor"
+                "roleDefinitionIdOrName": "5bd9cd88-fe45-4216-938b-f97437e15450"
               },
               {
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]",
-                "roleDefinitionIdOrName": "DocumentDB Account Contributor"
+                "roleDefinitionIdOrName": "5bd9cd88-fe45-4216-938b-f97437e15450"
               }
             ]
           },
@@ -31417,7 +31417,7 @@
               {
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
                 "principalType": "ServicePrincipal",
-                "roleDefinitionIdOrName": "Cognitive Services OpenAI Contributor"
+                "roleDefinitionIdOrName": "a001fd3d-188f-4b5d-821b-7da978bf7442"
               },
               {
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
@@ -31432,12 +31432,12 @@
               {
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]",
-                "roleDefinitionIdOrName": "Cognitive Services OpenAI Contributor"
+                "roleDefinitionIdOrName": "a001fd3d-188f-4b5d-821b-7da978bf7442"
               },
               {
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]",
-                "roleDefinitionIdOrName": "Cognitive Services User"
+                "roleDefinitionIdOrName": "a97b65f3-24c7-4388-baec-2e87135dc908"
               }
             ]
           }
@@ -31449,8 +31449,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "13516349791985095953"
+              "version": "0.44.1.10279",
+              "templateHash": "8388310902652207735"
             }
           },
           "definitions": {
@@ -31855,7 +31855,7 @@
           "roleAssignments": {
             "value": [
               {
-                "roleDefinitionIdOrName": "Cognitive Services OpenAI Contributor",
+                "roleDefinitionIdOrName": "a001fd3d-188f-4b5d-821b-7da978bf7442",
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
                 "principalType": "ServicePrincipal"
               },
@@ -31870,12 +31870,12 @@
                 "principalType": "ServicePrincipal"
               },
               {
-                "roleDefinitionIdOrName": "Cognitive Services OpenAI Contributor",
+                "roleDefinitionIdOrName": "a001fd3d-188f-4b5d-821b-7da978bf7442",
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]"
               },
               {
-                "roleDefinitionIdOrName": "Cognitive Services User",
+                "roleDefinitionIdOrName": "a97b65f3-24c7-4388-baec-2e87135dc908",
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployingUserType')]"
               }
@@ -35199,9 +35199,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
@@ -35238,8 +35238,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "17583277036649944863"
+              "version": "0.44.1.10279",
+              "templateHash": "16726486764770261194"
             }
           },
           "parameters": {
@@ -35461,7 +35461,7 @@
               {
                 "principalId": "[reference('appIdentity').outputs.principalId.value]",
                 "principalType": "ServicePrincipal",
-                "roleDefinitionIdOrName": "App Configuration Data Reader"
+                "roleDefinitionIdOrName": "516239f1-63e1-4d78-a4de-a74fb236a071"
               }
             ]
           },
