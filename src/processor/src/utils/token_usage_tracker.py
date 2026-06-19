@@ -8,7 +8,7 @@ Tracks token usage across four dimensions:
 - Per user/process
 - Per model deployment
 
-ses the cross-accelerator ``llm_token_telemetry`` module for extraction
+Uses the cross-accelerator ``llm_token_telemetry`` module for extraction
 and emission, keeping this tracker as a thin orchestration-specific layer
 that adds thread-safe aggregation and per-step tracking.
 """
