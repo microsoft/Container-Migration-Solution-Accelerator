@@ -10,7 +10,6 @@ exercised without modifying production source.
 import importlib
 import sys
 import types
-from typing import Type
 from unittest.mock import MagicMock
 
 import pytest
