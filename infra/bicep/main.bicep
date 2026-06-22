@@ -316,7 +316,6 @@ module ca_backend_api './modules/compute/container-app.bicep' = {
     location: solutionLocation
     tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
     environmentResourceId: containerAppEnv.outputs.resourceId
-    managedIdentities: { systemAssigned: true }
     ingressExternal: true
     ingressTargetPort: 80
     containers: [
@@ -369,7 +368,6 @@ module ca_frontend './modules/compute/container-app.bicep' = {
     location: solutionLocation
     tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
     environmentResourceId: containerAppEnv.outputs.resourceId
-    managedIdentities: { systemAssigned: true }
     ingressExternal: true
     ingressTargetPort: 3000
     containers: [
@@ -404,7 +402,6 @@ module ca_processor './modules/compute/container-app.bicep' = {
     location: solutionLocation
     tags: union(existingTags, tags, { TemplateName: 'Container Migration' })
     environmentResourceId: containerAppEnv.outputs.resourceId
-    managedIdentities: { systemAssigned: true }
     ingressExternal: false
     ingressTargetPort: 8080
     ingressAllowInsecure: true
