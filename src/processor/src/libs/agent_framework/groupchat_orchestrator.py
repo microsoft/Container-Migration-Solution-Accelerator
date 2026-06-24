@@ -25,6 +25,7 @@ from agent_framework import (
     Agent,
     AgentResponseUpdate,
     ChatOptions,
+    Content,
     Executor,
     Message,
     SupportsAgentRun,
@@ -1594,7 +1595,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             selected.append(
                 Message(
                     role=role,
-                    contents=[truncated],
+                    contents=[Content.from_text(truncated)],
                     author_name=author,
                 )
             )
@@ -1623,7 +1624,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             messages.append(
                 Message(
                     role="assistant",
-                    contents=[resp.message],
+                    contents=[Content.from_text(resp.message)],
                     author_name=resp.agent_name,
                 )
             )
