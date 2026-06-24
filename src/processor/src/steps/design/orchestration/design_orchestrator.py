@@ -83,6 +83,7 @@ class DesignOrchestrator(
                 participants=self.agents,
                 memory_client=None,
                 result_output_format=Design_ExtendedBooleanResult,
+                token_usage_tracker=self.token_tracker,
             )
 
             orchestration_result = await orchestrator.run_stream(

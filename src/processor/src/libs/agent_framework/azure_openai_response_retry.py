@@ -25,6 +25,168 @@ from tenacity.wait import wait_base
 logger = logging.getLogger(__name__)
 
 
+def _extract_tokens_from_dict_or_obj(ud: Any) -> tuple[int, int, int]:
+    """Extract (input, output, total) token counts from a dict or object."""
+    inp = out = tot = 0
+    if isinstance(ud, dict):
+        inp = ud.get("input_token_count", 0) or ud.get("input_tokens", 0) or 0
+        out = ud.get("output_token_count", 0) or ud.get("output_tokens", 0) or 0
+        tot = ud.get("total_token_count", 0) or ud.get("total_tokens", 0) or 0
+    else:
+        inp = getattr(ud, "input_token_count", 0) or getattr(ud, "input_tokens", 0) or 0
+        out = getattr(ud, "output_token_count", 0) or getattr(ud, "output_tokens", 0) or 0
+        tot = getattr(ud, "total_token_count", 0) or getattr(ud, "total_tokens", 0) or 0
+    if not tot:
+        tot = int(inp) + int(out)
+    return int(inp), int(out), int(tot)
+
+
+def _try_emit_token_event(inp: int, out: int, tot: int, source: str) -> None:
+    """Emit token usage found in a stream/response to App Insights.
+
+    The chat client retry wrapper is the only layer that reliably sees raw LLM
+    ``usage_details``; the orchestrator's streaming events and final conversation
+    do not surface usage Content. We therefore record here, against the active
+    ``TokenUsageTracker`` (resolved from context), which both aggregates the
+    usage and emits the per-call ``LLM_*`` Application Insights events. When no
+    tracker is active in the current context this falls back to a diagnostic log.
+    """
+    if not (tot > 0 or inp > 0 or out > 0):
+        return
+
+    logger.info(
+        "[TOKEN_STREAM] usage found: input=%s output=%s total=%s source=%s",
+        inp, out, tot, source,
+    )
+    try:
+        from utils.token_usage_tracker import record_usage_from_context
+
+        emitted = record_usage_from_context(
+            input_tokens=int(inp),
+            output_tokens=int(out),
+            total_tokens=int(tot),
+        )
+        if emitted:
+            logger.info(
+                "[TOKEN_STREAM] emitted LLM token event: total=%s source=%s",
+                tot, source,
+            )
+        else:
+            logger.warning(
+                "[TOKEN_STREAM] no active TokenUsageTracker in context; "
+                "token usage NOT emitted (total=%s source=%s)",
+                tot, source,
+            )
+    except Exception as e:
+        logger.warning(
+            "[TOKEN_STREAM] failed to emit token usage (source=%s): %s", source, e
+        )
+
+
+def _emit_usage_from_stream_item(item: Any) -> None:
+    """Check a streamed ChatResponseUpdate for usage Content and emit an App Insights event.
+
+    Checks multiple locations where usage data may appear:
+    1. item.contents[] with type="usage" and usage_details
+    2. item.usage (direct attribute - some SDK versions)
+    3. item.metadata with usage keys
+    """
+    try:
+        item_type = type(item).__name__
+
+        # --- Path 1: contents list with Content(type="usage") ---
+        contents = getattr(item, "contents", None)
+        if contents:
+            for content in contents:
+                ctype = getattr(content, "type", None)
+                if ctype == "usage":
+                    # SDK UsageContent uses "details"; fall back to "usage_details"
+                    ud = getattr(content, "details", None) or getattr(content, "usage_details", None)
+                    if ud:
+                        inp, out, tot = _extract_tokens_from_dict_or_obj(ud)
+                        _try_emit_token_event(inp, out, tot, "stream_contents")
+                        return
+
+        # --- Path 2: direct .usage attribute ---
+        usage = getattr(item, "usage", None)
+        if usage is not None:
+            inp, out, tot = _extract_tokens_from_dict_or_obj(usage)
+            _try_emit_token_event(inp, out, tot, "stream_usage_attr")
+            return
+
+        # --- Path 3: .metadata dict with usage keys ---
+        metadata = getattr(item, "metadata", None)
+        if isinstance(metadata, dict):
+            if any(k in metadata for k in ("input_tokens", "input_token_count", "usage")):
+                usage_data = metadata.get("usage", metadata)
+                inp, out, tot = _extract_tokens_from_dict_or_obj(usage_data)
+                _try_emit_token_event(inp, out, tot, "stream_metadata")
+                return
+
+        # --- Diagnostic: log item shape for debugging (only for non-text items) ---
+        if contents:
+            content_types = [getattr(c, "type", "?") for c in contents]
+            if any(t not in ("text",) for t in content_types):
+                logger.debug(
+                    "[TOKEN_DIAG] item_type=%s content_types=%s attrs=%s",
+                    item_type,
+                    content_types,
+                    [a for a in dir(item) if not a.startswith("_")],
+                )
+    except Exception as e:
+        logger.debug("[TOKEN_STREAM] error in emit: %s", e)
+
+
+def _emit_usage_from_response(response: Any) -> None:
+    """Extract and emit token usage from a non-streaming ChatResponse.
+
+    Checks usage_details (SDK attribute) and contents for UsageContent items.
+    """
+    try:
+        # Path 1: response.usage_details (ChatResponse from SDK)
+        ud = getattr(response, "usage_details", None) or getattr(response, "details", None)
+        if ud is not None:
+            inp, out, tot = _extract_tokens_from_dict_or_obj(ud)
+            _try_emit_token_event(inp, out, tot, "response_usage_details")
+            return
+
+        # Path 2: response.usage direct attribute
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            inp, out, tot = _extract_tokens_from_dict_or_obj(usage)
+            _try_emit_token_event(inp, out, tot, "response_usage_attr")
+            return
+
+        # Path 3: contents list with UsageContent
+        contents = getattr(response, "contents", None)
+        if contents:
+            for content in contents:
+                ctype = getattr(content, "type", None)
+                if ctype == "usage":
+                    ud = getattr(content, "details", None) or getattr(content, "usage_details", None)
+                    if ud:
+                        inp, out, tot = _extract_tokens_from_dict_or_obj(ud)
+                        _try_emit_token_event(inp, out, tot, "response_contents")
+                        return
+
+        # Path 4: messages list with usage content
+        messages = getattr(response, "messages", None)
+        if messages:
+            for msg in messages:
+                msg_contents = getattr(msg, "contents", None)
+                if not msg_contents:
+                    continue
+                for item in msg_contents:
+                    if getattr(item, "type", None) == "usage":
+                        ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
+                        if ud:
+                            inp, out, tot = _extract_tokens_from_dict_or_obj(ud)
+                            _try_emit_token_event(inp, out, tot, "response_msg_contents")
+                            return
+    except Exception as e:
+        logger.debug("[TOKEN_RESPONSE] error in emit: %s", e)
+
+
 def _format_exc_brief(exc: BaseException) -> str:
     name = type(exc).__name__
     msg = str(exc)
@@ -82,9 +244,15 @@ def _looks_like_rate_limit(error: BaseException) -> bool:
 
     # "The model produced invalid content" is a transient error from Azure OpenAI
     # when the model output fails content/schema validation — worth retrying.
+    # "No tool call found" is a 400 error when the conversation has orphaned
+    # function call outputs with no matching tool call request.
     if any(
         s in msg
-        for s in ["model produced invalid content", "invalid content"]
+        for s in [
+            "model produced invalid content",
+            "invalid content",
+            "no tool call found",
+        ]
     ):
         return True
 
@@ -695,12 +863,15 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
         )._inner_get_response
 
         try:
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=effective_messages, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Extract and emit token usage from non-streaming response
+            _emit_usage_from_response(response)
+            return response
         except Exception as e:
             if not (
                 self._context_trim_config.enabled
@@ -748,12 +919,15 @@ class AzureOpenAIResponseClientWithRetry(OpenAIChatClient):
                 "[AOAI_CTX_TRIM] sleeping %ss before retry", round(trim_delay, 1)
             )
             await asyncio.sleep(trim_delay)
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=trimmed, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Emit token usage from the retried (context-trimmed) response too.
+            _emit_usage_from_response(response)
+            return response
 
 
 class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
@@ -911,12 +1085,15 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
         )._inner_get_response
 
         try:
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=effective_messages, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Extract and emit token usage from the non-streaming response.
+            _emit_usage_from_response(response)
+            return response
         except Exception as e:
             if not (
                 self._context_trim_config.enabled
@@ -966,9 +1143,12 @@ class AzureOpenAIChatClientWithRetry(OpenAIChatCompletionClient):
                 "[AOAI_CTX_TRIM] sleeping %ss before retry", round(trim_delay, 1)
             )
             await asyncio.sleep(trim_delay)
-            return await _retry_call(
+            response = await _retry_call(
                 lambda: parent_inner(
                     messages=trimmed, options=options, stream=False, **kwargs
                 ),
                 config=self._retry_config,
             )
+            # Emit token usage from the retried (context-trimmed) response too.
+            _emit_usage_from_response(response)
+            return response

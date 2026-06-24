@@ -36,6 +36,14 @@ from agent_framework.orchestrations import GroupChatBuilder, GroupChatState
 from mem0 import AsyncMemory
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
+from utils.token_usage_tracker import (
+    TokenUsageTracker,
+    extract_usage_from_response,
+    _parse_usage_object,
+    set_active_tracker,
+    set_token_context,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -123,6 +131,7 @@ class OrchestrationResult(Generic[TOutput]):
     result: TOutput | None = None
     error: str | None = None
     execution_time_seconds: float = 0.0
+    token_usage_summary: dict[str, Any] | None = None
 
     @staticmethod
     def _to_jsonable(value: Any) -> Any:
@@ -186,6 +195,7 @@ class OrchestrationResult(Generic[TOutput]):
             "result": self._to_jsonable(self.result),
             "error": self.error,
             "execution_time_seconds": self.execution_time_seconds,
+            "token_usage_summary": self.token_usage_summary,
         }
 
     def to_json(self, *, indent: int = 2) -> str:
@@ -225,6 +235,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         max_rounds: int = 100,
         max_seconds: float | None = None,
         result_output_format: type[TOutput] | None = None,
+        token_usage_tracker: TokenUsageTracker | None = None,
     ):
         """
         Initialize the orchestrator.
@@ -254,11 +265,15 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self.max_seconds = max_seconds
         self.result_format = result_output_format
 
+        # Token usage tracker (optional — provided by OrchestratorBase)
+        self.token_usage_tracker = token_usage_tracker
+
         # Runtime state
         self.agents: dict[str, Agent] = participants
         self.agent_tool_usage: dict[str, list[dict[str, Any]]] = {}
         self.agent_responses: list[AgentResponse] = []
         self._initialized: bool = False
+        self._streaming_captured_usage: bool = False
 
         # Streaming response buffer
         self._last_executor_id: str | None = None
@@ -513,7 +528,15 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._tool_call_emitted.clear()
         self._tool_call_recorded.clear()
         self._tool_call_index.clear()
+        self._streaming_captured_usage = False
         self._conversation: list[Message] = []  # Track conversation during workflow
+
+        # Register this orchestrator's tracker as the active one so the chat
+        # client retry wrapper can emit token usage from the raw LLM responses
+        # (the streaming events / final conversation never surface usage Content).
+        if self.token_usage_tracker is not None:
+            set_active_tracker(self.token_usage_tracker)
+            set_token_context(step_name=self.name)
 
         try:
             # Ensure initialized
@@ -624,6 +647,11 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             # items inside Message.contents.
             self._backfill_tool_usage_from_conversation(conversation)
 
+            # Backfill token usage from conversation messages.
+            # Streaming events may not surface usage Content items, but the final
+            # conversation messages reliably carry them.
+            self._backfill_token_usage_from_conversation(conversation)
+
             # Post-workflow analysis (optional)
             final_analysis = None
             result_format = self.result_format
@@ -715,6 +743,11 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             execution_time = (datetime.now() - start_time).total_seconds()
 
             # Build result
+            # Collect token usage summary if tracker is active
+            token_summary = None
+            if self.token_usage_tracker is not None:
+                token_summary = self.token_usage_tracker.get_summary()
+
             result = OrchestrationResult[TOutput](
                 success=generated_error is None,
                 conversation=conversation,
@@ -723,6 +756,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 result=final_analysis,
                 error=generated_error,
                 execution_time_seconds=execution_time,
+                token_usage_summary=token_summary,
             )
 
             # Callback for completion with Typed Result
@@ -734,6 +768,10 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         except Exception as e:
             execution_time = (datetime.now() - start_time).total_seconds()
 
+            token_summary = None
+            if self.token_usage_tracker is not None:
+                token_summary = self.token_usage_tracker.get_summary()
+
             error_result = OrchestrationResult[TOutput](
                 success=False,
                 conversation=[],
@@ -742,6 +780,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 result=None,
                 error=str(e),
                 execution_time_seconds=execution_time,
+                token_usage_summary=token_summary,
             )
 
             if on_workflow_complete:
@@ -784,11 +823,73 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # twice on parse failure), the executor_id is identical but
         # response_id differs per invocation.
         response_id = getattr(event, "response_id", None)
+        # Update the active agent label so token usage recorded by the chat
+        # client retry wrapper is attributed to the right agent.
+        if agent_name:
+            set_token_context(agent_name=agent_name)
         await self._start_agent_if_needed(
             agent_name, stream_callback, callback, response_id=response_id
         )
         self._append_text_chunk(event)
         await self._process_tool_calls(event, agent_name, stream_callback)
+
+        # Extract token usage from the streaming update if tracker is active.
+        if self.token_usage_tracker is not None:
+            try:
+                self._try_record_streaming_usage(event, agent_name)
+            except Exception:
+                logger.debug(
+                    "Failed to extract token usage from update (agent=%s)",
+                    agent_name,
+                    exc_info=True,
+                )
+
+    def _try_record_streaming_usage(self, event: Any, agent_name: str) -> None:
+        """Try to extract and record token usage from a streaming event.
+
+        Checks three paths in priority order:
+        1. event.data.contents with Content(type="usage")
+        2. event.data.usage direct attribute
+        3. event.usage top-level attribute
+        """
+        candidates: list[tuple[Any, str]] = []
+        data = event.data
+
+        # Path 1: data.contents with Content(type="usage")
+        contents = getattr(data, "contents", None)
+        if contents:
+            for item in contents:
+                if getattr(item, "type", None) == "usage":
+                    ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
+                    if ud:
+                        candidates.append((ud, "contents"))
+
+        # Path 2: data.usage
+        usage = getattr(data, "usage", None)
+        if usage is not None:
+            candidates.append((usage, "data.usage"))
+
+        # Path 3: event.usage
+        event_usage = getattr(event, "usage", None)
+        if event_usage is not None:
+            candidates.append((event_usage, "event.usage"))
+
+        for candidate, source in candidates:
+            record = _parse_usage_object(candidate)
+            if record and record.total_tokens > 0:
+                self.token_usage_tracker.record(
+                    input_tokens=record.input_tokens,
+                    output_tokens=record.output_tokens,
+                    total_tokens=record.total_tokens,
+                    agent_name=agent_name,
+                    step_name=self.name,
+                )
+                self._streaming_captured_usage = True
+                logger.info(
+                    "[TOKEN_ORCH] recorded from %s: agent=%s step=%s tokens=%s",
+                    source, agent_name, self.name, record.total_tokens,
+                )
+                return
 
     def _normalize_executor_id(self, executor_id: str) -> str:
         """Normalize executor id to agent name.
@@ -1075,6 +1176,73 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             except Exception:
                 # Best effort only; don't break orchestration
                 continue
+
+    def _backfill_token_usage_from_conversation(
+        self, conversation: list[Message]
+    ) -> None:
+        """Extract token usage from the final conversation messages.
+
+        The agent_framework attaches ``Content(type="usage")`` items to
+        assistant messages when the underlying LLM response completes.
+        Streaming updates may not surface these, so we scan the final
+        conversation as a **fallback only when streaming did not capture
+        any usage** to avoid double-counting.
+        """
+        if self.token_usage_tracker is None:
+            return
+
+        # Skip backfill if streaming already captured token usage for this orchestrator run.
+        if getattr(self, "_streaming_captured_usage", False):
+            logger.info(
+                "[TOKEN] Skipping backfill — streaming already captured usage (step=%s)",
+                self.name,
+            )
+            return
+
+        found_any = False
+        for msg in conversation:
+            try:
+                role = getattr(msg, "role", None)
+                author = getattr(msg, "author_name", None) or "unknown"
+                contents = getattr(msg, "contents", None)
+                if not contents:
+                    continue
+
+                for item in contents:
+                    item_type = getattr(item, "type", None)
+                    if item_type != "usage":
+                        continue
+
+                    # SDK UsageContent uses "details"; fall back to "usage_details"
+                    ud = getattr(item, "details", None) or getattr(item, "usage_details", None)
+                    if ud is None:
+                        continue
+
+                    record = _parse_usage_object(ud)
+                    if record and record.total_tokens > 0:
+                        agent_name = self._normalize_executor_id(author)
+                        self.token_usage_tracker.record(
+                            input_tokens=record.input_tokens,
+                            output_tokens=record.output_tokens,
+                            total_tokens=record.total_tokens,
+                            agent_name=agent_name,
+                            step_name=self.name,
+                        )
+                        found_any = True
+            except Exception:
+                continue
+
+        if found_any:
+            logger.info(
+                "[TOKEN] Backfilled token usage from conversation (step=%s)",
+                self.name,
+            )
+        else:
+            logger.warning(
+                "[TOKEN] No usage Content found in conversation messages (step=%s, msgs=%d)",
+                self.name,
+                len(conversation),
+            )
 
     async def _complete_agent_response(
         self,

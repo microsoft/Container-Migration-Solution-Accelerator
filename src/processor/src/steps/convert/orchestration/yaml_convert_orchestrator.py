@@ -92,6 +92,7 @@ class YamlConvertOrchestrator(
                 memory_client=None,
                 max_seconds=900,
                 result_output_format=Yaml_ExtendedBooleanResult,
+                token_usage_tracker=self.token_tracker,
             )
 
             orchestration_result = await orchestrator.run_stream(

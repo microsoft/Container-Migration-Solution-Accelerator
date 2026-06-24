@@ -15,6 +15,19 @@ from libs.application.application_configuration import (
 from libs.application.application_context import AppContext
 from libs.azure.app_configuration import AppConfigurationHelper
 
+# Logger packages that emit at INFO/DEBUG levels often enough to drown
+# out signal in Application Insights logs when the OTEL log handler is
+# attached. We force them to WARNING regardless of caller config.
+# This is a backstop in addition to (not a replacement for) the
+# `AZURE_LOGGING_PACKAGES` env-var driven filtering — anything listed
+# here is ALWAYS clamped to WARNING.
+_NOISY_LOGGER_PACKAGES = (
+    "azure.core.pipeline.policies.http_logging_policy",
+    "azure.cosmos",
+    "opentelemetry.sdk",
+    "azure.monitor.opentelemetry.exporter.export._base",
+)
+
 
 class Application_Base(ABC):
     application_context: AppContext = None
@@ -77,6 +90,17 @@ class Application_Base(ABC):
                     ),
                 ):
                     logging.getLogger(logger_name).setLevel(azure_level)
+
+            # Hard-suppress known noisy packages regardless of operator
+            # config. Without this, the App Insights logs view is
+            # dominated by per-request HTTP policy logs and per-call
+            # Cosmos diagnostics — see AC #3 / AC #4 of AB#37816.
+            # We never lower a logger that the operator has explicitly
+            # raised below WARNING.
+            for noisy_pkg in _NOISY_LOGGER_PACKAGES:
+                noisy_logger = logging.getLogger(noisy_pkg)
+                if noisy_logger.level == logging.NOTSET or noisy_logger.level < logging.WARNING:
+                    noisy_logger.setLevel(logging.WARNING)
 
         # Initialize the application
         self.initialize()

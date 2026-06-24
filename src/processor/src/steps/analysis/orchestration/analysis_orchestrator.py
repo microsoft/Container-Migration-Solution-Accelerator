@@ -84,6 +84,7 @@ class AnalysisOrchestrator(
                 participants=self.agents,
                 memory_client=None,
                 result_output_format=Analysis_BooleanExtendedResult,
+                token_usage_tracker=self.token_tracker,
             )
 
             orchestration_result = await orchestrator.run_stream(

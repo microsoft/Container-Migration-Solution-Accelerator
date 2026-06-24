@@ -51,6 +51,7 @@ from libs.reporting import (
 from libs.reporting.models.failure_context import FailureType
 from utils.agent_telemetry import TelemetryManager
 from utils.credential_util import get_bearer_token_provider
+from utils.token_usage_tracker import TokenUsageTracker
 
 from .analysis.models.step_param import Analysis_TaskParam
 from .analysis.workflow.analysis_executor import AnalysisExecutor
@@ -277,6 +278,14 @@ class MigrationProcessor:
             # the old (closed) store, so get_service() would return it.
             self.app_context._instances.pop(QdrantMemoryStore, None)
             self.app_context.add_singleton(QdrantMemoryStore, memory_store)
+
+        # Create workflow-level token usage tracker and register in app context
+        token_tracker = TokenUsageTracker(
+            process_id=input_data.process_id,
+            user_id=getattr(input_data, "user_id", "") or "",
+        )
+        self.app_context._instances.pop(TokenUsageTracker, None)
+        self.app_context.add_singleton(TokenUsageTracker, token_tracker)
 
         try:
             telemetry: TelemetryManager = await self.app_context.get_service_async(
@@ -696,6 +705,19 @@ class MigrationProcessor:
                     # print(f"{event.__class__.__name__} ({event.origin.value}): {event}")
                     pass
         finally:
+            # Emit token usage summary events to Application Insights and persist to Cosmos
+            try:
+                token_tracker.emit_summary_events()
+                telemetry_mgr: TelemetryManager = (
+                    await self.app_context.get_service_async(TelemetryManager)
+                )
+                await telemetry_mgr.persist_token_usage(
+                    process_id=input_data.process_id,
+                    token_summary=token_tracker.get_summary(),
+                )
+            except Exception as e:
+                logger.warning("Failed to emit/persist token usage: %s", e)
+
             # Clean up shared memory store
             if memory_store is not None:
                 try:

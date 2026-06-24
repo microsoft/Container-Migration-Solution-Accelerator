@@ -284,6 +284,23 @@ class ProcessStatus(RootEntityBase["ProcessStatus", str]):
         description="Comprehensive UI data including file manifests, dashboard metrics, and downloadable artifacts",
     )
 
+    # Token Usage Tracking
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tokens: int = 0
+    token_usage_by_agent: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Token usage per agent: {agent_name: {input_tokens, output_tokens, total_tokens, call_count, model_deployment_name}}",
+    )
+    token_usage_by_model: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Token usage per model: {model_deployment_name: {input_tokens, output_tokens, total_tokens, call_count}}",
+    )
+    token_usage_by_step: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Token usage per step: {step_name: {input_tokens, output_tokens, total_tokens, call_count}}",
+    )
+
 
 class AgentActivityRepository(RepositoryBase[ProcessStatus, str]):
     def __init__(self, app_context: AppContext):
@@ -1593,3 +1610,52 @@ class TelemetryManager:
         except Exception as e:
             logger.error(f"[UI-TELEMETRY] Failed to retrieve UI data: {e}")
             return {}
+
+    async def persist_token_usage(
+        self,
+        process_id: str,
+        token_summary: dict[str, Any],
+    ) -> None:
+        """Persist aggregated token usage data to the ProcessStatus in Cosmos DB.
+
+        Parameters
+        ----------
+        process_id:
+            The process whose telemetry record should be updated.
+        token_summary:
+            The output of ``TokenUsageTracker.get_summary()``, containing
+            ``total``, ``by_agent``, ``by_model``, and ``by_step`` dictionaries.
+        """
+        if not self.repository:
+            logger.info("[TELEMETRY] Development mode — token usage not persisted")
+            return
+
+        try:
+            current_process = await self.repository.get_async(process_id)
+            if not current_process:
+                logger.warning(
+                    "[TOKEN] Process %s not found — cannot persist token usage",
+                    process_id,
+                )
+                return
+
+            total = token_summary.get("total", {})
+            current_process.total_input_tokens = total.get("input_tokens", 0)
+            current_process.total_output_tokens = total.get("output_tokens", 0)
+            current_process.total_tokens = total.get("total_tokens", 0)
+            current_process.token_usage_by_agent = token_summary.get("by_agent", {})
+            current_process.token_usage_by_model = token_summary.get("by_model", {})
+            current_process.token_usage_by_step = token_summary.get("by_step", {})
+            current_process.last_update_time = _get_utc_timestamp()
+
+            await self.repository.update_async(current_process)
+            logger.info(
+                "[TOKEN] Persisted token usage for process %s: total=%d",
+                process_id,
+                current_process.total_tokens,
+            )
+        except Exception:
+            logger.exception(
+                "[TOKEN] Failed to persist token usage (process_id=%s)",
+                process_id,
+            )

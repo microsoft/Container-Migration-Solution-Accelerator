@@ -105,7 +105,40 @@ class QueueMigrationServiceApp(ApplicationBase):
             "Application initialized with configuration: %s",
             self.application_context.configuration,
         )
+        self._configure_azure_monitor()
         self.register_services()
+
+    def _configure_azure_monitor(self):
+        """Initialise Azure Monitor OpenTelemetry exporter, if configured.
+
+        Required so that ``track_event`` from ``azure-monitor-events-extension``
+        has an export pipeline for custom events (e.g. token usage tracking).
+        """
+        connection_string = os.environ.get(
+            "APPLICATIONINSIGHTS_CONNECTION_STRING", ""
+        ).strip()
+        if not connection_string:
+            logger.info(
+                "APPLICATIONINSIGHTS_CONNECTION_STRING not set; "
+                "skipping Azure Monitor OpenTelemetry configuration."
+            )
+            return
+
+        try:
+            from azure.monitor.opentelemetry import configure_azure_monitor
+
+            configure_azure_monitor(
+                connection_string=connection_string,
+                enable_live_metrics=True,
+            )
+            logger.info(
+                "Azure Monitor OpenTelemetry configured (live metrics enabled)."
+            )
+        except Exception:
+            logger.exception(
+                "Failed to configure Azure Monitor OpenTelemetry; "
+                "continuing without App Insights export."
+            )
 
     def register_services(self):
         """Register application services into the dependency injection container.
