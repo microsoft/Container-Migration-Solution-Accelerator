@@ -316,15 +316,15 @@ wheels = [
 
 [[package]]
 name = "agent-framework-github-copilot"
-version = "1.0.0b260507"
+version = "1.0.0b260402"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "github-copilot-sdk" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/0f/0cab3d20c84ff309f820d02e810c1fa17f1a6fc432775605e34f651955ae/agent_framework_github_copilot-1.0.0b260507.tar.gz", hash = "sha256:f8640d4a18beca67a83b833b5d23f873aa5e1d4e91423ee1923d650b7b97d06d", size = 12546, upload-time = "2026-05-08T00:08:59.419Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/57/70/c7046be5b40de709843fc8ea07e5236368db06bbf683e8a1738ca67a9b6c/agent_framework_github_copilot-1.0.0b260402.tar.gz", hash = "sha256:29a6aa1c970d48b5d0dd88bf54512fbd06cfb1cf3e636f99a8fccad784b5592e", size = 9933, upload-time = "2026-04-02T16:39:42.914Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/75/c8747c30acf236daa97063763fd16e443a2734e80c5678c42e103d1b50d6/agent_framework_github_copilot-1.0.0b260507-py3-none-any.whl", hash = "sha256:53a5daae86824fce017f30637edd5e50675e4630da5be09bb259383713198f40", size = 12510, upload-time = "2026-05-08T00:09:42.889Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/39/547175228be559916c8e35a51187be454835719198194453216dca366e4d/agent_framework_github_copilot-1.0.0b260402-py3-none-any.whl", hash = "sha256:df2e4b13b07446aa984bf0aea5971a4304f34f07d6bec0f4f0d01c3e03ea37df", size = 9983, upload-time = "2026-04-02T16:39:23.269Z" },
 ]
 
 [[package]]
@@ -1514,19 +1514,19 @@ wheels = [
 
 [[package]]
 name = "github-copilot-sdk"
-version = "1.0.0b2"
+version = "0.1.32"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-dateutil" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/fe/2cb98d4b9f57f8062ea72775bde72aed1958305016753f7296398e0ceb45/github_copilot_sdk-1.0.0b2-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:1b5941d8b6e3d94d42a5bec6607a26f562e6535d5c981089d23d3d224b94601c", size = 67061619, upload-time = "2026-05-06T20:02:08.636Z" },
-    { url = "https://files.pythonhosted.org/packages/57/45/76567821b2d36f81e6bca78c98d265e2762733f765fa51d69602b7f81867/github_copilot_sdk-1.0.0b2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c5b8f6a087a0cf02bb0d33976e8f8c009578d84d701a0b28d52051304791ac70", size = 63790955, upload-time = "2026-05-06T20:02:12.354Z" },
-    { url = "https://files.pythonhosted.org/packages/15/67/684b0da0b1207a2bdf025c22ee075d34a1736d61a4973651035d4fd4d8dc/github_copilot_sdk-1.0.0b2-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:f403638c11b82bddb81c94675fc4e8014a1bb2e86a679a39fa167dcc3ad5416a", size = 69538664, upload-time = "2026-05-06T20:02:16.363Z" },
-    { url = "https://files.pythonhosted.org/packages/57/1d/80d88ecf83683535d1a16d4817f1683db3b125f52a924ebdfe9764f5e4c3/github_copilot_sdk-1.0.0b2-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:433d16bb31171fee8d3a5b70259c527f63b297e83a8f8761ae1f16f14d641f32", size = 68163648, upload-time = "2026-05-06T20:02:21.139Z" },
-    { url = "https://files.pythonhosted.org/packages/32/d3/b72aa2fbb3194b50b53e8cb1484f5606a1f8eedcdb0bfb5747da52079553/github_copilot_sdk-1.0.0b2-py3-none-win_amd64.whl", hash = "sha256:a6e9782dae4c3c2ab3527b45bb5de0f61998104c10e9ff64698280eaf37ab5dd", size = 62649144, upload-time = "2026-05-06T20:02:24.953Z" },
-    { url = "https://files.pythonhosted.org/packages/b6/e2/be95b8ea0ac11d1ca474e28a59284f4e395c2710734eadfb657f5de8ace2/github_copilot_sdk-1.0.0b2-py3-none-win_arm64.whl", hash = "sha256:2e97d0ce4bad67dc5929091cb429e7bbae7d4643e4908a6af256a41439000740", size = 60374365, upload-time = "2026-05-06T20:02:29.02Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/67/ebd002c14fe7d2640d0fff47a0b29fdb21ed239b597afa2d2c6f6cfebb0b/github_copilot_sdk-0.1.32-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:d97bc39fbd4b51e0aea3405299da1e643838ddbf6bff284f688a2d8c20d82ff8", size = 58576987, upload-time = "2026-03-07T15:28:24.062Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/50/add440f61e19f5b7e6989c89c5cefcb14c23f06627621e7c3a15a1f75e5d/github_copilot_sdk-0.1.32-py3-none-macosx_11_0_arm64.whl", hash = "sha256:8098592f34e7ee7decbcbb7615c7eb924471e65a3e4d0d93bc49b0d112f8ec51", size = 55328145, upload-time = "2026-03-07T15:28:28.395Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/b8/c3ca0678b21d8a0dd8fe3aa8fad4b7ec5f22cbe9d5fb3a11f82df4f40578/github_copilot_sdk-0.1.32-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:c20cae4bec3584ce007a65a363216a1f98a71428a3ca3b76622f9e556307eed2", size = 61456678, upload-time = "2026-03-07T15:28:32.646Z" },
+    { url = "https://files.pythonhosted.org/packages/21/5c/bdfe177353f88d44da9600c3ec478e2b0df7a838901947b168e869ba5ad7/github_copilot_sdk-0.1.32-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:0941fd445e97a9b13fb713086c4a8c09c20ec8c7ab854cf009bd7cc213488999", size = 59641536, upload-time = "2026-03-07T15:28:36.977Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/d0/2f3a07c74ecd24587b8f7d26729738f73e63f3341bf4bdc9eb2bb73ddaaf/github_copilot_sdk-0.1.32-py3-none-win_amd64.whl", hash = "sha256:37a82ff0908e01512052b69df4aa498332fa5769999635425015ed43cd850622", size = 54077464, upload-time = "2026-03-07T15:28:41.34Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/76/292088d6ccf2daf8bcb8a94b22b4f16005a6772087896f1b43c4f0d5edaa/github_copilot_sdk-0.1.32-py3-none-win_arm64.whl", hash = "sha256:3199c99604e8d393b1d60905be80b84da44e70d16d30b92e2ae9b92814cdc4ae", size = 52083845, upload-time = "2026-03-07T15:28:45.092Z" },
 ]
 
 [[package]]
@@ -3052,16 +3052,16 @@ wheels = [
 
 [[package]]
 name = "pydantic-settings"
-version = "2.14.0"
+version = "2.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/98/c8345dccdc31de4228c039a98f6467a941e39558da41c1744fbe29fa5666/pydantic_settings-2.14.0.tar.gz", hash = "sha256:24285fd4b0e0c06507dd9fdfd331ee23794305352aaec8fc4eb92d4047aeb67d", size = 235709, upload-time = "2026-04-20T13:37:40.293Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/b5/8f48e906c3e0205276e8bd8cb7512217a87b2685304d64be27cad5b3019f/pydantic_settings-2.14.2.tar.gz", hash = "sha256:c19dd64b19097f1de80184f0cc7b0272a13ae6e170cbf240a3e27e381ed14a5f", size = 237700, upload-time = "2026-06-19T13:44:56.324Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/dd/bebff3040138f00ae8a102d426b27349b9a49acc310fcae7f92112d867e3/pydantic_settings-2.14.0-py3-none-any.whl", hash = "sha256:fc8d5d692eb7092e43c8647c1c35a3ecd00e040fcf02ed86f4cb5458ca62182e", size = 60940, upload-time = "2026-04-20T13:37:38.586Z" },
+    { url = "https://files.pythonhosted.org/packages/77/c1/6e422f34e569cf8e18df68d1939c81c099d2b61e4f7d9621c8a77560799c/pydantic_settings-2.14.2-py3-none-any.whl", hash = "sha256:a20c97b37910b6550d5ea50fbcc2d4187defe58cd57070b73863d069419c9440", size = 61715, upload-time = "2026-06-19T13:44:55.02Z" },
 ]
 
 [[package]]
