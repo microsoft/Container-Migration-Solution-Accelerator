@@ -22,19 +22,19 @@ from datetime import datetime
 from typing import Any, Awaitable, Callable, Generic, Mapping, Sequence, TypeVar
 
 from agent_framework import (
-    AgentProtocol,
-    AgentRunUpdateEvent,
-    ChatAgent,
-    ChatMessage,
+    Agent,
+    AgentResponseUpdate,
+    ChatOptions,
+    Content,
     Executor,
-    GroupChatBuilder,
-    ManagerSelectionResponse,
-    Role,
+    Message,
+    SupportsAgentRun,
     Workflow,
-    WorkflowOutputEvent,
+    WorkflowEvent,
 )
+from agent_framework.orchestrations import GroupChatBuilder, GroupChatState
 from mem0 import AsyncMemory
-from pydantic import BaseModel, ValidationError
+from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,36 @@ logger = logging.getLogger(__name__)
 # Generic type variables
 TInput = TypeVar("TInput")  # Input type (str, dict, BaseModel, etc.)
 TOutput = TypeVar("TOutput", bound=BaseModel)  # Output must be Pydantic model
+
+
+class ManagerSelectionResponse(BaseModel):
+    """Coordinator selection payload parsed from JSON output.
+
+    The Coordinator prompt instructs the model to emit fields named
+    ``selected_participant`` / ``instruction`` / ``finish``. We use
+    ``selection_func`` (not ``orchestrator_agent``) so the Coordinator
+    runs as a regular participant and the framework does NOT override
+    its ``response_format``. The model should emit our prompt field
+    names, but we keep ``AliasChoices`` for robustness in case the
+    framework's ``AgentOrchestrationOutput`` names
+    (``next_speaker`` / ``reason`` / ``terminate``) leak through.
+    """
+
+    selected_participant: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("selected_participant", "next_speaker"),
+    )
+    instruction: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("instruction", "reason"),
+    )
+    finish: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("finish", "terminate"),
+    )
+    final_message: str | None = None
+
+    model_config = {"extra": "forbid", "populate_by_name": True}
 
 
 @dataclass
@@ -87,7 +117,7 @@ class OrchestrationResult(Generic[TOutput]):
     """Final workflow execution result with generic output type"""
 
     success: bool
-    conversation: list[ChatMessage]
+    conversation: list[Message]
     agent_responses: list[AgentResponse]
     tool_usage: dict[str, list[dict[str, Any]]]
     result: TOutput | None = None
@@ -188,8 +218,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self,
         name: str,
         process_id: str,
-        participants: Mapping[str, AgentProtocol | Executor]
-        | Sequence[AgentProtocol | Executor],
+        participants: Mapping[str, SupportsAgentRun | Executor]
+        | Sequence[SupportsAgentRun | Executor],
         memory_client: AsyncMemory,
         coordinator_name: str = "Coordinator",
         max_rounds: int = 100,
@@ -225,13 +255,14 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self.result_format = result_output_format
 
         # Runtime state
-        self.agents: dict[str, ChatAgent] = participants
+        self.agents: dict[str, Agent] = participants
         self.agent_tool_usage: dict[str, list[dict[str, Any]]] = {}
         self.agent_responses: list[AgentResponse] = []
         self._initialized: bool = False
 
         # Streaming response buffer
         self._last_executor_id: str | None = None
+        self._last_response_id: str | None = None
         self._current_agent_response: list[str] = []
         self._current_agent_start_time: datetime | None = None
 
@@ -262,9 +293,16 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._forced_termination_reason: str | None = None
         self._forced_termination_type: str | None = None
 
-        # Loop detection for Coordinator selections (participant + instruction)
-        self._last_coordinator_selection: tuple[str, str] | None = None
+        # Loop detection for Coordinator selections.
+        # We track the *agent the Coordinator most recently picked* (lower-cased name)
+        # rather than (agent, instruction) tuples, because in practice the LLM-driven
+        # Coordinator varies the instruction text while looping on the same agent.
+        # A streak counts how many consecutive Coordinator picks landed on the same
+        # agent without any *other* agent running in between (see _progress_counter
+        # bookkeeping in _handle_agent_update).
+        self._last_coordinator_selection: str | None = None
         self._coordinator_selection_streak: int = 0
+        # Diagnostic history of recent (agent, instruction) selections.
         self._recent_coordinator_selections: deque[tuple[str, str]] = deque(maxlen=10)
 
         # Progress counter used to avoid false-positive loop detection.
@@ -338,7 +376,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         """
         return "ResultGenerator"
 
-    def _validate_sign_offs(self, conversation: list[ChatMessage]) -> tuple[bool, str]:
+    def _validate_sign_offs(self, conversation: list[Message]) -> tuple[bool, str]:
         """
         Validate that all required reviewers have SIGN-OFF: PASS.
 
@@ -358,8 +396,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         # Search for sign-off patterns in messages
         for msg in recent_messages:
-            content = str(msg.content).upper()
-            agent_name = msg.source if hasattr(msg, "source") else None
+            content = (msg.text or str(msg.contents)).upper()
+            agent_name = getattr(msg, "author_name", None) or getattr(msg, "source", None)
 
             if not agent_name or agent_name == self.coordinator_name:
                 continue
@@ -475,7 +513,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         self._tool_call_emitted.clear()
         self._tool_call_recorded.clear()
         self._tool_call_index.clear()
-        self._conversation: list[ChatMessage] = []  # Track conversation during workflow
+        self._conversation: list[Message] = []  # Track conversation during workflow
 
         try:
             # Ensure initialized
@@ -489,9 +527,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             group_chat_workflow = await self._build_groupchat()
 
             # Execute with streaming
-            conversation: list[ChatMessage] = []
+            conversation: list[Message] = []
 
-            async for event in group_chat_workflow.run_stream(task_prompt):
+            async for event in group_chat_workflow.run(task_prompt, stream=True):
                 # Enforce wall-clock timeout if configured.
                 if self.max_seconds is not None:
                     elapsed = (datetime.now() - start_time).total_seconds()
@@ -503,9 +541,32 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                             termination_type="hard_timeout",
                         )
 
-                if isinstance(event, AgentRunUpdateEvent):
+                # In agent-framework 1.3.0, ``workflow.run(stream=True)`` yields
+                # only ``WorkflowEvent`` instances; ``AgentResponseUpdate`` is
+                # wrapped inside ``WorkflowEvent.data`` for ``type=="output"``
+                # events. The previous ``isinstance(event, AgentResponseUpdate)``
+                # check from the b260107 era is permanently dead in 1.3.0
+                # because the two types are unrelated. We now dispatch on
+                # ``WorkflowEvent.type`` and inspect ``event.data`` /
+                # ``event.executor_id`` to route per-participant streaming
+                # chunks vs the orchestrator's final output.
+                if not isinstance(event, WorkflowEvent) or event.type != "output":
+                    continue
+
+                data = event.data
+                src_executor = self._normalize_executor_id(event.executor_id or "")
+
+                # Per-participant streaming chunk. Requires
+                # ``intermediate_outputs=True`` on the GroupChatBuilder so the
+                # underlying executors' ``yield_output(AgentResponseUpdate)``
+                # calls surface as workflow events rather than being swallowed.
+                if (
+                    isinstance(data, AgentResponseUpdate)
+                    and src_executor in self.agents
+                ):
                     await self._handle_agent_update(
-                        event,
+                        data,
+                        executor_id=event.executor_id,
                         stream_callback=on_agent_response_stream,
                         callback=on_agent_response,
                     )
@@ -525,25 +586,42 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     # If the Coordinator requested finish=true, stop immediately.
                     if self._termination_requested:
                         break
-                elif isinstance(event, WorkflowOutputEvent):
-                    # Complete last agent's response before finishing
-                    if self._last_executor_id and self._current_agent_response:
-                        await self._complete_agent_response(
-                            self._last_executor_id, on_agent_response
-                        )
 
-                    # Extract final conversation from output
-                    if isinstance(event.data, list):
-                        conversation = event.data
-                        self._conversation = conversation  # Update instance variable
-                    else:
-                        # Handle custom result objects with conversation attribute
-                        conversation = getattr(event.data, "conversation", [])
-                        self._conversation = conversation  # Update instance variable
+                    continue
+
+                # Final orchestrator output: complete any buffered agent
+                # response and capture the conversation.
+                if self._last_executor_id and self._current_agent_response:
+                    await self._complete_agent_response(
+                        self._last_executor_id, on_agent_response
+                    )
+
+                if isinstance(data, list):
+                    conversation = data
+                    self._conversation = conversation  # Update instance variable
+                else:
+                    # Handle custom result objects with conversation attribute
+                    conversation = getattr(data, "conversation", [])
+                    self._conversation = conversation  # Update instance variable
+
+            # Fallback: when the streaming loop breaks early (e.g. Coordinator
+            # finish=true termination), the framework's final output event
+            # carrying the conversation is never received and ``conversation``
+            # stays empty.  Reconstruct a best-effort conversation from the
+            # agent_responses we collected during streaming so the
+            # ResultGenerator still has context to work with.
+            if not conversation and self.agent_responses:
+                logger.warning(
+                    "[CONVERSATION] Final output event missed (early termination); "
+                    "reconstructing conversation from %d agent_responses.",
+                    len(self.agent_responses),
+                )
+                conversation = self._reconstruct_conversation_from_responses()
+                self._conversation = conversation
 
             # Backfill tool usage from the final conversation (more reliable than streaming updates)
-            # AgentRunUpdateEvent may stream text only; tool calls are represented as FunctionCallContent
-            # items inside ChatMessage.contents.
+            # AgentResponseUpdate may stream text only; tool calls are represented as FunctionCallContent
+            # items inside Message.contents.
             self._backfill_tool_usage_from_conversation(conversation)
 
             # Post-workflow analysis (optional)
@@ -602,17 +680,48 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     f"[RESULT] Skipping result generation - result_format: {result_format}, agent exists: {result_generator_name in self.agents}"
                 )
 
+            # Validate that ResultGenerator produced a coherent output. The LLM can
+            # sometimes return is_hard_terminated=False with output=None ("success
+            # but no actual output"), which causes downstream steps to crash with
+            # NoneType errors. Treat such self-contradictory results as failures so
+            # the workflow surfaces a clear error rather than propagating an empty
+            # shell to the next step.
+            generated_error: str | None = None
+            if final_analysis is not None and not bool(
+                getattr(final_analysis, "is_hard_terminated", False)
+            ):
+                # Step result models use either ``output`` (Analysis) or
+                # ``termination_output`` (Design, Convert, Documentation). Treat
+                # both equivalently: if neither holds a non-None payload, the
+                # ResultGenerator returned an incoherent shell.
+                has_output_attr = hasattr(final_analysis, "output") or hasattr(
+                    final_analysis, "termination_output"
+                )
+                payload = getattr(final_analysis, "output", None) or getattr(
+                    final_analysis, "termination_output", None
+                )
+                if has_output_attr and payload is None:
+                    reason = (
+                        getattr(final_analysis, "reason", "") or "<no reason given>"
+                    )
+                    generated_error = (
+                        "ResultGenerator produced incoherent output: "
+                        "is_hard_terminated=False but output=None. "
+                        f"Reason from result: {reason}"
+                    )
+                    logger.error("[RESULT] %s", generated_error)
+
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()
 
             # Build result
             result = OrchestrationResult[TOutput](
-                success=True,
+                success=generated_error is None,
                 conversation=conversation,
                 agent_responses=self.agent_responses,
                 tool_usage=self.agent_tool_usage,
                 result=final_analysis,
-                error=None,
+                error=generated_error,
                 execution_time_seconds=execution_time,
             )
 
@@ -642,7 +751,8 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
     async def _handle_agent_update(
         self,
-        event: AgentRunUpdateEvent,
+        event: AgentResponseUpdate,
+        executor_id: str | None = None,
         stream_callback: AgentResponseStreamCallback | None = None,
         callback: AgentResponseCallback | None = None,
     ) -> None:
@@ -654,9 +764,29 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         2. On agent switch, complete previous agent's response
         3. Trigger callback with complete response
         4. Handle tool calls separately from text streaming
+
+        Agent identity resolution priority:
+          1. ``executor_id`` from the wrapping ``WorkflowEvent`` (always
+             populated by the workflow runner from ``AgentExecutor.id`` which
+             is the agent's name). This is the primary source in 1.3.0.
+          2. ``event.author_name`` (set by 1.3.0's ``map_chat_to_agent_update``).
+          3. ``event.agent_id`` (legacy; not populated in 1.3.0).
         """
-        agent_name = self._normalize_executor_id(event.executor_id)
-        await self._start_agent_if_needed(agent_name, stream_callback, callback)
+        if executor_id:
+            agent_name = self._normalize_executor_id(executor_id)
+        else:
+            author_name = getattr(event, "author_name", None)
+            agent_name = author_name or self._normalize_executor_id(
+                getattr(event, "agent_id", None) or ""
+            )
+        # Detect new invocations of the same agent via response_id change.
+        # When the same agent runs back-to-back (e.g. Coordinator selected
+        # twice on parse failure), the executor_id is identical but
+        # response_id differs per invocation.
+        response_id = getattr(event, "response_id", None)
+        await self._start_agent_if_needed(
+            agent_name, stream_callback, callback, response_id=response_id
+        )
         self._append_text_chunk(event)
         await self._process_tool_calls(event, agent_name, stream_callback)
 
@@ -672,10 +802,27 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         agent_name: str,
         stream_callback: AgentResponseStreamCallback | None,
         callback: AgentResponseCallback | None,
+        response_id: str | None = None,
     ) -> None:
-        """Handle agent switches and emit a message-start stream event."""
-        if agent_name == self._last_executor_id:
+        """Handle agent switches and emit a message-start stream event.
+
+        With ``selection_func`` the Coordinator IS a visible participant,
+        so we see both Coordinator and participant events. The response_id
+        detection is kept as a safety net for same-agent back-to-back
+        invocations (e.g. Coordinator → Coordinator on parse failure).
+        """
+        # Detect same-agent new invocation via response_id change.
+        is_new_response = (
+            response_id is not None
+            and self._last_response_id is not None
+            and response_id != self._last_response_id
+        )
+        if agent_name == self._last_executor_id and not is_new_response:
+            # Same agent, same response — just accumulating streaming chunks.
             return
+
+        if response_id is not None:
+            self._last_response_id = response_id
 
         # Complete and save previous agent's response
         if self._last_executor_id and self._current_agent_response:
@@ -705,24 +852,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         logger.info(f"\n[AGENT] {agent_name}:", extra={"agent_name": agent_name})
 
-    def _append_text_chunk(self, event: AgentRunUpdateEvent) -> None:
+    def _append_text_chunk(self, event: AgentResponseUpdate) -> None:
         """Append streamed text chunks to the current agent buffer."""
-        if not hasattr(event.data, "text") or not event.data.text:
+        text_chunk = getattr(event, "text", None)
+        if not text_chunk:
             return
 
-        text_obj = event.data.text
-        text_chunk = getattr(text_obj, "text", text_obj)
         if isinstance(text_chunk, str) and text_chunk:
             self._current_agent_response.append(text_chunk)
 
     async def _process_tool_calls(
         self,
-        event: AgentRunUpdateEvent,
+        event: AgentResponseUpdate,
         agent_name: str,
         stream_callback: AgentResponseStreamCallback | None,
     ) -> None:
         """Process tool-call contents: buffer/parse args, record once, emit once."""
-        tool_calls = self._extract_function_calls(getattr(event.data, "contents", None))
+        tool_calls = self._extract_function_calls(event.contents)
         if not tool_calls:
             return
 
@@ -884,7 +1030,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         return calls
 
     def _backfill_tool_usage_from_conversation(
-        self, conversation: list[ChatMessage]
+        self, conversation: list[Message]
     ) -> None:
         """Populate `agent_tool_usage` from final conversation messages.
 
@@ -894,7 +1040,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         for msg in conversation:
             try:
                 role = getattr(msg, "role", None)
-                if role != Role.ASSISTANT:
+                if role != "assistant":
                     continue
 
                 agent_name = getattr(msg, "author_name", None) or "assistant"
@@ -982,16 +1128,62 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         self.agent_responses.append(response)
 
+        # Participant-side loop detection (safety net). The Coordinator-based
+        # detection below (streak >= 3) is the primary guard. This catches
+        # edge cases where the Coordinator itself loops (e.g. selection_func
+        # returns Coordinator repeatedly on parse failure).
+        if agent_name != self.coordinator_name:
+            consecutive_same = 0
+            for r in reversed(self.agent_responses):
+                if r.agent_name == agent_name:
+                    consecutive_same += 1
+                else:
+                    break
+            if consecutive_same >= 5:
+                logger.warning(
+                    "[LOOP] Same agent '%s' ran %d consecutive times; forcing termination.",
+                    agent_name,
+                    consecutive_same,
+                )
+                self._request_forced_termination(
+                    reason=(
+                        f"Loop detected: '{agent_name}' ran {consecutive_same} "
+                        f"consecutive times without any other agent participating"
+                    ),
+                    termination_type="hard_timeout",
+                )
+
         # Mark progress on any non-Coordinator completion. This is used to ensure loop
         # detection only triggers when the Coordinator is repeating itself *and* the
         # rest of the conversation is not advancing.
+        #
+        # IMPORTANT: we must NOT count the looped-on agent's own runs as "progress".
+        # If we did, then the pattern "Coordinator picks A -> A runs -> Coordinator
+        # picks A -> A runs -> ..." would keep bumping the progress counter, which
+        # would reset the loop-detection streak on every check, and the streak would
+        # never grow past 1. The loop would then never be detected.
+        #
+        # Real progress means a DIFFERENT agent ran since the last identical Coordinator
+        # selection. So we only increment when the completing agent is not the one the
+        # Coordinator is currently latching onto.
         if agent_name != self.coordinator_name:
-            self._progress_counter += 1
+            last_selected = self._last_coordinator_selection
+            if (
+                last_selected is None
+                or agent_name.lower() != last_selected
+            ):
+                self._progress_counter += 1
 
         # Detect manager termination signal (finish=true) from Coordinator.
         # NOTE: The underlying GroupChatBuilder does not automatically stop on finish,
         # so we enforce it here.
         if agent_name == self.coordinator_name:
+            logger.info(
+                "[COORDINATOR] Processing Coordinator response (len=%d, streak=%d): %s",
+                len(complete_message),
+                self._coordinator_selection_streak,
+                complete_message[:150].replace("\n", " "),
+            )
             try:
                 json_payload = self._extract_first_json_payload(complete_message)
                 response_dict = json.loads(json_payload)
@@ -1006,17 +1198,27 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 # measures from Coordinator selection -> response completion.
                 selected = getattr(manager_response, "selected_participant", None)
 
-                # Loop detection: same selection+instruction repeated.
+                # Loop detection: same agent picked repeatedly with no other agent
+                # making progress in between. We deliberately key on the agent name
+                # alone (not on the instruction text) because the LLM-driven
+                # Coordinator often varies its instruction text while still looping
+                # on the same agent ("re-list", "read xyz.yaml", "save analysis_result.md"
+                # all sent to the same Chief Architect over and over). The
+                # _progress_counter (incremented in _handle_agent_update only when
+                # a DIFFERENT agent runs) is what tells us whether anything else
+                # actually happened in between.
                 if (
                     isinstance(selected, str)
                     and selected
                     and selected.lower() != "none"
                 ):
-                    selection_key = (selected, str(manager_instruction or ""))
-                    self._recent_coordinator_selections.append(selection_key)
-                    if selection_key == self._last_coordinator_selection:
-                        # If any other agent responded since the last identical selection,
-                        # treat that as progress and reset the streak.
+                    selected_key = selected.lower()
+                    self._recent_coordinator_selections.append(
+                        (selected, str(manager_instruction or ""))
+                    )
+                    if selected_key == self._last_coordinator_selection:
+                        # Same agent again. If any other agent ran since the last
+                        # identical pick, treat that as progress and reset the streak.
                         if (
                             self._progress_counter
                             != self._last_coordinator_selection_progress
@@ -1028,17 +1230,20 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                         else:
                             self._coordinator_selection_streak += 1
                     else:
-                        self._last_coordinator_selection = selection_key
+                        self._last_coordinator_selection = selected_key
                         self._coordinator_selection_streak = 1
                         self._last_coordinator_selection_progress = (
                             self._progress_counter
                         )
 
-                    # If the Coordinator repeats the exact same ask 3 times, break.
+                    # If the Coordinator picks the same agent 3 times in a row
+                    # without any other agent running in between, break out.
                     if self._coordinator_selection_streak >= 3:
                         self._request_forced_termination(
                             reason=(
-                                f"Loop detected: Coordinator repeated the same selection to '{selected}' {self._coordinator_selection_streak} times with no progress"
+                                f"Loop detected: Coordinator selected '{selected}' "
+                                f"{self._coordinator_selection_streak} consecutive "
+                                f"times with no other agent making progress in between"
                             ),
                             termination_type="hard_timeout",
                         )
@@ -1061,16 +1266,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 )
 
                 if coordinator_signaled_stop:
-                    # Only enforce PASS sign-offs when Coordinator claims success completion.
+                    # Log sign-off status for observability, but do NOT block
+                    # termination. With selection_func routing, rejecting finish
+                    # creates an unrecoverable loop (Coordinator keeps saying
+                    # finish=true, selection_func routes back to Coordinator).
+                    # The Coordinator's prompt already handles sign-off logic.
                     if instruction == "complete":
-                        is_valid, reason = self._validate_sign_offs(self._conversation)
+                        sign_off_conversation = (
+                            self._conversation
+                            if self._conversation
+                            else self._reconstruct_conversation_from_responses()
+                        )
+                        is_valid, reason = self._validate_sign_offs(sign_off_conversation)
                         if not is_valid:
                             logger.warning(
-                                "Termination rejected for success completion: %s. Workflow continues.",
+                                "Sign-off validation note: %s (proceeding with termination)",
                                 reason,
                             )
-                            # Do NOT set _termination_requested.
-                            return
 
                     self._termination_requested = True
                     self._termination_final_message = manager_response.final_message
@@ -1086,9 +1298,23 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                 ):
                     # Record invocation time for non-termination coordinator selections
                     self._agent_invoked_at[selected] = completed_at
-            except Exception:
-                # If the Coordinator didn't emit valid JSON, ignore.
-                pass
+            except Exception as exc:
+                # If the Coordinator didn't emit valid JSON we silently drop
+                # loop-detection and termination handling for this turn. Log at
+                # debug so the silence is visible if loop detection ever appears
+                # to misfire (previously this was a bare ``pass`` which made the
+                # failure invisible).
+                preview = (
+                    complete_message[:200]
+                    if isinstance(complete_message, str)
+                    else str(type(complete_message))
+                )
+                logger.warning(
+                    "[COORDINATOR] JSON parse failed; skipping loop detection. "
+                    "Raw message preview: %r; error: %s",
+                    preview,
+                    str(exc),
+                )
 
         # Invoke callback with complete response
         if callback:
@@ -1099,12 +1325,26 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
                     "on_agent_response callback failed (agent=%s)", agent_name
                 )
 
-        # # Invoke callback
-        # if callback:
-        #     await callback(response)
-
     async def _build_groupchat(self) -> Workflow:
-        """Build the GroupChat Orchestrator workflow"""
+        """Build the GroupChat Orchestrator workflow.
+
+        In agent-framework 1.3.0 the old ``GroupChatBuilder().set_manager()``
+        API was replaced. Using ``orchestrator_agent=`` wraps the Coordinator
+        inside ``AgentBasedGroupChatOrchestrator``, making its responses
+        invisible to our streaming loop and disabling loop detection, finish
+        signal extraction, and sign-off validation.
+
+        To restore the old behavior we use ``selection_func=`` with the
+        Coordinator included as a regular participant. The selection function
+        alternates between the Coordinator and participants:
+
+        1. After a participant responds → select Coordinator
+        2. After the Coordinator responds → parse its JSON to find the
+           next participant (or fall back to Coordinator on parse failure)
+
+        This keeps the Coordinator visible in the stream so all existing
+        detection/termination logic works unchanged.
+        """
         coordinator = self.agents[self.coordinator_name]
         participants = [
             agent
@@ -1113,16 +1353,73 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             and name != self.get_result_generator_name()
         ]
 
+        # Include Coordinator as a regular participant so its responses
+        # are visible in the streaming loop (unlike orchestrator_agent=).
+        all_participants = [coordinator] + participants
+        coordinator_name = self.coordinator_name
+
+        def selection_func(state: GroupChatState) -> str:
+            """Alternate between Coordinator and participants.
+
+            - First turn (no conversation): select Coordinator.
+            - After a participant: select Coordinator to evaluate.
+            - After the Coordinator: parse its JSON response and return
+              the selected participant name.
+            """
+            if not state.conversation:
+                return coordinator_name
+
+            last_msg = state.conversation[-1]
+            last_author = getattr(last_msg, "author_name", None) or ""
+
+            if last_author != coordinator_name:
+                # A participant just spoke → route to Coordinator
+                return coordinator_name
+
+            # Coordinator just spoke → parse its selection JSON
+            last_text = getattr(last_msg, "text", None) or ""
+            try:
+                # Find JSON payload in the Coordinator's response
+                start = last_text.find("{")
+                end = last_text.rfind("}") + 1
+                if start >= 0 and end > start:
+                    response_dict = json.loads(last_text[start:end])
+                    manager_response = ManagerSelectionResponse.model_validate(
+                        response_dict
+                    )
+                    selected = getattr(manager_response, "selected_participant", None)
+                    if (
+                        isinstance(selected, str)
+                        and selected
+                        and selected.lower() != "none"
+                        and selected in state.participants
+                    ):
+                        return selected
+
+                    # Coordinator said finish=true with no valid participant.
+                    # Route back to Coordinator to let the streaming loop's
+                    # termination/force-termination logic handle it.
+                    if manager_response.finish is True:
+                        return coordinator_name
+            except Exception:
+                pass
+
+            # Fallback: route back to Coordinator (will trigger loop detection)
+            return coordinator_name
+
         return (
-            GroupChatBuilder()
-            .set_manager(coordinator)
-            .participants(participants)
+            GroupChatBuilder(
+                participants=all_participants,
+                selection_func=selection_func,
+                max_rounds=self.max_rounds,
+                intermediate_outputs=True,
+            )
             .build()
         )
 
     async def _generate_final_result(
         self,
-        conversation: list[ChatMessage],
+        conversation: list[Message],
         result_format: type[TOutput],
         result_generator_name: str,
     ) -> TOutput:
@@ -1141,7 +1438,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
         result = await result_generator.run(
             final_conversation,
-            response_format=result_format,
+            options=ChatOptions(response_format=result_format),
         )
 
         text = result.messages[-1].text
@@ -1174,7 +1471,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
             )
             retry_result = await result_generator.run(
                 retry_conversation,
-                response_format=result_format,
+                options=ChatOptions(response_format=result_format),
             )
             retry_text = retry_result.messages[-1].text
             retry_json_payload = self._extract_first_json_payload(retry_text)
@@ -1220,7 +1517,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
     def _build_result_generator_conversation(
         self,
-        conversation: Iterable[ChatMessage],
+        conversation: Iterable[Message],
         *,
         exclude_authors: set[str] | None,
         max_messages: int,
@@ -1228,7 +1525,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         max_chars_per_message: int,
         keep_head_chars: int,
         keep_tail_chars: int,
-    ) -> list[ChatMessage]:
+    ) -> list[Message]:
         """Build a size-bounded conversation slice for the ResultGenerator.
 
         The raw conversation can contain extremely large tool outputs or repeated
@@ -1241,7 +1538,7 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         """
         exclude = {a.lower() for a in (exclude_authors or set())}
 
-        selected: list[ChatMessage] = []
+        selected: list[Message] = []
         seen_fingerprints: set[tuple[str | None, str, str]] = set()
         total_chars = 0
 
@@ -1296,9 +1593,9 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
 
             # Preserve role + author_name so downstream can attribute sign-offs.
             selected.append(
-                ChatMessage(
+                Message(
                     role=role,
-                    text=truncated,
+                    contents=[Content.from_text(truncated)],
                     author_name=author,
                 )
             )
@@ -1310,6 +1607,32 @@ class GroupChatOrchestrator(ABC, Generic[TInput, TOutput]):
         # Selected is newest->oldest; reverse back to chronological.
         selected.reverse()
         return selected
+
+    def _reconstruct_conversation_from_responses(self) -> list[Message]:
+        """Reconstruct a conversation from agent responses collected during streaming.
+
+        When the streaming loop breaks early (e.g., Coordinator termination),
+        the framework's final output event may not arrive, leaving the
+        conversation empty.  This method builds a best-effort conversation
+        from ``self.agent_responses`` so the ResultGenerator still has the
+        full agent discussion to summarize.
+        """
+        messages: list[Message] = []
+        for resp in self.agent_responses:
+            if not resp.message:
+                continue
+            messages.append(
+                Message(
+                    role="assistant",
+                    contents=[Content.from_text(resp.message)],
+                    author_name=resp.agent_name,
+                )
+            )
+        logger.info(
+            "[CONVERSATION] Reconstructed %d messages from agent_responses.",
+            len(messages),
+        )
+        return messages
 
     def get_tool_usage_summary(self) -> dict[str, Any]:
         """Get summary of tool usage across all agents"""

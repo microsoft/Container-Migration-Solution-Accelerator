@@ -22,14 +22,14 @@ Example:
 
         from libs.mcp_server.MCPBlobIOTool import get_blob_file_mcp
         from libs.agent_framework.mcp_context import MCPContext
-        from agent_framework import ChatAgent
+        from agent_framework import Agent
 
         # Get the Blob Storage MCP tool
         blob_tool = get_blob_file_mcp()
 
         # Use with MCPContext for TaskGroup-safe management
         async with MCPContext(tools=[blob_tool]) as mcp_ctx:
-            async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+            async with Agent(client, tools=mcp_ctx.tools) as agent:
                 response = await agent.run(
                     "Upload the file 'data.csv' to my Azure storage container 'datasets'"
                 )
@@ -76,7 +76,7 @@ def get_blob_file_mcp() -> MCPStdioTool:
             blob_tool = get_blob_file_mcp()
 
             async with blob_tool:
-                async with ChatAgent(client, tools=[blob_tool]) as agent:
+                async with Agent(client, tools=[blob_tool]) as agent:
                     result = await agent.run(
                         "Upload 'report.pdf' to container 'documents'"
                     )
@@ -91,7 +91,7 @@ def get_blob_file_mcp() -> MCPStdioTool:
             blob_tool = get_blob_file_mcp()
 
             async with MCPContext(tools=[blob_tool]) as mcp_ctx:
-                async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+                async with Agent(client, tools=mcp_ctx.tools) as agent:
                     # List all containers
                     containers = await agent.run("List all my blob containers")
                     print(containers)
@@ -111,13 +111,13 @@ def get_blob_file_mcp() -> MCPStdioTool:
 
             async with MCPContext(tools=[blob_tool, datetime_tool]) as mcp_ctx:
                 # Data processing agent
-                async with ChatAgent(client1, tools=mcp_ctx.tools) as processor:
+                async with Agent(client1, tools=mcp_ctx.tools) as processor:
                     data = await processor.run(
                         "Download 'raw_data.csv' from 'input-container'"
                     )
 
                 # Analysis agent
-                async with ChatAgent(client2, tools=mcp_ctx.tools) as analyst:
+                async with Agent(client2, tools=mcp_ctx.tools) as analyst:
                     result = await analyst.run(
                         f"Analyze the data and upload results to 'output-container'"
                     )
@@ -137,7 +137,7 @@ def get_blob_file_mcp() -> MCPStdioTool:
             blob_tool = get_blob_file_mcp()
 
             async with MCPContext(tools=[blob_tool]) as mcp_ctx:
-                async with ChatAgent(client, tools=mcp_ctx.tools) as agent:
+                async with Agent(client, tools=mcp_ctx.tools) as agent:
                     response = await agent.run("Upload 'image.png' to 'media-container'")
 
     Note:

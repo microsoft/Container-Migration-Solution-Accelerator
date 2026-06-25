@@ -22,6 +22,29 @@ from typing import Any
 from azure.core.exceptions import HttpResponseError
 
 
+class _EmptyMessageCacheFilter(logging.Filter):
+    """Suppress the harmless ``empty message cache`` warning emitted by
+    ``agent_framework._workflows._agent_executor``.
+
+    This warning fires by design in GroupChat orchestration when the orchestrator
+    routes back to the same speaker (its broadcast cache is empty because
+    ``_broadcast_messages_to_participants`` excludes the source executor). The
+    framework's parent client prepends the agent's system instructions before
+    calling the LLM, so the API call still has content. The warning is pure noise.
+
+    The filter is intentionally narrow: it matches only the exact message and
+    leaves every other warning/error from the same logger visible.
+    """
+
+    _MARKER = "Running agent with empty message cache"
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D401
+        try:
+            return self._MARKER not in record.getMessage()
+        except Exception:
+            return True
+
+
 def configure_application_logging(debug_mode: bool = False):
     """
     Comprehensive logging configuration with third-party suppression.
@@ -119,6 +142,13 @@ def configure_application_logging(debug_mode: bool = False):
 
     for logger_name in always_warning_loggers:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+    # Suppress only the harmless "Running agent with empty message cache" warning
+    # emitted by agent_framework's GroupChat orchestration. Real warnings/errors
+    # from the same logger are still surfaced.
+    _executor_logger = logging.getLogger("agent_framework._workflows._agent_executor")
+    if not any(isinstance(f, _EmptyMessageCacheFilter) for f in _executor_logger.filters):
+        _executor_logger.addFilter(_EmptyMessageCacheFilter())
 
     # Set environment variables to suppress verbose output at the source
     os.environ.setdefault("HTTPX_LOG_LEVEL", "WARNING")
