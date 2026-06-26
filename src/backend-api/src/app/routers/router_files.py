@@ -71,6 +71,12 @@ async def upload_file(
 
             process_record = await processRepository.get_async(process_id)
 
+            # Verify the caller owns this process before uploading into it.
+            # Return 404 (not 403) so the response does not confirm the
+            # existence of processes belonging to other users.
+            if not process_record or process_record.user_id != user_id:
+                raise HTTPException(status_code=404, detail="Process not found")
+
             file_id = str(uuid4())
             file_name = re.sub(r"[^\w.-]", "_", file.filename)
             blob_path = f"{process_id}/source/{file_name}"

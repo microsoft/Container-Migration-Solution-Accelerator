@@ -32,6 +32,13 @@ def _build(process_service=None, process_repo=None, configuration=None):
         process_repo.add_async, AsyncMock
     ):
         process_repo.add_async = AsyncMock(return_value=None)
+    # By default the authenticated caller (AUTH_HEADERS -> "user-1") owns the
+    # process, so ownership checks pass. Individual tests override get_async to
+    # exercise the not-found / not-owner (404) paths.
+    if not isinstance(getattr(process_repo, "get_async", None), AsyncMock):
+        process_repo.get_async = AsyncMock(
+            return_value=SimpleNamespace(id="p-1", user_id="user-1")
+        )
 
     scope = MagicMock()
     scope.get_service.side_effect = lambda t: (
@@ -392,3 +399,125 @@ class TestCancelStatus:
         ):
             res = client.get("/api/process/cancel/p-1/status", headers=AUTH_HEADERS)
         assert res.status_code == 504
+
+
+# A process owned by a *different* user than the authenticated caller ("user-1").
+OTHER_USER_PROCESS = SimpleNamespace(id="p-1", user_id="someone-else")
+
+
+def _build_unowned(missing=False):
+    """Build an app whose process repository returns a process the caller does
+    not own (or no process at all when ``missing`` is True)."""
+    repo = MagicMock()
+    repo.get_async = AsyncMock(return_value=None if missing else OTHER_USER_PROCESS)
+    app, svc, _ = _build(process_repo=repo)
+    return app, svc
+
+
+class TestProcessOwnershipEnforcement:
+    """Every endpoint that accepts a process_id must reject callers who do not
+    own the process with a 404 (not 403, to avoid confirming existence)."""
+
+    def test_status_rejects_non_owner(self):
+        app, _ = _build_unowned()
+        res = TestClient(app).get("/api/process/status/p-1/", headers=AUTH_HEADERS)
+        assert res.status_code == 404
+
+    def test_render_status_rejects_non_owner(self):
+        app, _ = _build_unowned()
+        res = TestClient(app).get(
+            "/api/process/status/p-1/render/", headers=AUTH_HEADERS
+        )
+        assert res.status_code == 404
+
+    def test_upload_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.save_files_to_blob = AsyncMock(return_value=None)
+        res = TestClient(app).post(
+            "/api/process/upload",
+            data={"process_id": "p-1"},
+            files={"files": ("a.txt", b"hi", "text/plain")},
+            headers=AUTH_HEADERS,
+        )
+        assert res.status_code == 404
+        svc.save_files_to_blob.assert_not_awaited()
+
+    def test_delete_file_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.delete_file_from_blob = AsyncMock(return_value=None)
+        res = TestClient(app).request(
+            "DELETE",
+            "/api/process/delete-file/foo.txt",
+            data={"process_id": "p-1"},
+            headers=AUTH_HEADERS,
+        )
+        assert res.status_code == 404
+        svc.delete_file_from_blob.assert_not_awaited()
+
+    def test_delete_process_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.delete_all_files_from_blob = AsyncMock(return_value=1)
+        res = TestClient(app).delete(
+            "/api/process/delete-process/p-1", headers=AUTH_HEADERS
+        )
+        assert res.status_code == 404
+        svc.delete_all_files_from_blob.assert_not_awaited()
+
+    def test_start_processing_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.process_enqueue = AsyncMock(return_value=None)
+        res = TestClient(app).post(
+            "/api/process/start-processing",
+            data={"process_id": "p-1"},
+            headers=AUTH_HEADERS,
+        )
+        assert res.status_code == 404
+        svc.process_enqueue.assert_not_awaited()
+
+    def test_download_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.get_converted_files = AsyncMock(return_value=[])
+        res = TestClient(app).get("/api/process/p-1/download", headers=AUTH_HEADERS)
+        assert res.status_code == 404
+        svc.get_converted_files.assert_not_awaited()
+
+    def test_process_summary_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.get_process_summary = AsyncMock(return_value=(None, []))
+        res = TestClient(app).get(
+            "/api/process/process-summary/p-1", headers=AUTH_HEADERS
+        )
+        assert res.status_code == 404
+        svc.get_process_summary.assert_not_awaited()
+
+    def test_file_content_rejects_non_owner(self):
+        app, svc = _build_unowned()
+        svc.get_converted_file_content = AsyncMock(return_value="x")
+        res = TestClient(app).get(
+            "/api/process/p-1/file/a.txt", headers=AUTH_HEADERS
+        )
+        assert res.status_code == 404
+        svc.get_converted_file_content.assert_not_awaited()
+
+    def test_cancel_rejects_non_owner_without_calling_processor(self):
+        app, _ = _build_unowned()
+        resp = _make_httpx_response(200, json_data={})
+        with _patch_httpx_async_client("post", resp) as patched:
+            res = TestClient(app).post("/api/process/cancel/p-1", headers=AUTH_HEADERS)
+        assert res.status_code == 404
+        patched.assert_not_called()
+
+    def test_cancel_status_rejects_non_owner_without_calling_processor(self):
+        app, _ = _build_unowned()
+        resp = _make_httpx_response(200, json_data={})
+        with _patch_httpx_async_client("get", resp) as patched:
+            res = TestClient(app).get(
+                "/api/process/cancel/p-1/status", headers=AUTH_HEADERS
+            )
+        assert res.status_code == 404
+        patched.assert_not_called()
+
+    def test_missing_process_returns_404(self):
+        app, _ = _build_unowned(missing=True)
+        res = TestClient(app).get("/api/process/p-1/download", headers=AUTH_HEADERS)
+        assert res.status_code == 404
