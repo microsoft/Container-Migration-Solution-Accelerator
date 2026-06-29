@@ -1172,7 +1172,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'App Configuration Data Reader'
+        roleDefinitionIdOrName: '516239f1-63e1-4d78-a4de-a74fb236a071' //'App Configuration Data Reader'
       }
     ]
     enableTelemetry: enableTelemetry
