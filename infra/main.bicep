@@ -634,23 +634,23 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     supportsHttpsTrafficOnly: true
     roleAssignments: [
       {
-        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' //'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
       {
-        roleDefinitionIdOrName: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' //'Storage Queue Data Contributor'
+        roleDefinitionIdOrName: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
       // Add deployer permissions
       {
-        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' //'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
       }
       {
-        roleDefinitionIdOrName: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' //'Storage Queue Data Contributor'
+        roleDefinitionIdOrName: '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
       }
@@ -721,7 +721,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 //========== Cosmos DB module ========== //
 var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 var cosmosDbZoneRedundantHaRegionPairs = {
-  australiaeast: 'uksouth' //'southeastasia'
+  australiaeast: 'uksouth' // southeastasia
   centralus: 'eastus2'
   eastasia: 'southeastasia'
   eastus: 'centralus'
@@ -847,13 +847,13 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '5bd9cd88-fe45-4216-938b-f97437e15450' //'DocumentDB Account Contributor'
+        roleDefinitionIdOrName: '5bd9cd88-fe45-4216-938b-f97437e15450' // DocumentDB Account Contributor
       }
       // Add deployer for local debugging
       {
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
-        roleDefinitionIdOrName: '5bd9cd88-fe45-4216-938b-f97437e15450' //'DocumentDB Account Contributor'
+        roleDefinitionIdOrName: '5bd9cd88-fe45-4216-938b-f97437e15450' // DocumentDB Account Contributor
       }
     ]
     // Create custom data plane role definition and assignment
@@ -935,28 +935,28 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
       }
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' //'Azure AI Developer'
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
       }
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' //'Foundry User'
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
       }
       // Deployer permissions
       {
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
-        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
       }
       {
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
-        roleDefinitionIdOrName: 'a97b65f3-24c7-4388-baec-2e87135dc908' //'Cognitive Services User'
+        roleDefinitionIdOrName: 'a97b65f3-24c7-4388-baec-2e87135dc908' // Cognitive Services User
       }
     ]
   }
@@ -1012,7 +1012,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
     roleAssignments: [
       // Service Principal permissions
       {
-        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1028,12 +1028,12 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.13.2'
       }
       // Deployer permissions for local debugging
       {
-        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' //'Cognitive Services OpenAI Contributor'
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
       }
       {
-        roleDefinitionIdOrName: 'a97b65f3-24c7-4388-baec-2e87135dc908' //'Cognitive Services User'
+        roleDefinitionIdOrName: 'a97b65f3-24c7-4388-baec-2e87135dc908' // Cognitive Services User
         principalId: deployingUserPrincipalId
         principalType: deployingUserType
       }
@@ -1215,7 +1215,7 @@ module appConfiguration 'br/public:avm/res/app-configuration/configuration-store
       {
         principalId: appIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: '516239f1-63e1-4d78-a4de-a74fb236a071' //'App Configuration Data Reader'
+        roleDefinitionIdOrName: '516239f1-63e1-4d78-a4de-a74fb236a071' // App Configuration Data Reader
       }
     ]
     enableTelemetry: enableTelemetry
