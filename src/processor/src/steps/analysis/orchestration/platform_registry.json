@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "experts": [
+    {
+      "id": "eks",
+      "agent_name": "EKS Expert",
+      "prompt_file": "prompt_eks.txt",
+      "category": "managed_cloud",
+      "signals": ["eks.amazonaws.com", "aws", "arn:aws", "kops", "eksctl"],
+      "description": "Tool-free reviewer specialized in Amazon EKS (AWS) source-side concerns. Provides EKS-specific analysis of the Evidence Pack and produces SIGN-OFF: PASS/FAIL. Select only after the Chief Architect has posted an Evidence Pack; required only if the source platform is EKS."
+    },
+    {
+      "id": "gke",
+      "agent_name": "GKE Expert",
+      "prompt_file": "prompt_gke.txt",
+      "category": "managed_cloud",
+      "signals": [
+        "cloud.google.com",
+        "gke",
+        "anthos",
+        "gcr.io",
+        "artifactregistry"
+      ],
+      "description": "Tool-free reviewer specialized in Google GKE source-side concerns. Provides GKE-specific analysis of the Evidence Pack and produces SIGN-OFF: PASS/FAIL. Select only after the Chief Architect has posted an Evidence Pack; required only if the source platform is GKE."
+    },
+    {
+      "id": "openshift",
+      "agent_name": "OpenShift Expert",
+      "prompt_file": "prompt_openshift.txt",
+      "category": "enterprise_distro",
+      "signals": [
+        "route.openshift.io",
+        "openshift",
+        "ocp",
+        "security.openshift.io",
+        "config.openshift.io"
+      ],
+      "description": "Tool-free reviewer for Red Hat OpenShift (OCP) source-side concerns. Reviews the Evidence Pack and produces SIGN-OFF: PASS/FAIL. Select only after the Chief Architect has posted an Evidence Pack; required only if the source platform is OpenShift."
+    },
+    {
+      "id": "rancher",
+      "agent_name": "Rancher Expert",
+      "prompt_file": "prompt_rancher.txt",
+      "category": "enterprise_distro",
+      "signals": ["cattle.io", "rancher", "rke", "rke2", "k3s"],
+      "description": "Tool-free reviewer for Rancher / RKE / RKE2 / K3s source-side concerns. Reviews the Evidence Pack and produces SIGN-OFF: PASS/FAIL. Select only after the Chief Architect has posted an Evidence Pack; required only if the source platform is Rancher."
+    },
+    {
+      "id": "tanzu",
+      "agent_name": "Tanzu Expert",
+      "prompt_file": "prompt_tanzu.txt",
+      "category": "enterprise_distro",
+      "signals": ["tanzu", "vmware", "tkg", "tkgs", "pinniped", "antrea"],
+      "description": "Tool-free reviewer for VMware Tanzu (TKG / TKGS) source-side concerns. Reviews the Evidence Pack and produces SIGN-OFF: PASS/FAIL. Select only after the Chief Architect has posted an Evidence Pack; required only if the source platform is Tanzu."
+    },
+    {
+      "id": "onprem",
+      "agent_name": "OnPremK8s Expert",
+      "prompt_file": "prompt_onprem_k8s.txt",
+      "category": "on_prem",
+      "signals": [
+        "kubeadm",
+        "kubespray",
+        "microk8s",
+        "charmed kubernetes",
+        "k0s",
+        "talos",
+        "bare metal",
+        "metal",
+        "vsphere",
+        "metallb",
+        "keepalived",
+        "openebs",
+        "rook",
+        "ceph",
+        "nfs",
+        "f5"
+      ],
+      "description": "Tool-free reviewer for self-managed / on-premises Kubernetes (kubeadm, k3s, Talos, bare-metal, vSphere) source-side concerns. Reviews the Evidence Pack and produces SIGN-OFF: PASS/FAIL. Select only after the Chief Architect has posted an Evidence Pack; required only if the source platform is on-prem."
+    }
+  ]
+}

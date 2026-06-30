@@ -1,0 +1,130 @@
+name: Build & Push Test Images (Feature Branch)
+
+on:
+  workflow_call:
+    outputs:
+      IMAGE_TAG:
+        description: "Generated Docker Image Tag"
+        value: ${{ jobs.docker-build.outputs.IMAGE_TAG }}
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      IMAGE_TAG: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Generate Unique Docker Image Tag
+        id: generate_docker_tag
+        shell: bash
+        run: |
+          echo "🔨 Building new Docker image - generating unique tag..."
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          RUN_ID="${{ github.run_id }}"
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          CLEAN_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+          UNIQUE_TAG="${CLEAN_BRANCH_NAME}-${TIMESTAMP}-${RUN_ID}"
+          echo "IMAGE_TAG=$UNIQUE_TAG" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$UNIQUE_TAG" >> $GITHUB_OUTPUT
+          echo "Generated unique Docker tag: $UNIQUE_TAG"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to Azure Container Registry
+        shell: bash
+        run: |
+          # Extract registry name from login server (e.g., myacr.azurecr.io -> myacr)
+          ACR_NAME=$(echo "${{ vars.ACR_TEST_LOGIN_SERVER }}" | cut -d'.' -f1)
+          az acr login --name "$ACR_NAME"
+
+      - name: Build and Push Backend API Docker Image
+        id: build_push_image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: ./src/backend-api
+          file: ./src/backend-api/Dockerfile
+          push: true
+          provenance: false
+          tags: |
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
+
+      - name: Build and Push Processor Docker Image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: ./src/processor
+          file: ./src/processor/Dockerfile
+          push: true
+          provenance: false
+          tags: |
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
+      
+      - name: Build and Push Front End Docker Image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/Dockerfile
+          push: true
+          provenance: false
+          tags: |
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
+
+      - name: Verify Docker Image Build
+        shell: bash
+        run: |
+          echo "✅ Docker image successfully built and pushed"
+          echo "Image tag: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}"
+      
+      - name: Generate Docker Build Summary
+        if: always()
+        shell: bash
+        run: |
+          ACR_NAME=$(echo "${{ vars.ACR_TEST_LOGIN_SERVER }}")
+          echo "## 🐳 Docker Build Job Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Job Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image Tag** | \`${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ env.BRANCH_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "### ✅ Build Details" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully built and pushed three Docker images to ACR:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Built Images:**" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${ACR_NAME}/backend-api:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${ACR_NAME}/processor:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${ACR_NAME}/frontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo "- Docker build process encountered an error" >> $GITHUB_STEP_SUMMARY
+            echo "- Check the docker-build job for detailed error information" >> $GITHUB_STEP_SUMMARY
+          fi

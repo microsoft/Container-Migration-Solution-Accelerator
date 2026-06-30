@@ -1,0 +1,36 @@
+
+# Sample Workflow
+
+To help you get started, here’s a **sample process** you can follow in the app.
+
+## **Process**
+
+> Note: Sample data files provided in the repo are for **EKS & GKE** and live in the data folder ([here](../data)). The solution also supports other source Kubernetes platforms (e.g., OpenShift/Rancher/Tanzu/on-prem), but sample data for those may not be included.
+
+### **Upload**
+
+_Sample Operations:_
+
+- Select all files from **EKS** folder.
+- Click the **Upload** button.
+- Check Upload Status
+  > _Observe: Success message **All valid files uploaded successfully!** appears_
+- Click **Start Processing** Button to Process Files.
+  > _Note: Average response time is 20-30 minutes._ <br>
+
+### **Review**
+
+- The Batch Processing page will appear, showing the migration process with real-time status updates, including agent activity and phase details.
+- Once batch processing is complete, all files along with four detailed reports will be available for review.
+  
+### **Download**
+
+_Sample operation:_
+
+- Once the files are translated, the **Download all as .zip** button at the top left will be enabled to download the translated files.
+
+ ![Application](images/sampleworkflow1.png)
+
+ > Note: Follow the same process for the **GKE** folder.
+
+This structured approach simplifies container adoption by automating migration, handling dependencies, and optimizing performance for cloud-native environments, while enhancing existing code for better efficiency and maintainability.

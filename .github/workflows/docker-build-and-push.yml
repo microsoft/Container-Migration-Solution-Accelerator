@@ -1,0 +1,120 @@
+name: Build and Push Docker Images
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+on:
+  push:
+    branches: [main, dev, demo, hotfix]
+    paths:
+      - 'src/backend-api/**'
+      - 'src/processor/**'
+      - 'src/frontend/**'
+      - '.github/workflows/docker-build-and-push.yml'
+  pull_request:
+    branches: [main, dev, demo, hotfix]
+    types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - 'src/backend-api/**'
+      - 'src/processor/**'
+      - 'src/frontend/**'
+      - '.github/workflows/docker-build-and-push.yml'
+  workflow_dispatch:
+  
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Login to Azure
+        if: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) || (github.event_name == 'workflow_dispatch' && (github.ref_name == 'dependabotchanges'||github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to Azure Container Registry
+        if: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) || (github.event_name == 'workflow_dispatch' && (github.ref_name == 'dependabotchanges'||github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) }}
+        run: az acr login --name ${{ env.ACR_LOGIN_SERVER }}
+      
+      - name: Get registry
+        id: registry
+        run: |
+          if [[ -n "${{ env.ACR_LOGIN_SERVER }}" ]]; then
+            echo "ext_registry=${{ env.ACR_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
+            echo "has_registry=true" >> $GITHUB_OUTPUT
+          else
+            echo "ext_registry=temp-registry" >> $GITHUB_OUTPUT
+            echo "has_registry=false" >> $GITHUB_OUTPUT
+          fi
+        
+      - name: Set Docker image tags
+        id: tag
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          DATE="${{ steps.date.outputs.date }}"
+          GITHUB_RUN_NUMBER="${{ github.run_number }}"
+          if [[ "$BRANCH" == "main" ]]; then
+            BASE_TAG="latest_v2"
+          elif [[ "$BRANCH" == "dev" ]]; then
+            BASE_TAG="dev"
+          elif [[ "$BRANCH" == "demo" ]]; then
+            BASE_TAG="demo"
+          elif [[ "$BRANCH" == "hotfix" ]]; then
+            BASE_TAG="hotfix"
+          else
+            BASE_TAG="pullrequest-ignore"
+          fi
+          DATE_TAG="${BASE_TAG}_${DATE}_${GITHUB_RUN_NUMBER}"
+          echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
+          echo "DATE_TAG=${DATE_TAG}" >> $GITHUB_ENV
+          echo "Base tag: $BASE_TAG, Date tag: $DATE_TAG"
+
+      - name: Build and Push Backend API Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./src/backend-api
+          file: ./src/backend-api/Dockerfile
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          provenance: false
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.BASE_TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
+
+      - name: Build and Push Processor Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./src/processor
+          file: ./src/processor/Dockerfile
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          provenance: false
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.BASE_TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
+            
+      - name: Build and Push Frontend Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+          provenance: false
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/frontend:${{ env.BASE_TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/frontend:${{ env.DATE_TAG }}

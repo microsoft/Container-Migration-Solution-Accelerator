@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: appserver-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: disaster-recovery
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: appserver
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: appserver
+      image: public.ecr.aws/docker/library/busybox:latest
+      imagePullPolicy: Always
+      command: ["/bin/sh"]
+      args:
+        [
+          "-c",
+          "while true; do echo Disaster Recovery in EKS with EBS at $(date -u) >> /data/out.txt; sleep 10; done",
+        ]
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "250m"
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: /data
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+  volumes:
+    - name: persistent-storage
+      persistentVolumeClaim:
+        claimName: appserver-claim # <---- this name is what will be used to restore the PVC
