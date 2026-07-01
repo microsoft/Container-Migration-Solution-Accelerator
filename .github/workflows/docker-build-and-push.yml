@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Get current date
         id: date
@@ -85,7 +85,7 @@ jobs:
           echo "Base tag: $BASE_TAG, Date tag: $DATE_TAG"
 
       - name: Build and Push ContentProcessorAPI Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/backend-api
           file: ./src/backend-api/Dockerfile
@@ -95,7 +95,7 @@ jobs:
             ${{ steps.registry.outputs.ext_registry }}/backend-api:${{ env.DATE_TAG }}
 
       - name: Build and Push ContentProcessor Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/processor
           file: ./src/processor/Dockerfile
@@ -105,7 +105,7 @@ jobs:
             ${{ steps.registry.outputs.ext_registry }}/processor:${{ env.DATE_TAG }}
             
       - name: Build and Push ContentProcessorWeb Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/frontend
           file: ./src/frontend/Dockerfile
