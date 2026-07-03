@@ -32,7 +32,7 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5.1, 100'
+      'OpenAI.GlobalStandard.gpt-5.1, 500'
     ]
   }
 })
