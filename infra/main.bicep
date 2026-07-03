@@ -32,7 +32,7 @@ var solutionLocation = empty(location) ? resourceGroup().location : location
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5.1, 500'
+      'OpenAI.GlobalStandard.gpt-5.1, 100'
     ]
   }
 })
@@ -41,11 +41,16 @@ param azureAiServiceLocation string
 
 
 
-@description('Optional. The endpoint (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry.')
-param containerRegistryEndpoint string = 'containermigrationacr.azurecr.io'
+@description('Optional. [Deprecated] The endpoint (excluding https://) of an existing container registry. Retained only for backward compatibility with existing parameter files/pipelines; each deployment now provisions its own dedicated Azure Container Registry and no longer depends on a shared/public registry.')
+#disable-next-line no-unused-params
+param containerRegistryEndpoint string = ''
 
 @description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
 param imageTag string = 'latest_v2'
+
+@description('''Optional. Placeholder container image used to initially provision the container apps.
+The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps quickstart image.''')
+param placeholderContainerImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
@@ -217,6 +222,35 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
     location: solutionLocation
     tags: allTags
     enableTelemetry: enableTelemetry
+  }
+}
+
+// ========== Dedicated Azure Container Registry ========== //
+// Each deployment provisions its own ACR instead of relying on a shared/public
+// registry with anonymous pull. Images are pulled using identity-based
+// authentication (AcrPull role granted to the application managed identity).
+var containerRegistryName = take('cr${solutionSuffix}', 50)
+module containerRegistry './modules/containerRegistry.bicep' = {
+  name: take('module.container-registry.${solutionSuffix}', 64)
+  params: {
+    name: containerRegistryName
+    location: solutionLocation
+    tags: allTags
+    // Premium SKU in WAF/private-networking mode (supports higher throughput and
+    // future private endpoints). Public network access is kept Enabled in both
+    // modes so remote `az acr build` (ACR Tasks) and managed-identity pulls work;
+    // AzureServices bypass lets trusted ACR Tasks reach the registry.
+    sku: enablePrivateNetworking ? 'Premium' : 'Standard'
+    publicNetworkAccess: 'Enabled'
+    networkRuleBypassOptions: 'AzureServices'
+    // Application managed identity gets AcrPull for identity-based image pulls.
+    acrPullPrincipalIds: [
+      appIdentity.outputs.principalId
+    ]
+    // Deployer gets a registry-scoped Contributor role so it can run remote
+    // builds (az acr build) and push images from the post-deployment script.
+    buildPrincipalId: deployingUserPrincipalId
+    buildPrincipalType: deployingUserType
   }
 }
 
@@ -1335,10 +1369,16 @@ module containerAppBackend 'br/public:avm/res/app/container-app:0.18.1' = {
         appIdentity.outputs.resourceId
       ]
     }
+    registries: [
+      {
+        server: containerRegistry.outputs.loginServer
+        identity: appIdentity.outputs.resourceId
+      }
+    ]
     containers: [
       {
         name: 'backend-api'
-        image: '${containerRegistryEndpoint}/backend-api:${imageTag}'
+        image: placeholderContainerImage
         env: concat(
           [
             {
@@ -1422,10 +1462,16 @@ module containerAppFrontend 'br/public:avm/res/app/container-app:0.18.1' = {
         appIdentity.outputs.resourceId
       ]
     }
+    registries: [
+      {
+        server: containerRegistry.outputs.loginServer
+        identity: appIdentity.outputs.resourceId
+      }
+    ]
     containers: [
       {
         name: 'frontend'
-        image: '${containerRegistryEndpoint}/frontend:${imageTag}'
+        image: placeholderContainerImage
         env: [
           {
             name: 'API_URL'
@@ -1490,10 +1536,16 @@ module containerAppProcessor 'br/public:avm/res/app/container-app:0.18.1' = {
         appIdentity.outputs.resourceId
       ]
     }
+    registries: [
+      {
+        server: containerRegistry.outputs.loginServer
+        identity: appIdentity.outputs.resourceId
+      }
+    ]
     containers: [
       {
         name: 'processor'
-        image: '${containerRegistryEndpoint}/processor:${imageTag}'
+        image: placeholderContainerImage
         env: concat(
           [
             {
@@ -1571,6 +1623,18 @@ output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
 
 @description('The Azure resource group name.')
 output AZURE_RESOURCE_GROUP string = resourceGroup().name
+
+@description('The name of the dedicated Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
+
+@description('The login server (endpoint) of the dedicated Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
+
+@description('The name of the processor container app.')
+output CONTAINER_PROCESSOR_APP_NAME string = containerAppProcessor.outputs.name
+
+@description('The image tag used for deployment-specific container images.')
+output AZURE_ENV_IMAGE_TAG string = imageTag
 
 // Log deployer information for debugging
 output deployerObjectId string = deployingUserPrincipalId

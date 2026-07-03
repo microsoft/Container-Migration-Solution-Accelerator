@@ -24,8 +24,8 @@
 **/charts
 **/docker-compose*
 **/compose*
-**/Dockerfile*
-**/*.Dockerfile
+# NOTE: Do not ignore Dockerfile* here - `az acr build` (remote build) uploads
+# this directory as the build context and requires the Dockerfile to be present.
 **/node_modules
 **/npm-debug.log
 **/obj
