@@ -30,7 +30,11 @@ $BackendApp       = $env:CONTAINER_API_APP_NAME
 $FrontendApp      = $env:CONTAINER_WEB_APP_NAME
 $ProcessorApp     = $env:CONTAINER_PROCESSOR_APP_NAME
 
-if ([string]::IsNullOrEmpty($AcrName) -or [string]::IsNullOrEmpty($ResourceGroup)) {
+# Load values from `azd env get-values` when any required value is missing. This
+# covers not just the registry/resource group but also the container app names
+# and registry endpoint, so a partially-populated environment does not silently
+# skip image updates and leave apps on the placeholder image.
+if ([string]::IsNullOrEmpty($AcrName) -or [string]::IsNullOrEmpty($ResourceGroup) -or [string]::IsNullOrEmpty($RegistryEndpoint) -or [string]::IsNullOrEmpty($BackendApp) -or [string]::IsNullOrEmpty($FrontendApp) -or [string]::IsNullOrEmpty($ProcessorApp)) {
     if (Get-Command azd -ErrorAction SilentlyContinue) {
         Write-Host "==> Loading missing values from 'azd env get-values'"
         foreach ($line in (azd env get-values)) {
@@ -74,11 +78,6 @@ if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
 # Ensure the Azure CLI has a valid, non-expired login. `az acr build` and
 # `az containerapp update` authenticate via the az CLI (separate from azd), so a
 # stale/expired token here would otherwise fail part-way through the build.
-if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-    Write-Error "Azure CLI (az) is not installed or not on PATH. Install Azure CLI and re-run this script."
-    exit 1
-}
-
 az account show --output none 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Azure CLI is not authenticated or its token has expired. Run 'az login' (add '--tenant <tenant-id>' if needed) and re-run this script."
@@ -107,8 +106,8 @@ function Build-Image {
 function Update-App {
     param([string]$AppName, [string]$ImageName)
     if ([string]::IsNullOrEmpty($AppName)) {
-        Write-Host "WARN: Container app name for '$ImageName' not set; skipping image update."
-        return
+        Write-Error "Container app name for '$ImageName' is not set; cannot update its image. Ensure the deployment outputs / azd environment include the container app names so the app is not left on the placeholder image."
+        exit 1
     }
     Write-Host "==> Updating container app '$AppName' -> $RegistryEndpoint/${ImageName}:$ImageTag"
     az containerapp update `

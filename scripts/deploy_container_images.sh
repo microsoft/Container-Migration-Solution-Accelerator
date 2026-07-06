@@ -28,7 +28,11 @@ BACKEND_APP="${CONTAINER_API_APP_NAME:-}"
 FRONTEND_APP="${CONTAINER_WEB_APP_NAME:-}"
 PROCESSOR_APP="${CONTAINER_PROCESSOR_APP_NAME:-}"
 
-if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" ]]; then
+# Load values from `azd env get-values` when any required value is missing.
+# This covers not just the registry/resource group but also the container app
+# names and registry endpoint, so a partially-populated environment does not
+# silently skip image updates and leave apps on the placeholder image.
+if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$BACKEND_APP" || -z "$FRONTEND_APP" || -z "$PROCESSOR_APP" ]]; then
   if command -v azd >/dev/null 2>&1; then
     echo "==> Loading missing values from 'azd env get-values'"
     while IFS='=' read -r key value; do
@@ -70,10 +74,6 @@ fi
 # Ensure the Azure CLI has a valid, non-expired login. `az acr build` and
 # `az containerapp update` authenticate via the az CLI (separate from azd), so a
 # stale/expired token here would otherwise fail part-way through the build.
-if ! command -v az >/dev/null 2>&1; then
-  echo "ERROR: Azure CLI (az) is not installed or not on PATH." >&2
-  exit 1
-fi
 if ! az account show >/dev/null 2>&1; then
   echo "ERROR: Azure CLI is not authenticated or its token has expired." >&2
   echo "       Run 'az login' (add '--tenant <tenant-id>' if needed) and re-run this script." >&2
@@ -107,8 +107,9 @@ update_app() {
   local app_name="$1"
   local image_name="$2"
   if [[ -z "$app_name" ]]; then
-    echo "WARN: Container app name for '${image_name}' not set; skipping image update."
-    return
+    echo "ERROR: Container app name for '${image_name}' is not set; cannot update its image." >&2
+    echo "       Ensure the deployment outputs / azd environment include the container app names so the app is not left on the placeholder image." >&2
+    exit 1
   fi
   echo "==> Updating container app '${app_name}' -> ${REGISTRY_ENDPOINT}/${image_name}:${IMAGE_TAG}"
   az containerapp update \

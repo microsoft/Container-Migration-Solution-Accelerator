@@ -30,7 +30,7 @@ hooks:
       shell: pwsh
       run: |  
         Write-Host "==> Building and pushing container images to the dedicated ACR (remote build)"
-        pwsh ./scripts/deploy_container_images.ps1
+        ./scripts/deploy_container_images.ps1
         Write-Host "-----"
         Write-Host "🧭 Web App Details:"
         Write-Host "✅ Name: $env:CONTAINER_WEB_APP_NAME"
