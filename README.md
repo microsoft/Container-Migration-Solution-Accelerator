@@ -205,10 +205,10 @@ flowchart TB
    %% LLM usage
    PROC -->|LLM call| AOAI
 
-   %% Image pulls
-   ACR -->|Pull image| FE
-   ACR -->|Pull image| API
-   ACR -->|Pull image| PROC
+   %% Image pulls (identity-based, AcrPull via managed identity - no anonymous pull)
+   ACR -->|Pull image · AcrPull| FE
+   ACR -->|Pull image · AcrPull| API
+   ACR -->|Pull image · AcrPull| PROC
 
    %% Identity usage
    ID -.-> FE
