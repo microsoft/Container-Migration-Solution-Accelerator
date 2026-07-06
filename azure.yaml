@@ -12,6 +12,8 @@ hooks:
     posix:
       shell: sh
       run: |  
+        echo "==> Building and pushing container images to the dedicated ACR (remote build)"
+        sh ./scripts/deploy_container_images.sh
         echo "-----"
         echo "🧭 Web App Details:"
         echo "✅ Name: $CONTAINER_WEB_APP_NAME"
@@ -27,6 +29,8 @@ hooks:
     windows:
       shell: pwsh
       run: |  
+        Write-Host "==> Building and pushing container images to the dedicated ACR (remote build)"
+        pwsh ./scripts/deploy_container_images.ps1
         Write-Host "-----"
         Write-Host "🧭 Web App Details:"
         Write-Host "✅ Name: $env:CONTAINER_WEB_APP_NAME"
