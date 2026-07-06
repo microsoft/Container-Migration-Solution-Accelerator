@@ -74,6 +74,11 @@ if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
 # Ensure the Azure CLI has a valid, non-expired login. `az acr build` and
 # `az containerapp update` authenticate via the az CLI (separate from azd), so a
 # stale/expired token here would otherwise fail part-way through the build.
+if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+    Write-Error "Azure CLI (az) is not installed or not on PATH. Install Azure CLI and re-run this script."
+    exit 1
+}
+
 az account show --output none 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Azure CLI is not authenticated or its token has expired. Run 'az login' (add '--tenant <tenant-id>' if needed) and re-run this script."
