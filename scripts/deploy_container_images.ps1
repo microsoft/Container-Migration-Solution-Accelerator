@@ -63,6 +63,14 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 
+# Ensure the Azure CLI is installed before any `az` invocation, so a missing
+# CLI produces a clear, actionable error instead of an opaque failure in the
+# azd hook logs.
+if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+    Write-Error "Azure CLI ('az') is not installed or not on PATH. Install it from https://learn.microsoft.com/cli/azure/install-azure-cli and re-run."
+    exit 1
+}
+
 # Ensure the Azure CLI has a valid, non-expired login. `az acr build` and
 # `az containerapp update` authenticate via the az CLI (separate from azd), so a
 # stale/expired token here would otherwise fail part-way through the build.

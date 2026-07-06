@@ -13,7 +13,7 @@ hooks:
       shell: sh
       run: |  
         echo "==> Building and pushing container images to the dedicated ACR (remote build)"
-        sh ./scripts/deploy_container_images.sh
+        bash ./scripts/deploy_container_images.sh
         echo "-----"
         echo "🧭 Web App Details:"
         echo "✅ Name: $CONTAINER_WEB_APP_NAME"
