@@ -70,6 +70,10 @@ fi
 # Ensure the Azure CLI has a valid, non-expired login. `az acr build` and
 # `az containerapp update` authenticate via the az CLI (separate from azd), so a
 # stale/expired token here would otherwise fail part-way through the build.
+if ! command -v az >/dev/null 2>&1; then
+  echo "ERROR: Azure CLI (az) is not installed or not on PATH." >&2
+  exit 1
+fi
 if ! az account show >/dev/null 2>&1; then
   echo "ERROR: Azure CLI is not authenticated or its token has expired." >&2
   echo "       Run 'az login' (add '--tenant <tenant-id>' if needed) and re-run this script." >&2
