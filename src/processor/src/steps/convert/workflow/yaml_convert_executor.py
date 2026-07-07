@@ -45,6 +45,13 @@ class YamlConvertExecutor(Executor):
             )
             raise Exception(f"YamlConvertExecutor failed: {error_msg}")
 
+        if not result.result.is_hard_terminated and result.result.termination_output is None:
+            reason = result.result.reason or "<no reason given>"
+            raise Exception(
+                "YamlConvertExecutor failed: orchestration reported success but "
+                f"produced no YAML conversion output. Reason: {reason}"
+            )
+
         if result.result:
             if not result.result.is_hard_terminated:
                 await ctx.send_message(result.result)

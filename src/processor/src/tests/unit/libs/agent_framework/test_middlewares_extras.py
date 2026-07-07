@@ -7,7 +7,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from agent_framework import ChatMessage, Role
+from agent_framework import Content, Message
 
 from libs.agent_framework.middlewares import (
     DebuggingMiddleware,
@@ -86,8 +86,8 @@ class TestInputObserverMiddleware:
     def test_replaces_user_messages_when_replacement_set(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg_user = ChatMessage(role=Role.USER, text="orig user")
-        msg_assistant = ChatMessage(role=Role.ASSISTANT, text="hi")
+        msg_user = Message(role="user", contents=[Content.from_text("orig user")])
+        msg_assistant = Message(role="assistant", contents=[Content.from_text("hi")])
         ctx = MagicMock()
         ctx.messages = [msg_user, msg_assistant]
         next_fn = AsyncMock()
@@ -101,7 +101,7 @@ class TestInputObserverMiddleware:
     def test_no_replacement_keeps_text(self):
         from libs.agent_framework.middlewares import InputObserverMiddleware
 
-        msg = ChatMessage(role=Role.USER, text="keep me")
+        msg = Message(role="user", contents=[Content.from_text("keep me")])
         ctx = MagicMock()
         ctx.messages = [msg]
         mw = InputObserverMiddleware(replacement=None)

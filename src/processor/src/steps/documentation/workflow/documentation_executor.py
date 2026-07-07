@@ -47,4 +47,11 @@ class DocumentationExecutor(Executor):
             )
             raise Exception(f"DocumentationExecutor failed: {error_msg}")
 
+        if not result.result.is_hard_terminated and result.result.termination_output is None:
+            reason = result.result.reason or "<no reason given>"
+            raise Exception(
+                "DocumentationExecutor failed: orchestration reported success but "
+                f"produced no DocumentationOutput. Reason: {reason}"
+            )
+
         await ctx.yield_output(result.result)

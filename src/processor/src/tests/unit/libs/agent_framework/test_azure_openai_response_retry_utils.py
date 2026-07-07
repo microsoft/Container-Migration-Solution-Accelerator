@@ -7,6 +7,8 @@ from libs.agent_framework.azure_openai_response_retry import (
     RateLimitRetryConfig,
     _looks_like_context_length,
     _looks_like_rate_limit,
+    _sanitize_author_name,
+    _sanitize_author_names,
     _trim_messages,
     _truncate_text,
 )
@@ -85,3 +87,96 @@ def test_trim_messages_keeps_system_and_tails_and_truncates_long_messages() -> N
     # The last message is intentionally never truncated (agent needs full context).
     assert len(trimmed[1]["content"]) <= 50
     assert len(trimmed[2]["content"]) == 100
+
+
+# ---------------------------------------------------------------------------
+# author_name sanitization (Chat Completions name pattern: ^[^\s<|\\/>]+$)
+# ---------------------------------------------------------------------------
+
+
+def test_sanitize_author_name_passthrough_for_valid_names() -> None:
+    assert _sanitize_author_name("Coordinator") == "Coordinator"
+    assert _sanitize_author_name("ResultGenerator") == "ResultGenerator"
+    assert _sanitize_author_name("agent-1_2.x") == "agent-1_2.x"
+
+
+def test_sanitize_author_name_replaces_whitespace_and_specials() -> None:
+    assert _sanitize_author_name("Chief Architect") == "Chief_Architect"
+    assert _sanitize_author_name("AKS Expert") == "AKS_Expert"
+    # Tabs/newlines collapse to a single underscore.
+    assert _sanitize_author_name("a\tb\nc") == "a_b_c"
+    # Each disallowed char in the pattern is replaced.
+    assert _sanitize_author_name("foo/bar\\baz|qux<x>y") == "foo_bar_baz_qux_x_y"
+
+
+def test_sanitize_author_name_handles_edge_cases() -> None:
+    assert _sanitize_author_name(None) is None
+    assert _sanitize_author_name("") is None
+    assert _sanitize_author_name(123) == 123
+    # All-invalid input collapses to empty -> None (so callers drop the field).
+    assert _sanitize_author_name("   ") is None
+    # Leading/trailing underscores from sanitization are stripped.
+    assert _sanitize_author_name("  Chief  Architect  ") == "Chief_Architect"
+
+
+def test_sanitize_author_names_dict_messages_shallow_copy() -> None:
+    original = [
+        {"role": "system", "content": "sys"},
+        {"role": "assistant", "name": "Chief Architect", "content": "hi"},
+        {"role": "user", "name": "Coordinator", "content": "ok"},
+    ]
+    out = _sanitize_author_names(original)
+
+    # New list when changes happened.
+    assert out is not original
+    # Originals untouched.
+    assert original[1]["name"] == "Chief Architect"
+    # Unchanged messages share identity with originals (shallow copy only when needed).
+    assert out[0] is original[0]
+    assert out[2] is original[2]
+    # Changed message is a new dict with sanitized name.
+    assert out[1] is not original[1]
+    assert out[1]["name"] == "Chief_Architect"
+    assert out[1]["content"] == "hi"
+
+
+def test_sanitize_author_names_dict_messages_drops_empty_name() -> None:
+    original = [
+        {"role": "assistant", "name": "   ", "content": "hello"},
+    ]
+    out = _sanitize_author_names(original)
+    assert "name" not in out[0]
+    assert out[0]["content"] == "hello"
+
+
+def test_sanitize_author_names_returns_input_when_nothing_changes() -> None:
+    original = [
+        {"role": "system", "content": "sys"},
+        {"role": "assistant", "name": "Coordinator", "content": "hi"},
+    ]
+    out = _sanitize_author_names(original)
+    # Same sequence object returned to avoid pointless copies.
+    assert out is original
+
+
+def test_sanitize_author_names_object_messages_shallow_copy() -> None:
+    class _Msg:
+        def __init__(self, role: str, author_name: str | None, content: str) -> None:
+            self.role = role
+            self.author_name = author_name
+            self.content = content
+
+    m1 = _Msg("assistant", "Chief Architect", "hi")
+    m2 = _Msg("assistant", "Coordinator", "ok")
+    original = [m1, m2]
+
+    out = _sanitize_author_names(original)
+
+    # Original object untouched.
+    assert m1.author_name == "Chief Architect"
+    # Changed message replaced with a shallow copy carrying sanitized name.
+    assert out[0] is not m1
+    assert out[0].author_name == "Chief_Architect"
+    assert out[0].content == "hi"
+    # Unchanged message is the same instance.
+    assert out[1] is m2
