@@ -236,13 +236,17 @@ module containerRegistry './modules/containerRegistry.bicep' = {
     name: containerRegistryName
     location: solutionLocation
     tags: allTags
-    // Premium SKU in WAF/private-networking mode (supports higher throughput and
-    // future private endpoints). Public network access is kept Enabled in both
-    // modes so remote `az acr build` (ACR Tasks) and managed-identity pulls work;
-    // AzureServices bypass lets trusted ACR Tasks reach the registry.
+    // Premium SKU in WAF/private-networking mode (required for private endpoints
+    // and network rule sets). In WAF mode public network access is Disabled at
+    // rest; runtime pulls flow over a private endpoint and the post-deploy build
+    // script temporarily re-enables public access for the remote `az acr build`.
     sku: enablePrivateNetworking ? 'Premium' : 'Standard'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkRuleBypassOptions: 'AzureServices'
+    // WAF: host the registry private endpoint in the backend subnet and link it
+    // to the privatelink.azurecr.io DNS zone so image pulls resolve privately.
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
+    privateDnsZoneResourceId: enablePrivateNetworking ? avmPrivateDnsZones[dnsZoneIndex.containerRegistry]!.outputs.resourceId : ''
     // Application managed identity gets AcrPull for identity-based image pulls.
     acrPullPrincipalIds: [
       appIdentity.outputs.principalId
@@ -605,6 +609,7 @@ var privateDnsZones = [
   'privatelink.blob.${environment().suffixes.storage}'
   'privatelink.queue.${environment().suffixes.storage}'
   'privatelink.azconfig.io'
+  'privatelink.azurecr.io'
 ]
 
 // DNS Zone Index Constants
@@ -616,6 +621,7 @@ var dnsZoneIndex = {
   storageBlob: 4
   storageQueue: 5
   appConfig: 6
+  containerRegistry: 7
 }
 
 // List of DNS zone indices that correspond to AI-related services.

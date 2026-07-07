@@ -118,14 +118,49 @@ function Update-App {
     if ($LASTEXITCODE -ne 0) { throw "az containerapp update failed for $AppName" }
 }
 
-# Build & push all images to the dedicated ACR.
-Build-Image -ImageName 'backend-api' -ContextDir (Join-Path $RootDir 'src/backend-api')
-Build-Image -ImageName 'processor'   -ContextDir (Join-Path $RootDir 'src/processor')
-Build-Image -ImageName 'frontend'    -ContextDir (Join-Path $RootDir 'src/frontend')
+# ---------------------------------------------------------------------------
+# WAF (private networking) support.
+#
+# In WAF mode the registry has public network access DISABLED at rest (with a
+# default-deny network rule set and image export disabled); runtime pulls flow
+# over a private endpoint. Remote build (az acr build / ACR Tasks) reaches the
+# registry over its PUBLIC endpoint, so we temporarily relax those settings for
+# the build/push and restore them afterwards - including on failure, via finally
+# - so the registry is never left publicly reachable. WAF is detected from the
+# resource group's 'Type' tag (set to 'WAF' when private networking is enabled).
+# ---------------------------------------------------------------------------
+$DeploymentType = az group show --name $ResourceGroup --query 'tags.Type' -o tsv 2>$null
+if ($DeploymentType -eq 'WAF') {
+    Write-Host "==> WAF deployment detected - temporarily relaxing ACR restrictions for the image push"
+    az acr update --name $AcrName --resource-group $ResourceGroup --allow-exports true --output none --only-show-errors
+    if ($LASTEXITCODE -ne 0) { throw "Failed to enable ACR exports." }
+    az acr update --name $AcrName --resource-group $ResourceGroup --public-network-enabled true --output none --only-show-errors
+    if ($LASTEXITCODE -ne 0) { throw "Failed to enable ACR public network access." }
+    az acr update --name $AcrName --resource-group $ResourceGroup --default-action Allow --output none --only-show-errors
+    if ($LASTEXITCODE -ne 0) { throw "Failed to set ACR default action to Allow." }
+    Write-Host "    Waiting ~45s for the network rule change to propagate..."
+    Start-Sleep -Seconds 45
+}
 
-# Point the Container Apps at the freshly built images.
-Update-App -AppName $BackendApp   -ImageName 'backend-api'
-Update-App -AppName $ProcessorApp -ImageName 'processor'
-Update-App -AppName $FrontendApp  -ImageName 'frontend'
+try {
+    # Build & push all images to the dedicated ACR.
+    Build-Image -ImageName 'backend-api' -ContextDir (Join-Path $RootDir 'src/backend-api')
+    Build-Image -ImageName 'processor'   -ContextDir (Join-Path $RootDir 'src/processor')
+    Build-Image -ImageName 'frontend'    -ContextDir (Join-Path $RootDir 'src/frontend')
+
+    # Point the Container Apps at the freshly built images.
+    Update-App -AppName $BackendApp   -ImageName 'backend-api'
+    Update-App -AppName $ProcessorApp -ImageName 'processor'
+    Update-App -AppName $FrontendApp  -ImageName 'frontend'
+}
+finally {
+    if ($DeploymentType -eq 'WAF') {
+        Write-Host "==> Restoring WAF ACR configuration (default-action Deny, public access disabled, exports off)"
+        az acr update --name $AcrName --resource-group $ResourceGroup --default-action Deny --output none --only-show-errors
+        az acr update --name $AcrName --resource-group $ResourceGroup --public-network-enabled false --output none --only-show-errors
+        az acr update --name $AcrName --resource-group $ResourceGroup --allow-exports false --output none --only-show-errors
+        if ($LASTEXITCODE -ne 0) { Write-Warning "Failed to fully restore ACR configuration; verify manually." }
+    }
+}
 
 Write-Host "==> [deploy_container_images] Completed successfully."

@@ -50,6 +50,12 @@ param buildPrincipalId string = ''
 ])
 param buildPrincipalType string = 'User'
 
+@description('Optional. Resource ID of the subnet to host the registry private endpoint. When set (WAF mode), a private endpoint is created so runtime image pulls flow over the private network.')
+param privateEndpointSubnetResourceId string = ''
+
+@description('Optional. Resource ID of the privatelink.azurecr.io private DNS zone to link the private endpoint to.')
+param privateDnsZoneResourceId string = ''
+
 // AcrPull role definition ID (allows pulling images).
 var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 // AcrPush role definition ID (least-privilege push/pull for the deployer).
@@ -72,6 +78,51 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
     anonymousPullEnabled: false
     publicNetworkAccess: publicNetworkAccess
     networkRuleBypassOptions: networkRuleBypassOptions
+    // WAF-aligned networking: when public access is Disabled, default-deny all
+    // network traffic (runtime pulls flow over the private endpoint) and disable
+    // image export. The DisableExport_PublicNetworkAccessMustBeDisabled constraint
+    // requires public access to be Disabled while exports are disabled, so the
+    // post-deploy build script toggles both together when it opens the registry.
+    networkRuleSet: publicNetworkAccess == 'Disabled' ? { defaultAction: 'Deny' } : null
+    policies: publicNetworkAccess == 'Disabled' ? { exportPolicy: { status: 'disabled' } } : null
+  }
+}
+
+// WAF: private endpoint for runtime image pulls when public access is disabled.
+resource registryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = if (!empty(privateEndpointSubnetResourceId)) {
+  name: 'pep-${name}'
+  location: location
+  tags: tags
+  properties: {
+    subnet: {
+      id: privateEndpointSubnetResourceId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'pls-${name}'
+        properties: {
+          privateLinkServiceId: registry.id
+          groupIds: [
+            'registry'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource registryPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = if (!empty(privateEndpointSubnetResourceId) && !empty(privateDnsZoneResourceId)) {
+  parent: registryPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'privatelink-azurecr-io'
+        properties: {
+          privateDnsZoneId: privateDnsZoneResourceId
+        }
+      }
+    ]
   }
 }
 

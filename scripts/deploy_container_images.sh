@@ -89,6 +89,44 @@ echo "    Resource group  : $RESOURCE_GROUP"
 echo "    Image tag       : $IMAGE_TAG"
 
 # ---------------------------------------------------------------------------
+# WAF (private networking) support.
+#
+# In WAF mode the registry has public network access DISABLED at rest (with a
+# default-deny network rule set and image export disabled); runtime pulls flow
+# over a private endpoint. Remote build (az acr build / ACR Tasks) reaches the
+# registry over its PUBLIC endpoint, so we must temporarily relax those settings
+# for the build/push and restore them afterwards - including on failure, via a
+# trap - so the registry is never left publicly reachable.
+#
+# WAF is detected from the resource group's `Type` tag (set to 'WAF' by the
+# infrastructure when private networking is enabled).
+# ---------------------------------------------------------------------------
+DEPLOYMENT_TYPE="$(az group show --name "$RESOURCE_GROUP" --query 'tags.Type' -o tsv 2>/dev/null || true)"
+
+relock_acr() {
+  if [[ "$DEPLOYMENT_TYPE" == "WAF" ]]; then
+    echo "==> Restoring WAF ACR configuration (default-action Deny, public access disabled, exports off)"
+    az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --default-action Deny --output none --only-show-errors \
+      || echo "WARNING: failed to restore ACR default-action; verify manually." >&2
+    az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --public-network-enabled false --output none --only-show-errors \
+      || echo "WARNING: failed to disable ACR public network access; verify manually." >&2
+    az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --allow-exports false --output none --only-show-errors \
+      || echo "WARNING: failed to disable ACR exports; verify manually." >&2
+  fi
+}
+
+if [[ "$DEPLOYMENT_TYPE" == "WAF" ]]; then
+  echo "==> WAF deployment detected - temporarily relaxing ACR restrictions for the image push"
+  # Ensure the locked-down state is restored on any exit (success or failure).
+  trap relock_acr EXIT
+  az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --allow-exports true --output none --only-show-errors
+  az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --public-network-enabled true --output none --only-show-errors
+  az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --default-action Allow --output none --only-show-errors
+  echo "    Waiting ~45s for the network rule change to propagate..."
+  sleep 45
+fi
+
+# ---------------------------------------------------------------------------
 # Remote build helper - uses ACR Tasks (az acr build) so no local Docker daemon
 # is required on the machine running the deployment.
 # ---------------------------------------------------------------------------
