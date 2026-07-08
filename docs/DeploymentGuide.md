@@ -294,7 +294,21 @@ azd up
 
 **⚠️ Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
 
-### 4.3 Get Application URL
+### 4.3 Run the script to build and push the application images
+
+Build and push the frontend, backend, and processor images to the dedicated ACR, then update the Container Apps to use them. This step is **not run automatically** by `azd up` — run it from the repository root after deployment:
+
+```powershell
+# PowerShell
+./scripts/deploy_container_images.ps1
+```
+
+```bash
+# Bash
+bash ./scripts/deploy_container_images.sh
+```
+
+### 4.4 Get Application URL
 
 After successful deployment:
 1. Open [Azure Portal](https://portal.azure.com/)
@@ -315,7 +329,7 @@ After successful deployment:
 
 ### 5.2 Verify Deployment
 
-1. Access your application using the URL from Step 4.3
+1. Access your application using the URL from Step 4.4
 2. Confirm the application loads successfully
 3. Verify you can sign in with your authenticated account
 
