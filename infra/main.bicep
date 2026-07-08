@@ -45,12 +45,12 @@ param azureAiServiceLocation string
 #disable-next-line no-unused-params
 param containerRegistryEndpoint string = ''
 
-@description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
-param imageTag string = 'latest_v2'
+@description('Optional. The image tag to use for container images. Defaults to "latest".')
+param imageTag string = 'latest'
 
 @description('''Optional. Placeholder container image used to initially provision the container apps.
-The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps quickstart image.''')
-param placeholderContainerImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
+The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image.''')
+param placeholderContainerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])

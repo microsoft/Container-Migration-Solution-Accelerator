@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "17608527028333640769"
+      "templateHash": "8577992003868472105"
     }
   },
   "parameters": {
@@ -70,16 +70,16 @@
     },
     "imageTag": {
       "type": "string",
-      "defaultValue": "latest_v2",
+      "defaultValue": "latest",
       "metadata": {
-        "description": "Optional. The image tag to use for container images. Defaults to \"latest_v2\"."
+        "description": "Optional. The image tag to use for container images. Defaults to \"latest\"."
       }
     },
     "placeholderContainerImage": {
       "type": "string",
-      "defaultValue": "mcr.microsoft.com/k8se/quickstart:latest",
+      "defaultValue": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
       "metadata": {
-        "description": "Optional. Placeholder container image used to initially provision the container apps.\nThe dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps quickstart image."
+        "description": "Optional. Placeholder container image used to initially provision the container apps.\nThe dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image."
       }
     },
     "deploymentType": {
@@ -895,7 +895,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "10052698379792252001"
+              "templateHash": "17231291582633402413"
             },
             "name": "Dedicated Azure Container Registry",
             "description": "Provisions a dedicated Azure Container Registry (ACR) for a single deployment and configures identity-based authentication.\r\nAdmin user and anonymous pull are disabled. The provided application managed identity principals are granted the AcrPull role, and the deployer is granted a registry-scoped AcrPush role so it can push/pull images (remote builds via `az acr build` additionally rely on the deployer's higher-scope role for scheduleRun/action)."
@@ -942,7 +942,7 @@
                 "Disabled"
               ],
               "metadata": {
-                "description": "Optional. Public network access for the registry. Defaults to Enabled. Note: `az acr build` (ACR Tasks quick builds) and Container Apps image pulls require reachability; disabling public access requires VNet agent pools and private endpoints, so it is left Enabled by default for both WAF and non-WAF deployments."
+                "description": "Optional. Public network access for the registry. Defaults to Enabled for non-WAF deployments. In WAF (private-networking) deployments the caller sets this to Disabled: runtime image pulls flow over a private endpoint, and the post-deployment build script (scripts/deploy_container_images.*) temporarily re-enables public access for the remote `az acr build` and then restores it to Disabled."
               }
             },
             "networkRuleBypassOptions": {

@@ -25,7 +25,7 @@ Write-Host "==> [deploy_container_images] Building and pushing images to the ded
 $AcrName          = $env:AZURE_CONTAINER_REGISTRY_NAME
 $RegistryEndpoint = $env:AZURE_CONTAINER_REGISTRY_ENDPOINT
 $ResourceGroup    = $env:AZURE_RESOURCE_GROUP
-$ImageTag         = if ($env:AZURE_ENV_IMAGE_TAG) { $env:AZURE_ENV_IMAGE_TAG } else { 'latest_v2' }
+$ImageTag         = if ($env:AZURE_ENV_IMAGE_TAG) { $env:AZURE_ENV_IMAGE_TAG } else { 'latest' }
 $BackendApp       = $env:CONTAINER_API_APP_NAME
 $FrontendApp      = $env:CONTAINER_WEB_APP_NAME
 $ProcessorApp     = $env:CONTAINER_PROCESSOR_APP_NAME
