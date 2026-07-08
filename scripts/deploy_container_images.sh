@@ -23,7 +23,7 @@ echo "==> [deploy_container_images] Building and pushing images to the dedicated
 ACR_NAME="${AZURE_CONTAINER_REGISTRY_NAME:-}"
 REGISTRY_ENDPOINT="${AZURE_CONTAINER_REGISTRY_ENDPOINT:-}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
-IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-latest}"
+IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-}"
 BACKEND_APP="${CONTAINER_API_APP_NAME:-}"
 FRONTEND_APP="${CONTAINER_WEB_APP_NAME:-}"
 PROCESSOR_APP="${CONTAINER_PROCESSOR_APP_NAME:-}"
@@ -52,6 +52,10 @@ fi
 
 # Derive the login server from the registry name if it was not provided.
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-${ACR_NAME}.azurecr.io}"
+
+# Apply the default image tag only after the azd fallback, so an explicitly
+# configured tag (env var or `azd env get-values`) is honored.
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 missing=()
 [[ -z "$ACR_NAME" ]]       && missing+=("AZURE_CONTAINER_REGISTRY_NAME")
