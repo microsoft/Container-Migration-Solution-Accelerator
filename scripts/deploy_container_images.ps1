@@ -130,19 +130,25 @@ function Update-App {
 # resource group's 'Type' tag (set to 'WAF' when private networking is enabled).
 # ---------------------------------------------------------------------------
 $DeploymentType = az group show --name $ResourceGroup --query 'tags.Type' -o tsv 2>$null
-if ($DeploymentType -eq 'WAF') {
-    Write-Host "==> WAF deployment detected - temporarily relaxing ACR restrictions for the image push"
-    az acr update --name $AcrName --resource-group $ResourceGroup --allow-exports true --output none --only-show-errors
-    if ($LASTEXITCODE -ne 0) { throw "Failed to enable ACR exports." }
-    az acr update --name $AcrName --resource-group $ResourceGroup --public-network-enabled true --output none --only-show-errors
-    if ($LASTEXITCODE -ne 0) { throw "Failed to enable ACR public network access." }
-    az acr update --name $AcrName --resource-group $ResourceGroup --default-action Allow --output none --only-show-errors
-    if ($LASTEXITCODE -ne 0) { throw "Failed to set ACR default action to Allow." }
-    Write-Host "    Waiting ~45s for the network rule change to propagate..."
-    Start-Sleep -Seconds 45
-}
 
 try {
+    # In WAF mode, temporarily relax the ACR restrictions so the remote build
+    # (az acr build / ACR Tasks) can reach the registry over its public endpoint.
+    # This is done inside the try so the finally block always restores the
+    # locked-down state - even if one of the relaxation steps partially succeeds
+    # and a later one fails.
+    if ($DeploymentType -eq 'WAF') {
+        Write-Host "==> WAF deployment detected - temporarily relaxing ACR restrictions for the image push"
+        az acr update --name $AcrName --resource-group $ResourceGroup --allow-exports true --output none --only-show-errors
+        if ($LASTEXITCODE -ne 0) { throw "Failed to enable ACR exports." }
+        az acr update --name $AcrName --resource-group $ResourceGroup --public-network-enabled true --output none --only-show-errors
+        if ($LASTEXITCODE -ne 0) { throw "Failed to enable ACR public network access." }
+        az acr update --name $AcrName --resource-group $ResourceGroup --default-action Allow --output none --only-show-errors
+        if ($LASTEXITCODE -ne 0) { throw "Failed to set ACR default action to Allow." }
+        Write-Host "    Waiting ~45s for the network rule change to propagate..."
+        Start-Sleep -Seconds 45
+    }
+
     # Build & push all images to the dedicated ACR.
     Build-Image -ImageName 'backend-api' -ContextDir (Join-Path $RootDir 'src/backend-api')
     Build-Image -ImageName 'processor'   -ContextDir (Join-Path $RootDir 'src/processor')
@@ -156,10 +162,14 @@ try {
 finally {
     if ($DeploymentType -eq 'WAF') {
         Write-Host "==> Restoring WAF ACR configuration (default-action Deny, public access disabled, exports off)"
+        $restoreFailed = $false
         az acr update --name $AcrName --resource-group $ResourceGroup --default-action Deny --output none --only-show-errors
+        if ($LASTEXITCODE -ne 0) { $restoreFailed = $true; Write-Warning "Failed to restore ACR default-action to Deny." }
         az acr update --name $AcrName --resource-group $ResourceGroup --public-network-enabled false --output none --only-show-errors
+        if ($LASTEXITCODE -ne 0) { $restoreFailed = $true; Write-Warning "Failed to disable ACR public network access." }
         az acr update --name $AcrName --resource-group $ResourceGroup --allow-exports false --output none --only-show-errors
-        if ($LASTEXITCODE -ne 0) { Write-Warning "Failed to fully restore ACR configuration; verify manually." }
+        if ($LASTEXITCODE -ne 0) { $restoreFailed = $true; Write-Warning "Failed to disable ACR exports." }
+        if ($restoreFailed) { Write-Warning "ACR was not fully restored to its locked-down state; verify manually that public network access is disabled." }
     }
 }
 

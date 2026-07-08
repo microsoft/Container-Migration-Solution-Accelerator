@@ -20,7 +20,7 @@ param tags object = {}
 ])
 param sku string = 'Standard'
 
-@description('Optional. Public network access for the registry. Defaults to Enabled. Note: `az acr build` (ACR Tasks quick builds) and Container Apps image pulls require reachability; disabling public access requires VNet agent pools and private endpoints, so it is left Enabled by default for both WAF and non-WAF deployments.')
+@description('Optional. Public network access for the registry. Defaults to Enabled for non-WAF deployments. In WAF (private-networking) deployments the caller sets this to Disabled: runtime image pulls flow over a private endpoint, and the post-deployment build script (scripts/deploy_container_images.*) temporarily re-enables public access for the remote `az acr build` and then restores it to Disabled.')
 @allowed([
   'Enabled'
   'Disabled'
