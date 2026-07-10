@@ -69,13 +69,9 @@ async def upload_file(
             processRepository = scope.get_service(ProcessRepository)
             fileRepository = scope.get_service(FileRepository)
 
-            process_record = await processRepository.get_async(process_id)
+            from libs.services.authorization import verify_process_ownership
 
-            # Verify the caller owns this process before uploading into it.
-            # Return 404 (not 403) so the response does not confirm the
-            # existence of processes belonging to other users.
-            if not process_record or process_record.user_id != user_id:
-                raise HTTPException(status_code=404, detail="Process not found")
+            process_record = await verify_process_ownership(app, process_id, user_id)
 
             file_id = str(uuid4())
             file_name = re.sub(r"[^\w.-]", "_", file.filename)
