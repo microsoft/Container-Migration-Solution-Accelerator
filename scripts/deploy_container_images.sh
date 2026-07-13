@@ -23,6 +23,7 @@ echo "==> [deploy_container_images] Building and pushing images to the dedicated
 ACR_NAME="${AZURE_CONTAINER_REGISTRY_NAME:-}"
 REGISTRY_ENDPOINT="${AZURE_CONTAINER_REGISTRY_ENDPOINT:-}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
+SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-}"
 IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-}"
 BACKEND_APP="${CONTAINER_API_APP_NAME:-}"
 FRONTEND_APP="${CONTAINER_WEB_APP_NAME:-}"
@@ -32,7 +33,7 @@ PROCESSOR_APP="${CONTAINER_PROCESSOR_APP_NAME:-}"
 # This covers not just the registry/resource group but also the container app
 # names and registry endpoint, so a partially-populated environment does not
 # silently skip image updates and leave apps on the placeholder image.
-if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$BACKEND_APP" || -z "$FRONTEND_APP" || -z "$PROCESSOR_APP" ]]; then
+if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$BACKEND_APP" || -z "$FRONTEND_APP" || -z "$PROCESSOR_APP" || -z "$SUBSCRIPTION_ID" ]]; then
   if command -v azd >/dev/null 2>&1; then
     echo "==> Loading missing values from 'azd env get-values'"
     while IFS='=' read -r key value; do
@@ -41,6 +42,7 @@ if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$
         AZURE_CONTAINER_REGISTRY_NAME)     ACR_NAME="${ACR_NAME:-$value}" ;;
         AZURE_CONTAINER_REGISTRY_ENDPOINT) REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-$value}" ;;
         AZURE_RESOURCE_GROUP)              RESOURCE_GROUP="${RESOURCE_GROUP:-$value}" ;;
+        AZURE_SUBSCRIPTION_ID)             SUBSCRIPTION_ID="${SUBSCRIPTION_ID:-$value}" ;;
         AZURE_ENV_IMAGE_TAG)               IMAGE_TAG="${IMAGE_TAG:-$value}" ;;
         CONTAINER_API_APP_NAME)            BACKEND_APP="${BACKEND_APP:-$value}" ;;
         CONTAINER_WEB_APP_NAME)            FRONTEND_APP="${FRONTEND_APP:-$value}" ;;
@@ -82,6 +84,18 @@ if ! az account show >/dev/null 2>&1; then
   echo "ERROR: Azure CLI is not authenticated or its token has expired." >&2
   echo "       Run 'az login' (add '--tenant <tenant-id>' if needed) and re-run this script." >&2
   exit 1
+fi
+
+# Pin the Azure CLI to the azd environment's subscription. `az acr build` and
+# `az containerapp update` use the CLI's active subscription, which may differ
+# from the azd environment when the user has multiple subscriptions - without
+# this the build/update could target the wrong subscription (or fail).
+if [[ -n "$SUBSCRIPTION_ID" ]]; then
+  if ! az account set --subscription "$SUBSCRIPTION_ID" 2>/dev/null; then
+    echo "ERROR: Failed to set Azure CLI subscription to '$SUBSCRIPTION_ID'." >&2
+    echo "       Verify the subscription ID and that your account has access to it." >&2
+    exit 1
+  fi
 fi
 
 # Resolve the repository root (this script lives in <root>/scripts).

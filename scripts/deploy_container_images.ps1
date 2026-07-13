@@ -25,6 +25,7 @@ Write-Host "==> [deploy_container_images] Building and pushing images to the ded
 $AcrName          = $env:AZURE_CONTAINER_REGISTRY_NAME
 $RegistryEndpoint = $env:AZURE_CONTAINER_REGISTRY_ENDPOINT
 $ResourceGroup    = $env:AZURE_RESOURCE_GROUP
+$SubscriptionId   = $env:AZURE_SUBSCRIPTION_ID
 $ImageTag         = if ($env:AZURE_ENV_IMAGE_TAG) { $env:AZURE_ENV_IMAGE_TAG } else { 'latest' }
 $BackendApp       = $env:CONTAINER_API_APP_NAME
 $FrontendApp      = $env:CONTAINER_WEB_APP_NAME
@@ -34,7 +35,7 @@ $ProcessorApp     = $env:CONTAINER_PROCESSOR_APP_NAME
 # covers not just the registry/resource group but also the container app names
 # and registry endpoint, so a partially-populated environment does not silently
 # skip image updates and leave apps on the placeholder image.
-if ([string]::IsNullOrEmpty($AcrName) -or [string]::IsNullOrEmpty($ResourceGroup) -or [string]::IsNullOrEmpty($RegistryEndpoint) -or [string]::IsNullOrEmpty($BackendApp) -or [string]::IsNullOrEmpty($FrontendApp) -or [string]::IsNullOrEmpty($ProcessorApp)) {
+if ([string]::IsNullOrEmpty($AcrName) -or [string]::IsNullOrEmpty($ResourceGroup) -or [string]::IsNullOrEmpty($RegistryEndpoint) -or [string]::IsNullOrEmpty($BackendApp) -or [string]::IsNullOrEmpty($FrontendApp) -or [string]::IsNullOrEmpty($ProcessorApp) -or [string]::IsNullOrEmpty($SubscriptionId)) {
     if (Get-Command azd -ErrorAction SilentlyContinue) {
         Write-Host "==> Loading missing values from 'azd env get-values'"
         foreach ($line in (azd env get-values)) {
@@ -44,6 +45,7 @@ if ([string]::IsNullOrEmpty($AcrName) -or [string]::IsNullOrEmpty($ResourceGroup
                     'AZURE_CONTAINER_REGISTRY_NAME'     { if (-not $AcrName)          { $AcrName = $v } }
                     'AZURE_CONTAINER_REGISTRY_ENDPOINT' { if (-not $RegistryEndpoint) { $RegistryEndpoint = $v } }
                     'AZURE_RESOURCE_GROUP'              { if (-not $ResourceGroup)    { $ResourceGroup = $v } }
+                    'AZURE_SUBSCRIPTION_ID'             { if (-not $SubscriptionId)   { $SubscriptionId = $v } }
                     'AZURE_ENV_IMAGE_TAG'               { if (-not $env:AZURE_ENV_IMAGE_TAG) { $ImageTag = $v } }
                     'CONTAINER_API_APP_NAME'            { if (-not $BackendApp)       { $BackendApp = $v } }
                     'CONTAINER_WEB_APP_NAME'            { if (-not $FrontendApp)      { $FrontendApp = $v } }
@@ -82,6 +84,18 @@ az account show --output none 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Azure CLI is not authenticated or its token has expired. Run 'az login' (add '--tenant <tenant-id>' if needed) and re-run this script."
     exit 1
+}
+
+# Pin the Azure CLI to the azd environment's subscription. `az acr build` and
+# `az containerapp update` use the CLI's active subscription, which may differ
+# from the azd environment when multiple subscriptions are available - without
+# this the build/update could target the wrong subscription (or fail).
+if (-not [string]::IsNullOrEmpty($SubscriptionId)) {
+    az account set --subscription $SubscriptionId 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to set Azure CLI subscription to '$SubscriptionId'. Verify the subscription ID and that your account has access to it."
+        exit 1
+    }
 }
 
 # Resolve the repository root (this script lives in <root>/scripts).
