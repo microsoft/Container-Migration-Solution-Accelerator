@@ -24,7 +24,12 @@ def _make_app(*, process_record=None, file_count=1, blob_helper=None):
     process_repo = MagicMock()
     process_repo.get_async = AsyncMock(
         return_value=process_record
-        or SimpleNamespace(id="p-1", source_file_count=0, status="initialized")
+        or SimpleNamespace(
+            id="p-1",
+            user_id="user-1",
+            source_file_count=0,
+            status="initialized",
+        )
     )
     process_repo.update_async = AsyncMock(return_value=None)
 
@@ -159,3 +164,38 @@ class TestUploadFile:
             headers=AUTH_HEADERS,
         )
         assert res.status_code == 500
+
+    def test_returns_404_when_caller_does_not_own_process(self):
+        # Process exists but is owned by a different user than the caller.
+        app, mocks = _make_app(
+            process_record=SimpleNamespace(
+                id="p-1",
+                user_id="someone-else",
+                source_file_count=0,
+                status="initialized",
+            )
+        )
+        client = TestClient(app)
+        res = client.post(
+            "/api/file/upload",
+            files={"file": ("a.txt", b"x", "text/plain")},
+            data={"process_id": VALID_PROCESS_ID},
+            headers=AUTH_HEADERS,
+        )
+        assert res.status_code == 404
+        mocks["blob_helper"].upload_blob.assert_not_awaited()
+        mocks["process_repo"].update_async.assert_not_awaited()
+
+    def test_returns_404_when_process_missing(self):
+        app, mocks = _make_app(process_record=False)
+        # Force get_async to return None (no such process).
+        mocks["process_repo"].get_async = AsyncMock(return_value=None)
+        client = TestClient(app)
+        res = client.post(
+            "/api/file/upload",
+            files={"file": ("a.txt", b"x", "text/plain")},
+            data={"process_id": VALID_PROCESS_ID},
+            headers=AUTH_HEADERS,
+        )
+        assert res.status_code == 404
+        mocks["blob_helper"].upload_blob.assert_not_awaited()

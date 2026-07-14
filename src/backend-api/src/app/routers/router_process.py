@@ -11,6 +11,7 @@ from libs.base.typed_fastapi import TypedFastAPI
 from libs.models.entities import Process
 from libs.repositories.process_repository import ProcessRepository
 from libs.services.auth import get_authenticated_user
+from libs.services.authorization import verify_process_ownership
 from libs.services.interfaces import ILoggerService
 from libs.services.process_services import ProcessService
 from routers.models.files import FileInfo
@@ -83,6 +84,11 @@ async def status(process_id: str, request: Request):
         f"Process router status endpoint called for process_id: {process_id}"
     )
 
+    # Authenticate the caller and verify they own this process
+    authenticated_user = get_authenticated_user(request)
+    user_id = authenticated_user.user_principal_id
+    await verify_process_ownership(app, process_id, user_id)
+
     # loading business component for process
     processService = app.app_context.get_service(ProcessService)
 
@@ -98,6 +104,11 @@ async def render_status(process_id: str, request: Request):
     logger_service.log_info(
         f"Process router render status endpoint called for process_id: {process_id}"
     )
+
+    # Authenticate the caller and verify they own this process
+    authenticated_user = get_authenticated_user(request)
+    user_id = authenticated_user.user_principal_id
+    await verify_process_ownership(app, process_id, user_id)
 
     # loading business component for process
     processService = app.app_context.get_service(ProcessService)
@@ -137,6 +148,9 @@ async def upload_files(
 
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Verify the caller owns this process before touching its blob storage
+        await verify_process_ownership(app, process_id, user_id)
 
         # Make uploaded files list
         uploaded_files: list[FileInfo] = []
@@ -195,6 +209,8 @@ async def upload_files(
             response.headers["Location"] = f"/process/{process_id}/"
 
         return result_response
+    except HTTPException:
+        raise
     except Exception as e:
         logger_service.log_error(f"Error in upload_files: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error uploading files: {str(e)}")
@@ -232,6 +248,9 @@ async def delete_file(
 
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Verify the caller owns this process before deleting any file
+        await verify_process_ownership(app, process_id, user_id)
 
         # Get process service
         processService = app.app_context.get_service(ProcessService)
@@ -274,6 +293,8 @@ async def delete_file(
             status_code=404,
             detail=f"File '{file_name}' not found for process '{process_id}'",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger_service.log_error(f"Error in delete_file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
@@ -309,6 +330,9 @@ async def delete_process(
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
 
+        # Verify the caller owns this process before deleting its files
+        await verify_process_ownership(app, process_id, user_id)
+
         # Get process service
         processService = app.app_context.get_service(ProcessService)
 
@@ -333,6 +357,8 @@ async def delete_process(
 
         return result_response
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger_service.log_error(f"Error in delete_process: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting process: {str(e)}")
@@ -365,6 +391,9 @@ async def start_processing(
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
 
+        # Verify the caller owns this process before queueing it for processing
+        await verify_process_ownership(app, process_id, user_id)
+
         # Get process service
         processService = app.app_context.get_service(ProcessService)
 
@@ -394,6 +423,8 @@ async def start_processing(
             "user_id": str(user_id),
             "status": "queued",
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger_service.log_error(f"Error in start_processing: {str(e)}")
         raise HTTPException(
@@ -424,6 +455,9 @@ async def download_process_files(
 
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Verify the caller owns this process before returning its files
+        await verify_process_ownership(app, process_id, user_id)
 
         # Get process service
         processService = app.app_context.get_service(ProcessService)
@@ -492,6 +526,9 @@ async def get_process_summary(
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
 
+        # Verify the caller owns this process before returning its summary
+        await verify_process_ownership(app, process_id, user_id)
+
         # Get process service
         processService = app.app_context.get_service(ProcessService)
 
@@ -548,6 +585,9 @@ async def get_file_content(
 
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Verify the caller owns this process before returning file content
+        await verify_process_ownership(app, process_id, user_id)
 
         # Get process service
         processService = app.app_context.get_service(ProcessService)
@@ -606,6 +646,9 @@ async def cancel_process(
 
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Verify the caller owns this process before forwarding the kill request
+        await verify_process_ownership(app, process_id, user_id)
 
         # Get processor control URL from configuration
         config = app.app_context.configuration
@@ -703,6 +746,9 @@ async def get_cancel_status(
 
         if not user_id:
             raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Verify the caller owns this process before reading its cancel status
+        await verify_process_ownership(app, process_id, user_id)
 
         # Get processor control URL from configuration
         config = app.app_context.configuration

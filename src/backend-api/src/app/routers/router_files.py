@@ -69,7 +69,9 @@ async def upload_file(
             processRepository = scope.get_service(ProcessRepository)
             fileRepository = scope.get_service(FileRepository)
 
-            process_record = await processRepository.get_async(process_id)
+            from libs.services.authorization import verify_process_ownership
+
+            process_record = await verify_process_ownership(app, process_id, user_id)
 
             file_id = str(uuid4())
             file_name = re.sub(r"[^\w.-]", "_", file.filename)
