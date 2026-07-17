@@ -30,7 +30,7 @@ hooks:
       shell: pwsh
       run: |  
         Write-Host "ℹ️  Container images are NOT built automatically. Run the build manually when ready:"
-        Write-Host "    ./scripts/deploy_container_images.ps1"
+        Write-Host "    ./scripts/acr_build_push.ps1"
         Write-Host "-----"
         Write-Host "🧭 Web App Details:"
         Write-Host "✅ Name: $env:CONTAINER_WEB_APP_NAME"
