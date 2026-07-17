@@ -79,7 +79,7 @@
       "type": "string",
       "defaultValue": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
       "metadata": {
-        "description": "Optional. Placeholder container image used to initially provision the container apps.\nThe dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image."
+        "description": "Optional. Placeholder container image used to initially provision the container apps.\nThe dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/acr_build_push.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image."
       }
     },
     "deploymentType": {
@@ -942,7 +942,7 @@
                 "Disabled"
               ],
               "metadata": {
-                "description": "Optional. Public network access for the registry. Defaults to Enabled for non-WAF deployments. In WAF (private-networking) deployments the caller sets this to Disabled: runtime image pulls flow over a private endpoint, and the post-deployment build script (scripts/deploy_container_images.*) temporarily re-enables public access for the remote `az acr build` and then restores it to Disabled."
+                "description": "Optional. Public network access for the registry. Defaults to Enabled for non-WAF deployments. In WAF (private-networking) deployments the caller sets this to Disabled: runtime image pulls flow over a private endpoint, and the post-deployment build script (scripts/acr_build_push.*) temporarily re-enables public access for the remote `az acr build` and then restores it to Disabled."
               }
             },
             "networkRuleBypassOptions": {

@@ -49,7 +49,7 @@ param containerRegistryEndpoint string = ''
 param imageTag string = 'latest'
 
 @description('''Optional. Placeholder container image used to initially provision the container apps.
-The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image.''')
+The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/acr_build_push.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image.''')
 param placeholderContainerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @minLength(1)
