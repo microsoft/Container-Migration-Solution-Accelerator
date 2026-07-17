@@ -245,8 +245,10 @@ module containerRegistry './modules/containerRegistry.bicep' = {
     networkRuleBypassOptions: 'AzureServices'
     // WAF: host the registry private endpoint in the backend subnet and link it
     // to the privatelink.azurecr.io DNS zone so image pulls resolve privately.
-    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
-    privateDnsZoneResourceId: enablePrivateNetworking ? avmPrivateDnsZones[dnsZoneIndex.containerRegistry]!.outputs.resourceId : ''
+    // Use deterministic resource IDs here so non-private deployments do not
+    // pick up unconditional dependencies on the conditional network modules.
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', 'vnet-${solutionSuffix}', 'backend') : ''
+    privateDnsZoneResourceId: enablePrivateNetworking ? resourceId(resourceGroup().name, 'Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io') : ''
     // Application managed identity gets AcrPull for identity-based image pulls.
     acrPullPrincipalIds: [
       appIdentity.outputs.principalId

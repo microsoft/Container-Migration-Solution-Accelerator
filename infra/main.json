@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "8577992003868472105"
+      "templateHash": "14967895930995130893"
     }
   },
   "parameters": {
@@ -874,8 +874,8 @@
           "networkRuleBypassOptions": {
             "value": "AzureServices"
           },
-          "privateEndpointSubnetResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference('virtualNetwork').outputs.backendSubnetResourceId.value), createObject('value', ''))]",
-          "privateDnsZoneResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference(format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').containerRegistry)).outputs.resourceId.value), createObject('value', ''))]",
+          "privateEndpointSubnetResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', format('vnet-{0}', variables('solutionSuffix')), 'backend')), createObject('value', ''))]",
+          "privateDnsZoneResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', resourceId(resourceGroup().name, 'Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io')), createObject('value', ''))]",
           "acrPullPrincipalIds": {
             "value": [
               "[reference('appIdentity').outputs.principalId.value]"
@@ -895,7 +895,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "17231291582633402413"
+              "templateHash": "6541411388428378234"
             },
             "name": "Dedicated Azure Container Registry",
             "description": "Provisions a dedicated Azure Container Registry (ACR) for a single deployment and configures identity-based authentication.\r\nAdmin user and anonymous pull are disabled. The provided application managed identity principals are granted the AcrPull role, and the deployer is granted a registry-scoped AcrPush role so it can push/pull images (remote builds via `az acr build` additionally rely on the deployer's higher-scope role for scheduleRun/action)."
@@ -1128,9 +1128,7 @@
         }
       },
       "dependsOn": [
-        "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').containerRegistry)]",
-        "virtualNetwork"
+        "appIdentity"
       ]
     },
     "logAnalyticsWorkspace": {
@@ -27769,8 +27767,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
