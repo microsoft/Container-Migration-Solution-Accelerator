@@ -13,7 +13,7 @@ hooks:
       shell: sh
       run: |  
         echo "ℹ️  Container images are NOT built automatically. Run the build manually when ready:"
-        echo "    bash ./scripts/deploy_container_images.sh"
+        echo "    bash ./scripts/acr_build_push.sh"
         echo "-----"
         echo "🧭 Web App Details:"
         echo "✅ Name: $CONTAINER_WEB_APP_NAME"
