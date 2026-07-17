@@ -45,12 +45,12 @@ param azureAiServiceLocation string
 #disable-next-line no-unused-params
 param containerRegistryEndpoint string = ''
 
-@description('Optional. The image tag to use for container images. Defaults to "latest_v2".')
-param imageTag string = 'latest_v2'
+@description('Optional. The image tag to use for container images. Defaults to "latest".')
+param imageTag string = 'latest'
 
 @description('''Optional. Placeholder container image used to initially provision the container apps.
-The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/deploy_container_images.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps quickstart image.''')
-param placeholderContainerImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
+The dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/acr_build_push.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image.''')
+param placeholderContainerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @minLength(1)
 @allowed(['Standard', 'GlobalStandard'])
@@ -236,13 +236,19 @@ module containerRegistry './modules/containerRegistry.bicep' = {
     name: containerRegistryName
     location: solutionLocation
     tags: allTags
-    // Premium SKU in WAF/private-networking mode (supports higher throughput and
-    // future private endpoints). Public network access is kept Enabled in both
-    // modes so remote `az acr build` (ACR Tasks) and managed-identity pulls work;
-    // AzureServices bypass lets trusted ACR Tasks reach the registry.
+    // Premium SKU in WAF/private-networking mode (required for private endpoints
+    // and network rule sets). In WAF mode public network access is Disabled at
+    // rest; runtime pulls flow over a private endpoint and the post-deploy build
+    // script temporarily re-enables public access for the remote `az acr build`.
     sku: enablePrivateNetworking ? 'Premium' : 'Standard'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkRuleBypassOptions: 'AzureServices'
+    // WAF: host the registry private endpoint in the backend subnet and link it
+    // to the privatelink.azurecr.io DNS zone so image pulls resolve privately.
+    // Use deterministic resource IDs here so non-private deployments do not
+    // pick up unconditional dependencies on the conditional network modules.
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', 'vnet-${solutionSuffix}', 'backend') : ''
+    privateDnsZoneResourceId: enablePrivateNetworking ? resourceId(resourceGroup().name, 'Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io') : ''
     // Application managed identity gets AcrPull for identity-based image pulls.
     acrPullPrincipalIds: [
       appIdentity.outputs.principalId
@@ -605,6 +611,7 @@ var privateDnsZones = [
   'privatelink.blob.${environment().suffixes.storage}'
   'privatelink.queue.${environment().suffixes.storage}'
   'privatelink.azconfig.io'
+  'privatelink.azurecr.io'
 ]
 
 // DNS Zone Index Constants
@@ -616,6 +623,7 @@ var dnsZoneIndex = {
   storageBlob: 4
   storageQueue: 5
   appConfig: 6
+  containerRegistry: 7
 }
 
 // List of DNS zone indices that correspond to AI-related services.
