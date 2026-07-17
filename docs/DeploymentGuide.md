@@ -300,12 +300,12 @@ Build and push the frontend, backend, and processor images to the dedicated ACR,
 
 ```powershell
 # PowerShell
-./scripts/deploy_container_images.ps1
+./scripts/acr_build_push.ps1
 ```
 
 ```bash
 # Bash
-bash ./scripts/deploy_container_images.sh
+bash ./scripts/acr_build_push.sh
 ```
 
 ### 4.4 Get Application URL
