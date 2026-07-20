@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# deploy_container_images.sh
+# acr_build_push.sh
 #
 # Separate post-deployment script that runs FIRST (before any existing
 # post-deployment scripts). It builds the deployment-specific container images
@@ -14,7 +14,7 @@
 #
 set -euo pipefail
 
-echo "==> [deploy_container_images] Building and pushing images to the dedicated ACR (remote build)"
+echo "==> [acr_build_push] Building and pushing images to the dedicated ACR (remote build)"
 
 # ---------------------------------------------------------------------------
 # Resolve required values. azd exports deployment outputs as environment
@@ -23,7 +23,8 @@ echo "==> [deploy_container_images] Building and pushing images to the dedicated
 ACR_NAME="${AZURE_CONTAINER_REGISTRY_NAME:-}"
 REGISTRY_ENDPOINT="${AZURE_CONTAINER_REGISTRY_ENDPOINT:-}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
-IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-latest_v2}"
+SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-}"
+IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-}"
 BACKEND_APP="${CONTAINER_API_APP_NAME:-}"
 FRONTEND_APP="${CONTAINER_WEB_APP_NAME:-}"
 PROCESSOR_APP="${CONTAINER_PROCESSOR_APP_NAME:-}"
@@ -32,7 +33,7 @@ PROCESSOR_APP="${CONTAINER_PROCESSOR_APP_NAME:-}"
 # This covers not just the registry/resource group but also the container app
 # names and registry endpoint, so a partially-populated environment does not
 # silently skip image updates and leave apps on the placeholder image.
-if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$BACKEND_APP" || -z "$FRONTEND_APP" || -z "$PROCESSOR_APP" ]]; then
+if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$BACKEND_APP" || -z "$FRONTEND_APP" || -z "$PROCESSOR_APP" || -z "$SUBSCRIPTION_ID" ]]; then
   if command -v azd >/dev/null 2>&1; then
     echo "==> Loading missing values from 'azd env get-values'"
     while IFS='=' read -r key value; do
@@ -41,6 +42,7 @@ if [[ -z "$ACR_NAME" || -z "$RESOURCE_GROUP" || -z "$REGISTRY_ENDPOINT" || -z "$
         AZURE_CONTAINER_REGISTRY_NAME)     ACR_NAME="${ACR_NAME:-$value}" ;;
         AZURE_CONTAINER_REGISTRY_ENDPOINT) REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-$value}" ;;
         AZURE_RESOURCE_GROUP)              RESOURCE_GROUP="${RESOURCE_GROUP:-$value}" ;;
+        AZURE_SUBSCRIPTION_ID)             SUBSCRIPTION_ID="${SUBSCRIPTION_ID:-$value}" ;;
         AZURE_ENV_IMAGE_TAG)               IMAGE_TAG="${IMAGE_TAG:-$value}" ;;
         CONTAINER_API_APP_NAME)            BACKEND_APP="${BACKEND_APP:-$value}" ;;
         CONTAINER_WEB_APP_NAME)            FRONTEND_APP="${FRONTEND_APP:-$value}" ;;
@@ -52,6 +54,10 @@ fi
 
 # Derive the login server from the registry name if it was not provided.
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-${ACR_NAME}.azurecr.io}"
+
+# Apply the default image tag only after the azd fallback, so an explicitly
+# configured tag (env var or `azd env get-values`) is honored.
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 missing=()
 [[ -z "$ACR_NAME" ]]       && missing+=("AZURE_CONTAINER_REGISTRY_NAME")
@@ -80,6 +86,18 @@ if ! az account show >/dev/null 2>&1; then
   exit 1
 fi
 
+# Pin the Azure CLI to the azd environment's subscription. `az acr build` and
+# `az containerapp update` use the CLI's active subscription, which may differ
+# from the azd environment when the user has multiple subscriptions - without
+# this the build/update could target the wrong subscription (or fail).
+if [[ -n "$SUBSCRIPTION_ID" ]]; then
+  if ! az account set --subscription "$SUBSCRIPTION_ID" 2>/dev/null; then
+    echo "ERROR: Failed to set Azure CLI subscription to '$SUBSCRIPTION_ID'." >&2
+    echo "       Verify the subscription ID and that your account has access to it." >&2
+    exit 1
+  fi
+fi
+
 # Resolve the repository root (this script lives in <root>/scripts).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -87,6 +105,44 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 echo "    Registry        : $REGISTRY_ENDPOINT ($ACR_NAME)"
 echo "    Resource group  : $RESOURCE_GROUP"
 echo "    Image tag       : $IMAGE_TAG"
+
+# ---------------------------------------------------------------------------
+# WAF (private networking) support.
+#
+# In WAF mode the registry has public network access DISABLED at rest (with a
+# default-deny network rule set and image export disabled); runtime pulls flow
+# over a private endpoint. Remote build (az acr build / ACR Tasks) reaches the
+# registry over its PUBLIC endpoint, so we must temporarily relax those settings
+# for the build/push and restore them afterwards - including on failure, via a
+# trap - so the registry is never left publicly reachable.
+#
+# WAF is detected from the resource group's `Type` tag (set to 'WAF' by the
+# infrastructure when private networking is enabled).
+# ---------------------------------------------------------------------------
+DEPLOYMENT_TYPE="$(az group show --name "$RESOURCE_GROUP" --query 'tags.Type' -o tsv 2>/dev/null || true)"
+
+relock_acr() {
+  if [[ "$DEPLOYMENT_TYPE" == "WAF" ]]; then
+    echo "==> Restoring WAF ACR configuration (default-action Deny, public access disabled, exports off)"
+    az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --default-action Deny --output none --only-show-errors \
+      || echo "WARNING: failed to restore ACR default-action; verify manually." >&2
+    az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --public-network-enabled false --output none --only-show-errors \
+      || echo "WARNING: failed to disable ACR public network access; verify manually." >&2
+    az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --allow-exports false --output none --only-show-errors \
+      || echo "WARNING: failed to disable ACR exports; verify manually." >&2
+  fi
+}
+
+if [[ "$DEPLOYMENT_TYPE" == "WAF" ]]; then
+  echo "==> WAF deployment detected - temporarily relaxing ACR restrictions for the image push"
+  # Ensure the locked-down state is restored on any exit (success or failure).
+  trap relock_acr EXIT
+  az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --allow-exports true --output none --only-show-errors
+  az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --public-network-enabled true --output none --only-show-errors
+  az acr update --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --default-action Allow --output none --only-show-errors
+  echo "    Waiting ~45s for the network rule change to propagate..."
+  sleep 45
+fi
 
 # ---------------------------------------------------------------------------
 # Remote build helper - uses ACR Tasks (az acr build) so no local Docker daemon
@@ -129,4 +185,4 @@ update_app "$BACKEND_APP"   "backend-api"
 update_app "$PROCESSOR_APP" "processor"
 update_app "$FRONTEND_APP"  "frontend"
 
-echo "==> [deploy_container_images] Completed successfully."
+echo "==> [acr_build_push] Completed successfully."
