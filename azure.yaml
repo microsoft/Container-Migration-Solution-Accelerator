@@ -45,12 +45,10 @@ hooks:
       run: |  
         echo ""
         echo "========================================"
-        echo "      Provisioning Complete      "
+        echo "      Deployment Complete      "
         echo "========================================"
         echo ""
-        echo "Run the following script, in order:"
-        echo ""
-        echo "Building and pushing container images to the dedicated ACR (remote build)"
+        echo "Next step: build and push container images to the dedicated ACR (remote build):"
         echo ""
         echo "     bash ./scripts/acr_build_push.sh"
         echo ""
@@ -70,11 +68,10 @@ hooks:
       shell: pwsh
       run: | 
         Write-Host "`n========================================" -ForegroundColor Green
-        Write-Host "      Provisioning Complete      " -ForegroundColor Green
+        Write-Host "      Deployment Complete      " -ForegroundColor Green
         Write-Host "========================================`n" -ForegroundColor Green
 
-        Write-Host "Run the following script, in order:" -ForegroundColor Yellow
-        Write-Host "    Building and pushing container images to the dedicated ACR (remote build)" -ForegroundColor Yellow
+        Write-Host "Next step: build and push container images to the dedicated ACR (remote build):" -ForegroundColor Yellow
         Write-Host "     ./scripts/acr_build_push.ps1" -ForegroundColor Cyan
         
         Write-Host "-----"
