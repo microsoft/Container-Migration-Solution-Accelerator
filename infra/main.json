@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "2561563027340256551"
+      "templateHash": "14967895930995130893"
     }
   },
   "parameters": {
@@ -63,16 +63,23 @@
     },
     "containerRegistryEndpoint": {
       "type": "string",
-      "defaultValue": "containermigrationacr.azurecr.io",
+      "defaultValue": "",
       "metadata": {
-        "description": "Optional. The endpoint (excluding https://) of an existing container registry. This is the `loginServer` when using Azure Container Registry."
+        "description": "Optional. [Deprecated] The endpoint (excluding https://) of an existing container registry. Retained only for backward compatibility with existing parameter files/pipelines; each deployment now provisions its own dedicated Azure Container Registry and no longer depends on a shared/public registry."
       }
     },
     "imageTag": {
       "type": "string",
-      "defaultValue": "latest_v2",
+      "defaultValue": "latest",
       "metadata": {
-        "description": "Optional. The image tag to use for container images. Defaults to \"latest_v2\"."
+        "description": "Optional. The image tag to use for container images. Defaults to \"latest\"."
+      }
+    },
+    "placeholderContainerImage": {
+      "type": "string",
+      "defaultValue": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
+      "metadata": {
+        "description": "Optional. Placeholder container image used to initially provision the container apps.\nThe dedicated Azure Container Registry is empty right after infrastructure provisioning, so a public image is used as the default allowed image until the post-deployment script (scripts/acr_build_push.*) builds and pushes the deployment-specific images and updates the apps. Defaults to the Azure Container Apps hello-world image."
       }
     },
     "deploymentType": {
@@ -267,6 +274,7 @@
     },
     "replicaLocation": "[variables('replicaRegionPairs')[resourceGroup().location]]",
     "userAssignedIdentityResourceName": "[format('id-{0}', variables('solutionSuffix'))]",
+    "containerRegistryName": "[take(format('cr{0}', variables('solutionSuffix')), 50)]",
     "logAnalyticsWorkspaceResourceName": "[format('log-{0}', variables('solutionSuffix'))]",
     "applicationInsightsResourceName": "[format('appi-{0}', variables('solutionSuffix'))]",
     "bastionHostName": "[format('bas-{0}', variables('solutionSuffix'))]",
@@ -282,7 +290,8 @@
       "privatelink.documents.azure.com",
       "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
       "[format('privatelink.queue.{0}', environment().suffixes.storage)]",
-      "privatelink.azconfig.io"
+      "privatelink.azconfig.io",
+      "privatelink.azurecr.io"
     ],
     "dnsZoneIndex": {
       "cognitiveServices": 0,
@@ -291,7 +300,8 @@
       "cosmosDB": 3,
       "storageBlob": 4,
       "storageQueue": 5,
-      "appConfig": 6
+      "appConfig": 6,
+      "containerRegistry": 7
     },
     "aiRelatedDnsZoneIndices": [
       "[variables('dnsZoneIndex').cognitiveServices]",
@@ -839,6 +849,287 @@
           }
         }
       }
+    },
+    "containerRegistry": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('containerRegistryName')]"
+          },
+          "location": {
+            "value": "[variables('solutionLocation')]"
+          },
+          "tags": {
+            "value": "[variables('allTags')]"
+          },
+          "sku": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Premium'), createObject('value', 'Standard'))]",
+          "publicNetworkAccess": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Disabled'), createObject('value', 'Enabled'))]",
+          "networkRuleBypassOptions": {
+            "value": "AzureServices"
+          },
+          "privateEndpointSubnetResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', format('vnet-{0}', variables('solutionSuffix')), 'backend')), createObject('value', ''))]",
+          "privateDnsZoneResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', resourceId(resourceGroup().name, 'Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io')), createObject('value', ''))]",
+          "acrPullPrincipalIds": {
+            "value": [
+              "[reference('appIdentity').outputs.principalId.value]"
+            ]
+          },
+          "buildPrincipalId": {
+            "value": "[variables('deployingUserPrincipalId')]"
+          },
+          "buildPrincipalType": {
+            "value": "[variables('deployingUserType')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "6541411388428378234"
+            },
+            "name": "Dedicated Azure Container Registry",
+            "description": "Provisions a dedicated Azure Container Registry (ACR) for a single deployment and configures identity-based authentication.\r\nAdmin user and anonymous pull are disabled. The provided application managed identity principals are granted the AcrPull role, and the deployer is granted a registry-scoped AcrPush role so it can push/pull images (remote builds via `az acr build` additionally rely on the deployer's higher-scope role for scheduleRun/action)."
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "maxLength": 50,
+              "metadata": {
+                "description": "Required. Name of the Azure Container Registry. Must be globally unique and 5-50 alphanumeric characters."
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Optional. Azure region for the registry. Defaults to the resource group location."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Optional. Tags to apply to the registry."
+              }
+            },
+            "sku": {
+              "type": "string",
+              "defaultValue": "Standard",
+              "allowedValues": [
+                "Basic",
+                "Standard",
+                "Premium"
+              ],
+              "metadata": {
+                "description": "Optional. SKU for the registry. Premium is required for private networking. Defaults to Standard."
+              }
+            },
+            "publicNetworkAccess": {
+              "type": "string",
+              "defaultValue": "Enabled",
+              "allowedValues": [
+                "Enabled",
+                "Disabled"
+              ],
+              "metadata": {
+                "description": "Optional. Public network access for the registry. Defaults to Enabled for non-WAF deployments. In WAF (private-networking) deployments the caller sets this to Disabled: runtime image pulls flow over a private endpoint, and the post-deployment build script (scripts/acr_build_push.*) temporarily re-enables public access for the remote `az acr build` and then restores it to Disabled."
+              }
+            },
+            "networkRuleBypassOptions": {
+              "type": "string",
+              "defaultValue": "AzureServices",
+              "allowedValues": [
+                "AzureServices",
+                "None"
+              ],
+              "metadata": {
+                "description": "Optional. Whether to allow trusted Azure services (e.g. ACR Tasks used by `az acr build`) to bypass network rules. Defaults to AzureServices."
+              }
+            },
+            "acrPullPrincipalIds": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Optional. Principal IDs (managed identities) to grant the AcrPull role so they can pull images using identity-based authentication."
+              }
+            },
+            "buildPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Principal ID (e.g. the deployer) to grant a registry-scoped AcrPush role so it can push/pull images. Leave empty to skip."
+              }
+            },
+            "buildPrincipalType": {
+              "type": "string",
+              "defaultValue": "User",
+              "allowedValues": [
+                "Device",
+                "ForeignGroup",
+                "Group",
+                "ServicePrincipal",
+                "User"
+              ],
+              "metadata": {
+                "description": "Optional. Principal type for the build principal."
+              }
+            },
+            "privateEndpointSubnetResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Resource ID of the subnet to host the registry private endpoint. When set (WAF mode), a private endpoint is created so runtime image pulls flow over the private network."
+              }
+            },
+            "privateDnsZoneResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Resource ID of the privatelink.azurecr.io private DNS zone to link the private endpoint to."
+              }
+            }
+          },
+          "variables": {
+            "acrPullRoleDefinitionId": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
+            "acrPushRoleDefinitionId": "8311e382-0749-4cb8-b61a-304f252e45ec"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('sku')]"
+              },
+              "properties": {
+                "adminUserEnabled": false,
+                "anonymousPullEnabled": false,
+                "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+                "networkRuleBypassOptions": "[parameters('networkRuleBypassOptions')]",
+                "networkRuleSet": "[if(equals(parameters('publicNetworkAccess'), 'Disabled'), createObject('defaultAction', 'Deny'), null())]",
+                "policies": "[if(equals(parameters('publicNetworkAccess'), 'Disabled'), createObject('exportPolicy', createObject('status', 'disabled')), null())]"
+              }
+            },
+            {
+              "condition": "[not(empty(parameters('privateEndpointSubnetResourceId')))]",
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-11-01",
+              "name": "[format('pep-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('privateEndpointSubnetResourceId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('pls-{0}', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]",
+                      "groupIds": [
+                        "registry"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[and(not(empty(parameters('privateEndpointSubnetResourceId'))), not(empty(parameters('privateDnsZoneResourceId'))))]",
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('pep-{0}', parameters('name')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "privatelink-azurecr-io",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneResourceId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pep-{0}', parameters('name')))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "acrPullRoleAssignments",
+                "count": "[length(parameters('acrPullPrincipalIds'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), parameters('acrPullPrincipalIds')[copyIndex()], variables('acrPullRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleDefinitionId'))]",
+                "principalId": "[parameters('acrPullPrincipalIds')[copyIndex()]]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('buildPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), parameters('buildPrincipalId'), variables('acrPushRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPushRoleDefinitionId'))]",
+                "principalId": "[parameters('buildPrincipalId')]",
+                "principalType": "[parameters('buildPrincipalType')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "resourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the container registry."
+              },
+              "value": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the container registry."
+              },
+              "value": "[parameters('name')]"
+            },
+            "loginServer": {
+              "type": "string",
+              "metadata": {
+                "description": "The login server (endpoint) of the container registry, e.g. myregistry.azurecr.io."
+              },
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), '2023-07-01').loginServer]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appIdentity"
+      ]
     },
     "logAnalyticsWorkspace": {
       "condition": "[and(or(parameters('enableMonitoring'), parameters('enablePrivateNetworking')), not(variables('useExistingLogAnalytics')))]",
@@ -27476,8 +27767,8 @@
       },
       "dependsOn": [
         "appIdentity",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
         "virtualNetwork"
       ]
     },
@@ -35199,13 +35490,7 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cosmosDB)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageBlob)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').storageQueue)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').appConfig)]",
+        "avmPrivateDnsZones",
         "virtualNetwork"
       ]
     },
@@ -40649,11 +40934,19 @@
               ]
             }
           },
+          "registries": {
+            "value": [
+              {
+                "server": "[reference('containerRegistry').outputs.loginServer.value]",
+                "identity": "[reference('appIdentity').outputs.resourceId.value]"
+              }
+            ]
+          },
           "containers": {
             "value": [
               {
                 "name": "backend-api",
-                "image": "[format('{0}/backend-api:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
+                "image": "[parameters('placeholderContainerImage')]",
                 "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'PROCESSOR_CONTROL_URL', 'value', format('https://{0}.internal.{1}', variables('processorContainerAppName'), reference('containerAppsEnvironment').outputs.defaultDomain.value))), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 1,
@@ -42267,7 +42560,8 @@
         "appConfiguration",
         "appIdentity",
         "applicationInsights",
-        "containerAppsEnvironment"
+        "containerAppsEnvironment",
+        "containerRegistry"
       ]
     },
     "containerAppFrontend": {
@@ -42296,11 +42590,19 @@
               ]
             }
           },
+          "registries": {
+            "value": [
+              {
+                "server": "[reference('containerRegistry').outputs.loginServer.value]",
+                "identity": "[reference('appIdentity').outputs.resourceId.value]"
+              }
+            ]
+          },
           "containers": {
             "value": [
               {
                 "name": "frontend",
-                "image": "[format('{0}/frontend:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
+                "image": "[parameters('placeholderContainerImage')]",
                 "env": [
                   {
                     "name": "API_URL",
@@ -43915,7 +44217,8 @@
       "dependsOn": [
         "appIdentity",
         "containerAppBackend",
-        "containerAppsEnvironment"
+        "containerAppsEnvironment",
+        "containerRegistry"
       ]
     },
     "containerAppProcessor": {
@@ -43944,11 +44247,19 @@
               ]
             }
           },
+          "registries": {
+            "value": [
+              {
+                "server": "[reference('containerRegistry').outputs.loginServer.value]",
+                "identity": "[reference('appIdentity').outputs.resourceId.value]"
+              }
+            ]
+          },
           "containers": {
             "value": [
               {
                 "name": "processor",
-                "image": "[format('{0}/processor:{1}', parameters('containerRegistryEndpoint'), parameters('imageTag'))]",
+                "image": "[parameters('placeholderContainerImage')]",
                 "env": "[concat(createArray(createObject('name', 'APP_CONFIGURATION_URL', 'value', reference('appConfiguration').outputs.endpoint.value), createObject('name', 'AZURE_CLIENT_ID', 'value', reference('appIdentity').outputs.clientId.value), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'STORAGE_ACCOUNT_NAME', 'value', reference('storageAccount').outputs.name.value), createObject('name', 'CONTROL_API_ENABLED', 'value', '1'), createObject('name', 'CONTROL_API_PORT', 'value', '8080')), if(parameters('enableMonitoring'), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference('applicationInsights').outputs.connectionString.value)), createArray()))]",
                 "resources": {
                   "cpu": 2,
@@ -45546,6 +45857,7 @@
         "appIdentity",
         "applicationInsights",
         "containerAppsEnvironment",
+        "containerRegistry",
         "storageAccount"
       ]
     }
@@ -45611,6 +45923,34 @@
         "description": "The Azure resource group name."
       },
       "value": "[resourceGroup().name]"
+    },
+    "AZURE_CONTAINER_REGISTRY_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the dedicated Azure Container Registry."
+      },
+      "value": "[reference('containerRegistry').outputs.name.value]"
+    },
+    "AZURE_CONTAINER_REGISTRY_ENDPOINT": {
+      "type": "string",
+      "metadata": {
+        "description": "The login server (endpoint) of the dedicated Azure Container Registry."
+      },
+      "value": "[reference('containerRegistry').outputs.loginServer.value]"
+    },
+    "CONTAINER_PROCESSOR_APP_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the processor container app."
+      },
+      "value": "[reference('containerAppProcessor').outputs.name.value]"
+    },
+    "AZURE_ENV_IMAGE_TAG": {
+      "type": "string",
+      "metadata": {
+        "description": "The image tag used for deployment-specific container images."
+      },
+      "value": "[parameters('imageTag')]"
     },
     "deployerObjectId": {
       "type": "string",
