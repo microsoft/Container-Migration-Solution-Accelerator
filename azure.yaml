@@ -33,8 +33,15 @@ hooks:
     posix:
       shell: sh
       run: |  
-        echo "ℹ️  Container images are NOT built automatically. Run the build manually when ready:"
-        echo "    bash ./scripts/acr_build_push.sh"
+        echo ""
+        echo "========================================"
+        echo "      Deployment Complete      "
+        echo "========================================"
+        echo ""
+        echo "Next step: build and push container images to the dedicated ACR (remote build):"
+        echo ""
+        echo "     bash ./scripts/acr_build_push.sh"
+        echo ""
         echo "-----"
         echo "🧭 Web App Details:"
         echo "✅ Name: $CONTAINER_WEB_APP_NAME"
@@ -49,9 +56,14 @@ hooks:
       interactive: true
     windows:
       shell: pwsh
-      run: |  
-        Write-Host "ℹ️  Container images are NOT built automatically. Run the build manually when ready:"
-        Write-Host "    ./scripts/acr_build_push.ps1"
+      run: |
+        Write-Host "`n========================================" -ForegroundColor Green
+        Write-Host "      Deployment Complete      " -ForegroundColor Green
+        Write-Host "========================================`n" -ForegroundColor Green
+
+        Write-Host "Next step: build and push container images to the dedicated ACR (remote build):" -ForegroundColor Yellow
+        Write-Host "     ./scripts/acr_build_push.ps1" -ForegroundColor Cyan
+        
         Write-Host "-----"
         Write-Host "🧭 Web App Details:"
         Write-Host "✅ Name: $env:CONTAINER_WEB_APP_NAME"
