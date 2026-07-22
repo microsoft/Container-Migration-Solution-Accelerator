@@ -52,7 +52,7 @@ hooks:
         echo ""
         echo "Building and pushing container images to the dedicated ACR (remote build)"
         echo ""
-        echo "     bash ./scripts/deploy_container_images.sh"
+        echo "     bash ./scripts/acr_build_push.sh"
         echo ""
         echo "-----"
         echo "🧭 Web App Details:"
@@ -75,7 +75,7 @@ hooks:
 
         Write-Host "Run the following script, in order:" -ForegroundColor Yellow
         Write-Host "    Building and pushing container images to the dedicated ACR (remote build)" -ForegroundColor Yellow
-        Write-Host "     ./scripts/deploy_container_images.ps1" -ForegroundColor Cyan
+        Write-Host "     ./scripts/acr_build_push.ps1" -ForegroundColor Cyan
         
         Write-Host "-----"
         Write-Host "🧭 Web App Details:"
