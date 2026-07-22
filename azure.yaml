@@ -56,7 +56,7 @@ hooks:
       interactive: true
     windows:
       shell: pwsh
-      run: | 
+      run: |
         Write-Host "`n========================================" -ForegroundColor Green
         Write-Host "      Deployment Complete      " -ForegroundColor Green
         Write-Host "========================================`n" -ForegroundColor Green
