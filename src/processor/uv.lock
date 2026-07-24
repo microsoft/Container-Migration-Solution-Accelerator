@@ -38,19 +38,6 @@ wheels = [
 ]
 
 [[package]]
-name = "agent-framework-openai"
-version = "1.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "agent-framework-core" },
-    { name = "openai" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/50/54/26595b5fa394dd91a5bd434f87b1e7d781545efbf0bd8053de193f89ec63/agent_framework_openai-1.3.0.tar.gz", hash = "sha256:770828447875ee169dde8cd2f2a0343f427d856af7c83895ca12d59f8c24a7f2", size = 49146, upload-time = "2026-05-08T00:09:44.373Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/d8/a0e0af08123d3c2ff3f42b6976eed155536c73be4d61b898bc15cf31a38c/agent_framework_openai-1.3.0-py3-none-any.whl", hash = "sha256:1953dcb9f3e852362be84b4316ee69639313a7f119eab6ce8c88949e1f24aa4b", size = 54041, upload-time = "2026-05-08T00:09:17.744Z" },
-]
-
-[[package]]
 name = "agent-framework-orchestrations"
 version = "1.0.0b260507"
 source = { registry = "https://pypi.org/simple" }
@@ -1484,7 +1471,6 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "agent-framework-core" },
-    { name = "agent-framework-openai" },
     { name = "agent-framework-orchestrations" },
     { name = "aiohttp" },
     { name = "art" },
@@ -1521,7 +1507,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-framework-core", specifier = "==1.3.0" },
-    { name = "agent-framework-openai", specifier = "==1.3.0" },
     { name = "agent-framework-orchestrations", specifier = "==1.0.0b260507" },
     { name = "aiohttp", specifier = "==3.14.1" },
     { name = "art", specifier = "==6.5" },
