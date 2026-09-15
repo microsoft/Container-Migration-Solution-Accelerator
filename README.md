@@ -1,3 +1,9 @@
+<hr>
+<h3 align="center">
+     <b>⚠️ This repository is no longer maintained ⚠️</b>
+</h3>
+<hr>
+
 # Container Migration Solution Accelerator
 
 Extract, analyze, and migrate Kubernetes configurations from other cloud providers to Azure Kubernetes Service (AKS) using intelligent multi-agent orchestration powered by Azure OpenAI GPT-5.1, Microsoft Agent Framework, and MCP (Model Context Protocol) servers. This solution provides automated platform detection, multi-dimensional analysis, and expert-guided configuration transformation with comprehensive migration reporting.
